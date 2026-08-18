@@ -1,4 +1,5 @@
 using Bannerlord.XmlPreview.Interfaces;
+using Bannerlord.XmlPreview.DemoData;
 using Bannerlord.XmlPreview.Models;
 using Bannerlord.XmlPreview.Models.Assets;
 using Bannerlord.XmlPreview.Models.Nodes;
@@ -21,75 +22,19 @@ public sealed class PrefabRenderContext
     private readonly Dictionary<string, (int Top, int Bottom)?> _spriteCoreVerticalBoundsCache = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Dictionary<string, string> MockBindings =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["LandManagementString"] = "Land Management",
-            ["ActionText"] = "Resume",
-            ["IsDisabled"] = "false",
-            ["IsPositiveBehaviored"] = "false",
-            ["NavigationButtonsEnabled"] = "true",
-            ["GameTipTitle"] = "Game Tips",
-            ["CurrentTip"] = "You can reset your perks at the tournament master...for the right price.",
-            ["LedgerString"] = "Open Ledger",
-            ["LandPlotsString"] = "Land Plots",
-            ["OwnedLandPlotsString"] = "Owned",
-            ["OwnedPlotsString"] = "24",
-            ["AvailableLandPlotsString"] = "Available",
-            ["AvaliblePlotsString"] = "12",
-            ["BuyString"] = "Buy",
-            ["SellString"] = "Sell",
-            ["UndevLandPlotsString"] = "Undeveloped Plots",
-            ["OwnedUndevelopedPlotsString"] = "8",
-            ["AvalibleUndevelopedPlotsString"] = "5",
-            ["SlavesTitle"] = "Slaves",
-            ["CapacityText"] = "Capacity",
-            ["SlaveCapacityString"] = "37 / 60",
-            ["ManageString"] = "Manage",
-            ["SlaveDeclineTitleString"] = "Decline Rate",
-            ["SlaveDeclineString"] = "2.1% / day",
-            ["RevoltRiskTitleString"] = "Revolt Risk",
-            ["RevoltRiskString"] = "Low",
-            ["LandUsageTitleString"] = "Land Usage",
-            ["LandUsageString"] = "71%",
-            ["BuySlavesTitleString"] = "Slave Market",
-            ["BuySlavesString"] = "Buy 6",
-            ["BuySlavesButton"] = "ButtonBrush1",
-            ["ProductionDetailsString"] = "Production Details",
-            ["StockpileTitle"] = "Stockpile",
-            ["StockpileCapacityString"] = "84 / 120",
-            ["SellToMarketTitleString"] = "Market Action",
-            ["SellToMarketString"] = "Sell 25 Grain",
-            ["SellToMarketButton"] = "ButtonBrush2",
-            ["CurrentProjectTitle"] = "Current Project",
-            ["CurrentProjectString"] = "Irrigation Channels",
-            ["CancelString"] = "Cancel",
-            ["ProgressTitle"] = "Progress",
-            ["CurrentProjecProgressString"] = "42%",
-            ["ProjectQueueString"] = "Queue",
-            ["UpgradesTitle"] = "Upgrades",
-            ["LandClearanceString"] = "Land Clearance",
-            ["UpgradePatrolsString"] = "Patrols",
-            ["UpgradeStorehouseString"] = "Storehouse",
-            ["UpgradeString"] = "Upgrade",
-            ["CloseString"] = "Close",
-            ["SettlementImageID"] = "gui_bg_village_empire_t",
-            ["CurrentProjectIconSting"] = "ae_irrigation"
-        };
+        new(PreviewDemoCatalog.MockBindings, StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Dictionary<string, Brush> PanelBrushes =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Encyclopedia.Frame"] = CreateGradientBrush("#2A1F13", "#B7985A"),
-            ["ButtonBrush1"] = CreateGradientBrush("#425530", "#A5C47A"),
-            ["ButtonBrush2"] = CreateGradientBrush("#5A332C", "#D68A79")
-        };
+    private static readonly Dictionary<string, Brush> PanelBrushes = PreviewDemoCatalog.PanelBrushes
+        .ToDictionary(
+            entry => entry.Key,
+            entry => CreateGradientBrush(entry.Value.FillHex, entry.Value.StrokeHex),
+            StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Dictionary<string, Brush> TextBrushes =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Recruitment.Popup.Title.Text"] = CreateSolidBrushInternal("#E6D2A4"),
-            ["OverlayPopup.ButtonText"] = CreateSolidBrushInternal("#F4EFE4")
-        };
+    private static readonly Dictionary<string, Brush> TextBrushes = PreviewDemoCatalog.TextBrushColors
+        .ToDictionary(
+            entry => entry.Key,
+            entry => (Brush)CreateSolidBrushInternal(entry.Value),
+            StringComparer.OrdinalIgnoreCase);
 
     private readonly PreviewDiagnostics _diagnostics;
     private readonly IReadOnlyDictionary<string, string> _constants;
@@ -644,29 +589,65 @@ public sealed class PrefabRenderContext
         textBlock.Foreground = ResolveTextBrush(brushId, isDisabled);
         textBlock.FontSize = ResolveTextFontSize(brushId, rawFontSize, isDisabled, fallbackFontSize);
         textBlock.FontFamily = ResolveFontFamily(brushId);
-        textBlock.TextAlignment = ResolveTextAlignment(brushId);
+        textBlock.TextAlignment = ResolveTextAlignment(
+            brushId,
+            attributes.TryGetValue("Brush.TextHorizontalAlignment", out var textHorizontalAlignment)
+                ? textHorizontalAlignment
+                : null);
     }
 
-    public HorizontalAlignment ResolveTextHorizontalAlignment(string? brushName)
+    public HorizontalAlignment ResolveTextHorizontalAlignment(string? brushName, string? rawOverride = null)
     {
-        return ResolveCatalogBrush(brushName)?.TextHorizontalAlignment switch
+        return ResolveHorizontalAlignment(
+            rawOverride ?? ResolveCatalogBrush(brushName)?.TextHorizontalAlignment,
+            HorizontalAlignment.Left);
+    }
+
+    public VerticalAlignment ResolveTextVerticalAlignment(string? brushName, string? rawOverride = null)
+    {
+        return ResolveVerticalAlignment(
+            rawOverride ?? ResolveCatalogBrush(brushName)?.TextVerticalAlignment,
+            VerticalAlignment.Center);
+    }
+
+    public HorizontalAlignment ResolveWidgetHorizontalAlignment(
+        IReadOnlyDictionary<string, string> attributes,
+        HorizontalAlignment fallback = HorizontalAlignment.Left)
+    {
+        return attributes.TryGetValue("HorizontalAlignment", out var rawAlignment)
+            ? ResolveHorizontalAlignment(rawAlignment, fallback)
+            : fallback;
+    }
+
+    public VerticalAlignment ResolveWidgetVerticalAlignment(
+        IReadOnlyDictionary<string, string> attributes,
+        VerticalAlignment fallback = VerticalAlignment.Top)
+    {
+        return attributes.TryGetValue("VerticalAlignment", out var rawAlignment)
+            ? ResolveVerticalAlignment(rawAlignment, fallback)
+            : fallback;
+    }
+
+    private static HorizontalAlignment ResolveHorizontalAlignment(string? rawAlignment, HorizontalAlignment fallback)
+    {
+        return rawAlignment switch
         {
             "Center" => HorizontalAlignment.Center,
             "Right" => HorizontalAlignment.Right,
             "Left" => HorizontalAlignment.Left,
             "Stretch" => HorizontalAlignment.Stretch,
-            _ => HorizontalAlignment.Left
+            _ => fallback
         };
     }
 
-    public VerticalAlignment ResolveTextVerticalAlignment(string? brushName)
+    private static VerticalAlignment ResolveVerticalAlignment(string? rawAlignment, VerticalAlignment fallback)
     {
-        return ResolveCatalogBrush(brushName)?.TextVerticalAlignment switch
+        return rawAlignment switch
         {
             "Center" => VerticalAlignment.Center,
             "Bottom" => VerticalAlignment.Bottom,
             "Stretch" => VerticalAlignment.Stretch,
-            _ => VerticalAlignment.Center
+            _ => fallback
         };
     }
 
@@ -798,15 +779,18 @@ public sealed class PrefabRenderContext
             }
 
             var elementSize = Measure(rendered.Element, parentSize);
-            var position = ComputePosition(child.Attributes, parentSize, elementSize);
+            var position = ComputePosition(child.Attributes, parentSize, elementSize, rendered.AlignmentBounds);
             host.Children.Add(rendered.Element);
             Canvas.SetLeft(rendered.Element, origin.X + position.X);
             Canvas.SetTop(rendered.Element, origin.Y + position.Y);
         }
     }
 
-    public Size MeasureCanvasChildren(Canvas canvas)
+    public Rect MeasureCanvasChildrenBounds(Canvas canvas)
     {
+        var hasChildren = false;
+        var minLeft = 0d;
+        var minTop = 0d;
         double maxRight = 0;
         double maxBottom = 0;
 
@@ -831,17 +815,76 @@ public sealed class PrefabRenderContext
                 ? child.Height
                 : child.DesiredSize.Height;
 
+            if (!hasChildren)
+            {
+                minLeft = left;
+                minTop = top;
+                hasChildren = true;
+            }
+            else
+            {
+                minLeft = Math.Min(minLeft, left);
+                minTop = Math.Min(minTop, top);
+            }
+
             maxRight = Math.Max(maxRight, left + width);
             maxBottom = Math.Max(maxBottom, top + height);
         }
 
-        return new Size(maxRight, maxBottom);
+        if (!hasChildren)
+        {
+            return Rect.Empty;
+        }
+
+        return new Rect(
+            minLeft,
+            minTop,
+            Math.Max(0, maxRight - minLeft),
+            Math.Max(0, maxBottom - minTop));
     }
 
-    public void ApplyCanvasSize(Canvas canvas, Size contentSize)
+    public Size MeasureCanvasChildren(Canvas canvas)
     {
-        canvas.Width = contentSize.Width;
-        canvas.Height = contentSize.Height;
+        var bounds = MeasureCanvasChildrenBounds(canvas);
+        return bounds.IsEmpty ? new Size(0, 0) : bounds.Size;
+    }
+
+    public void ApplyCanvasLayout(Canvas canvas, Rect contentBounds)
+    {
+        if (contentBounds.IsEmpty)
+        {
+            canvas.Margin = new Thickness(0);
+            canvas.Width = 0;
+            canvas.Height = 0;
+            return;
+        }
+
+        var offsetX = contentBounds.X;
+        var offsetY = contentBounds.Y;
+        if (!DoubleUtil.AreClose(offsetX, 0) || !DoubleUtil.AreClose(offsetY, 0))
+        {
+            foreach (var child in canvas.Children.OfType<FrameworkElement>())
+            {
+                var left = Canvas.GetLeft(child);
+                if (double.IsNaN(left))
+                {
+                    left = 0;
+                }
+
+                var top = Canvas.GetTop(child);
+                if (double.IsNaN(top))
+                {
+                    top = 0;
+                }
+
+                Canvas.SetLeft(child, left - offsetX);
+                Canvas.SetTop(child, top - offsetY);
+            }
+        }
+
+        canvas.Margin = new Thickness(offsetX, offsetY, 0, 0);
+        canvas.Width = contentBounds.Width;
+        canvas.Height = contentBounds.Height;
     }
 
     public bool ApplyCoverChildrenSize(FrameworkElement element, IReadOnlyDictionary<string, string> attributes, Size contentSize)
@@ -881,7 +924,11 @@ public sealed class PrefabRenderContext
                string.Equals(policy, "CoverChildren", StringComparison.OrdinalIgnoreCase);
     }
 
-    public Point ComputePosition(IReadOnlyDictionary<string, string> attributes, Size parentSize, Size elementSize)
+    public Point ComputePosition(
+        IReadOnlyDictionary<string, string> attributes,
+        Size parentSize,
+        Size elementSize,
+        Rect? alignmentBounds = null)
     {
         var horizontalAlignment = attributes.TryGetValue("HorizontalAlignment", out var horizontalValue) ? horizontalValue : "Left";
         var verticalAlignment = attributes.TryGetValue("VerticalAlignment", out var verticalValue) ? verticalValue : "Top";
@@ -891,22 +938,25 @@ public sealed class PrefabRenderContext
         var marginTop = ResolveDouble(attributes.TryGetValue("MarginTop", out var marginTopValue) ? marginTopValue : null, 0);
         var marginRight = ResolveDouble(attributes.TryGetValue("MarginRight", out var marginRightValue) ? marginRightValue : null, 0);
         var marginBottom = ResolveDouble(attributes.TryGetValue("MarginBottom", out var marginBottomValue) ? marginBottomValue : null, 0);
+        var anchorBounds = alignmentBounds is { IsEmpty: false } bounds
+            ? bounds
+            : new Rect(new Point(0, 0), elementSize);
 
-        var left = horizontalAlignment switch
+        var anchorLeft = horizontalAlignment switch
         {
-            "Center" => (parentSize.Width - elementSize.Width) / 2 + offsetX + (marginLeft - marginRight) / 2,
-            "Right" => parentSize.Width - elementSize.Width - marginRight - offsetX,
+            "Center" => (parentSize.Width - anchorBounds.Width) / 2 + offsetX + (marginLeft - marginRight) / 2,
+            "Right" => parentSize.Width - anchorBounds.Width - marginRight - offsetX,
             _ => marginLeft + offsetX
         };
 
-        var top = verticalAlignment switch
+        var anchorTop = verticalAlignment switch
         {
-            "Center" => (parentSize.Height - elementSize.Height) / 2 + offsetY + (marginTop - marginBottom) / 2,
-            "Bottom" => parentSize.Height - elementSize.Height - marginBottom - offsetY,
+            "Center" => (parentSize.Height - anchorBounds.Height) / 2 + offsetY + (marginTop - marginBottom) / 2,
+            "Bottom" => parentSize.Height - anchorBounds.Height - marginBottom - offsetY,
             _ => marginTop + offsetY
         };
 
-        return new Point(left, top);
+        return new Point(anchorLeft - anchorBounds.X, anchorTop - anchorBounds.Y);
     }
 
     private static class DoubleUtil
@@ -1469,14 +1519,18 @@ public sealed class PrefabRenderContext
             formattedText.MaxTextWidth = availableWidth;
         }
 
-        var glyphGeometry = formattedText.BuildGeometry(new Point(0, 0));
+        // FormattedText.BuildGeometry uses the provided point as the baseline origin.
+        // Using the real baseline keeps the glyph bounds in the same coordinate space
+        // as the rendered line box instead of shifting centered titles downward.
+        var glyphGeometry = formattedText.BuildGeometry(new Point(0, formattedText.Baseline));
         var bounds = glyphGeometry.Bounds;
         if (bounds.IsEmpty || formattedText.Height <= 0)
         {
             return 0;
         }
 
-        var offset = ((formattedText.Height - bounds.Height) / 2d) - bounds.Top;
+        var lineHeight = textBlock.LineHeight > 0 ? textBlock.LineHeight : formattedText.Height;
+        var offset = ((lineHeight - bounds.Height) / 2d) - bounds.Top;
         return Math.Clamp(offset, -textBlock.FontSize * 0.35, textBlock.FontSize * 0.35);
     }
 
@@ -1629,10 +1683,10 @@ public sealed class PrefabRenderContext
             : new FontFamily("Segoe UI");
     }
 
-    private TextAlignment ResolveTextAlignment(string? brushName)
+    private TextAlignment ResolveTextAlignment(string? brushName, string? rawOverride = null)
     {
-        var brush = ResolveCatalogBrush(brushName);
-        return brush?.TextHorizontalAlignment switch
+        var rawAlignment = rawOverride ?? ResolveCatalogBrush(brushName)?.TextHorizontalAlignment;
+        return rawAlignment switch
         {
             "Center" => TextAlignment.Center,
             "Right" => TextAlignment.Right,

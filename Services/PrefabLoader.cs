@@ -3,6 +3,7 @@ using Bannerlord.XmlPreview.Models.Nodes;
 using System.IO;
 using System.Xml;
 using System.Xml.Linq;
+using Bannerlord.XmlPreview.DemoData;
 using Bannerlord.XmlPreview.Interfaces;
 
 namespace Bannerlord.XmlPreview.Services;
@@ -12,13 +13,6 @@ public sealed class PrefabLoader : IPrefabLoader
     private const int MaxLoadAttempts = 6;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(120);
     private readonly IBannerlordAssetCatalog _assetCatalog;
-
-    private static readonly Dictionary<(string BrushName, string ValueType), string> BrushMetricFallbacks =
-        new()
-        {
-            [("Encyclopedia.Frame", "Width")] = "1500",
-            [("Encyclopedia.Frame", "Height")] = "1000"
-        };
 
     public PrefabLoader(IBannerlordAssetCatalog assetCatalog)
     {
@@ -120,9 +114,7 @@ public sealed class PrefabLoader : IPrefabLoader
                 continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(brushName) &&
-                !string.IsNullOrWhiteSpace(valueType) &&
-                BrushMetricFallbacks.TryGetValue((brushName, valueType), out var fallback))
+            if (TryGetBrushMetricFallback(brushName, valueType, out var fallback))
             {
                 constants[name] = fallback;
                 diagnostics.Add(
@@ -134,6 +126,20 @@ public sealed class PrefabLoader : IPrefabLoader
         }
 
         return constants;
+    }
+
+    private static bool TryGetBrushMetricFallback(string? brushName, string? valueType, out string fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(brushName) &&
+            !string.IsNullOrWhiteSpace(valueType) &&
+            PreviewDemoCatalog.BrushMetricFallbacks.TryGetValue(brushName, out var brushFallbacks) &&
+            brushFallbacks.TryGetValue(valueType, out fallback!))
+        {
+            return true;
+        }
+
+        fallback = string.Empty;
+        return false;
     }
 
     private static PrefabNode ParseNode(XElement element, HashSet<string> bindingKeys)

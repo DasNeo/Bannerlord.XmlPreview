@@ -1,3 +1,4 @@
+using Bannerlord.XmlPreview.DemoData;
 using Bannerlord.XmlPreview.Rendering;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,7 +31,7 @@ public abstract class ContainerPrefabNode : PrefabNode
         var borderColor = hasMissingReference
             ? new SolidColorBrush(Colors.Red)
             : _frameBrush
-                ? context.CreateSolidBrush("#B7985A")
+                ? context.CreateSolidBrush(PreviewDemoCatalog.FrameBorderColor)
                 : Brushes.Transparent;
         
         var border = new Border
@@ -72,8 +73,9 @@ public abstract class ContainerPrefabNode : PrefabNode
             : childLayoutRect;
         context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
 
-        var contentSize = context.MeasureCanvasChildren(childCanvas);
-        context.ApplyCanvasSize(childCanvas, contentSize);
+        var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
+        context.ApplyCanvasLayout(childCanvas, contentBounds);
+        var contentSize = contentBounds.IsEmpty ? new Size(0, 0) : contentBounds.Size;
 
         if (context.ApplyCoverChildrenSize(border, Attributes, contentSize))
         {
@@ -86,8 +88,9 @@ public abstract class ContainerPrefabNode : PrefabNode
                 ? context.ResolveSpriteSelectionRect(spriteId, containerSize)
                 : childLayoutRect;
             context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
-            contentSize = context.MeasureCanvasChildren(childCanvas);
-            context.ApplyCanvasSize(childCanvas, contentSize);
+            contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
+            context.ApplyCanvasLayout(childCanvas, contentBounds);
+            contentSize = contentBounds.IsEmpty ? new Size(0, 0) : contentBounds.Size;
             context.ApplyCoverChildrenSize(border, Attributes, contentSize);
         }
 
@@ -100,6 +103,6 @@ public abstract class ContainerPrefabNode : PrefabNode
             context.AddBrushOverlay(layout, brushId, isDisabled, overlayWidth, overlayHeight, 0);
         }
 
-        return new RenderedPrefabNode(border, childCanvas);
+        return new RenderedPrefabNode(border, childCanvas, selectionRect);
     }
 }

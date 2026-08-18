@@ -1,3 +1,4 @@
+using Bannerlord.XmlPreview.DemoData;
 using Bannerlord.XmlPreview.Rendering;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,18 +7,6 @@ namespace Bannerlord.XmlPreview.Models.Nodes;
 
 public sealed class NavigatableListPanelNode : PrefabNode
 {
-    private static readonly (string ActionText, bool IsDisabled, bool IsPositiveBehaviored)[] EscapeMenuPreviewItems =
-    [
-        ("Return to the Game", false, true),
-        ("Campaign Options", false, false),
-        ("Options", false, false),
-        ("Save", false, false),
-        ("Save As", false, false),
-        ("Load", false, false),
-        ("Save And Exit", false, false),
-        ("Exit to Main Menu", false, false)
-    ];
-
     public NavigatableListPanelNode(IReadOnlyDictionary<string, string> attributes, IReadOnlyList<PrefabNode> children)
         : base("NavigatableListPanel", attributes, children)
     {
@@ -64,7 +53,7 @@ public sealed class NavigatableListPanelNode : PrefabNode
         PrefabRenderContext context,
         Size parentSize)
     {
-        foreach (var item in EscapeMenuPreviewItems)
+        foreach (var item in PreviewDemoCatalog.EscapeMenuItems)
         {
             PrefabRenderContext.SetMockBindingValue("ActionText", item.ActionText);
             PrefabRenderContext.SetMockBindingValue("IsDisabled", item.IsDisabled ? "true" : "false");

@@ -30,14 +30,9 @@ public abstract class TextWidgetNodeBase : PrefabNode
             Text = context.ResolveBinding(GetAttribute("Text")),
             FontWeight = FontWeights.SemiBold,
             TextWrapping = TextWrapping.Wrap,
-            HorizontalAlignment = context.ResolveTextHorizontalAlignment(brushId),
-            VerticalAlignment = context.ResolveTextVerticalAlignment(brushId)
+            HorizontalAlignment = context.ResolveTextHorizontalAlignment(brushId, GetAttribute("Brush.TextHorizontalAlignment")),
+            VerticalAlignment = context.ResolveTextVerticalAlignment(brushId, GetAttribute("Brush.TextVerticalAlignment"))
         };
-
-        context.ApplyTextStyle(text, brushId, GetAttribute("Brush.FontSize"), Attributes, FallbackFontSize);
-        var visualOffset = context.ApplyVisualTextCentering(text, parentSize.Width);
-        text.Measure(parentSize);
-        var textSize = text.DesiredSize;
 
         var centerHorizontally = context.UsesCoverChildren(Attributes, "WidthSizePolicy") &&
             string.Equals(GetAttribute("HorizontalAlignment"), "Center", StringComparison.OrdinalIgnoreCase) &&
@@ -45,6 +40,21 @@ public abstract class TextWidgetNodeBase : PrefabNode
         var centerVertically = context.UsesCoverChildren(Attributes, "HeightSizePolicy") &&
             string.Equals(GetAttribute("VerticalAlignment"), "Center", StringComparison.OrdinalIgnoreCase) &&
             parentSize.Height > 0;
+
+        if (centerHorizontally)
+        {
+            text.HorizontalAlignment = HorizontalAlignment.Center;
+        }
+
+        if (centerVertically)
+        {
+            text.VerticalAlignment = VerticalAlignment.Center;
+        }
+
+        context.ApplyTextStyle(text, brushId, GetAttribute("Brush.FontSize"), Attributes, FallbackFontSize);
+        var visualOffset = context.ApplyVisualTextCentering(text, parentSize.Width);
+        text.Measure(parentSize);
+        var textSize = text.DesiredSize;
 
         context.ApplySizing(host, Attributes, parentSize);
         if (centerHorizontally)

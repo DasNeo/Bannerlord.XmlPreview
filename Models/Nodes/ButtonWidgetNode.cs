@@ -44,13 +44,29 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
             ? childFontSize
             : null;
         var textAttributes = textNode?.Attributes ?? Attributes;
+        var textHorizontalAlignment = textNode?.Attributes.TryGetValue("Brush.TextHorizontalAlignment", out var childHorizontalAlignment) == true
+            ? childHorizontalAlignment
+            : null;
+        var textVerticalAlignment = textNode?.Attributes.TryGetValue("Brush.TextVerticalAlignment", out var childVerticalAlignment) == true
+            ? childVerticalAlignment
+            : null;
+        var horizontalAlignment = textNode is not null
+            ? context.ResolveWidgetHorizontalAlignment(
+                textNode.Attributes,
+                context.ResolveTextHorizontalAlignment(textBrushId, textHorizontalAlignment))
+            : context.ResolveTextHorizontalAlignment(textBrushId, textHorizontalAlignment);
+        var verticalAlignment = textNode is not null
+            ? context.ResolveWidgetVerticalAlignment(
+                textNode.Attributes,
+                context.ResolveTextVerticalAlignment(textBrushId, textVerticalAlignment))
+            : context.ResolveTextVerticalAlignment(textBrushId, textVerticalAlignment);
 
         var textBlock = new TextBlock
         {
             Text = ResolveButtonText(context),
             FontWeight = FontWeights.SemiBold,
-            HorizontalAlignment = context.ResolveTextHorizontalAlignment(textBrushId),
-            VerticalAlignment = context.ResolveTextVerticalAlignment(textBrushId),
+            HorizontalAlignment = horizontalAlignment,
+            VerticalAlignment = verticalAlignment,
             TextWrapping = TextWrapping.NoWrap
         };
         context.ApplyTextStyle(textBlock, textBrushId, textFontSize, textAttributes, 20);
