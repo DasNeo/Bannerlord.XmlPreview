@@ -1,0 +1,101 @@
+using Bannerlord.XmlPreview.Services;
+using Bannerlord.XmlPreview.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using System.Windows;
+using Bannerlord.XmlPreview.Interfaces;
+using System.Text;
+using System.Windows.Threading;
+
+namespace Bannerlord.XmlPreview;
+
+public partial class App : Application
+{
+    private ServiceProvider? _serviceProvider;
+
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+
+        try
+        {
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnCurrentDomainUnhandledException;
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+
+            _serviceProvider = services.BuildServiceProvider();
+
+            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            MainWindow = mainWindow;
+            mainWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            ShowFatalError("Startup failure", ex);
+            Shutdown(-1);
+        }
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        DispatcherUnhandledException -= OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException -= OnCurrentDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
+        _serviceProvider?.Dispose();
+        base.OnExit(e);
+    }
+
+    private static void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton<IAppSettingsService, AppSettingsService>();
+        services.AddSingleton<IBannerlordAssetCatalog, BannerlordAssetCatalog>();
+        services.AddSingleton<IPrefabLoader, PrefabLoader>();
+        services.AddSingleton<IPrefabRenderer, PrefabRenderer>();
+        services.AddSingleton<IFileDialogService, FileDialogService>();
+        services.AddSingleton<IFileWatcherService, FileWatcherService>();
+        
+        services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<MainWindow>();
+    }
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        ShowFatalError("Unhandled UI exception", e.Exception);
+        e.Handled = true;
+        Shutdown(-1);
+    }
+
+    private void OnCurrentDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception exception)
+        {
+            ShowFatalError("Unhandled AppDomain exception", exception);
+            return;
+        }
+
+        MessageBox.Show(
+            $"Unhandled non-Exception error object:{Environment.NewLine}{e.ExceptionObject}",
+            "Fatal error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+    }
+
+    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        ShowFatalError("Unobserved task exception", e.Exception);
+        e.SetObserved();
+    }
+
+    private static void ShowFatalError(string title, Exception exception)
+    {
+        var message = new StringBuilder()
+            .AppendLine(exception.Message)
+            .AppendLine()
+            .AppendLine(exception.ToString())
+            .ToString();
+
+        Console.WriteLine(message);
+    }
+}
