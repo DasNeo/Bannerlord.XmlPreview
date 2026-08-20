@@ -32,6 +32,20 @@ public static class PreviewElementDebugProperties
             typeof(PreviewElementDebugProperties),
             new PropertyMetadata(Rect.Empty));
 
+    public static readonly DependencyProperty PreviewStateProperty =
+        DependencyProperty.RegisterAttached(
+            "PreviewState",
+            typeof(string),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(string.Empty));
+
+    public static readonly DependencyProperty PreviewBaseStateProperty =
+        DependencyProperty.RegisterAttached(
+            "PreviewBaseState",
+            typeof(string),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(string.Empty));
+
     public static string GetDebugBaseText(DependencyObject element)
     {
         return (string)element.GetValue(DebugBaseTextProperty);
@@ -70,5 +84,25 @@ public static class PreviewElementDebugProperties
     public static void SetSelectionBounds(DependencyObject element, Rect value)
     {
         element.SetValue(SelectionBoundsProperty, value);
+    }
+
+    public static string GetPreviewState(DependencyObject element)
+    {
+        return (string)element.GetValue(PreviewStateProperty);
+    }
+
+    public static void SetPreviewState(DependencyObject element, string value)
+    {
+        element.SetValue(PreviewStateProperty, value);
+    }
+
+    public static string GetPreviewBaseState(DependencyObject element)
+    {
+        return (string)element.GetValue(PreviewBaseStateProperty);
+    }
+
+    public static void SetPreviewBaseState(DependencyObject element, string value)
+    {
+        element.SetValue(PreviewBaseStateProperty, value);
     }
 }

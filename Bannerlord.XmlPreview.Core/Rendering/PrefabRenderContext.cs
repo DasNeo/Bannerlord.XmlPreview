@@ -419,36 +419,82 @@ public sealed class PrefabRenderContext
             initialAmount = ResolveDouble(widget.Attributes, "InitialAmount", double.NaN);
         }
 
+        var currentAmount = ResolveDouble(widget.Attributes, "CurrentAmountAsFloat", double.NaN);
+        if (double.IsNaN(currentAmount))
+        {
+            currentAmount = ResolveDouble(widget.Attributes, "CurrentAmount", double.NaN);
+        }
+
         if (double.IsNaN(maxAmount) || maxAmount <= 0 || double.IsNaN(initialAmount))
         {
             return;
         }
 
-        var ratio = Math.Clamp(initialAmount / maxAmount, 0d, 1d);
         var isVertical = widget.NodeName.Contains("Vertical", StringComparison.OrdinalIgnoreCase);
         var fillFromEnd = isVertical
             ? ResolveBoolean(widget.Attributes, "IsDirectionUpward")
-            : fillWidget.Element.HorizontalAlignment == HorizontalAlignment.Right;
-        fillWidget.Element.RenderTransformOrigin = isVertical
-            ? new Point(0.5, fillFromEnd ? 1 : 0)
-            : new Point(fillFromEnd ? 1 : 0, 0.5);
-        fillWidget.Element.RenderTransform = new ScaleTransform(
-            isVertical ? 1d : ratio,
-            isVertical ? ratio : 1d);
-        fillWidget.Element.Opacity = Math.Max(fillWidget.Element.Opacity, ratio <= 0 ? 0.2 : 0.35);
-
-        if (TryResolveReferencedWidget(widget.Attributes, "ContainerWidget", out var containerWidget))
+            : ResolveBoolean(widget.Attributes, "IsDirectionRightward", fillWidget.Element.HorizontalAlignment != HorizontalAlignment.Right);
+        var hostSize = ResolveFillBarHostSize(widget, fillWidget, isVertical);
+        var hostLength = isVertical ? hostSize.Height : hostSize.Width;
+        if (hostLength <= 0)
         {
-            var widgetParentSize = ResolveRegisteredParentSize(widget);
-            var widgetSize = Measure(widget.Element, widget.Attributes, widgetParentSize);
-            var containerSize = Measure(containerWidget.Element, containerWidget.Attributes, widgetSize);
-            if (isVertical && containerSize.Height > 0 && double.IsNaN(fillWidget.Element.Height))
+            return;
+        }
+
+        var fillLength = CalculateFillBarLength(hostLength, fillWidget.Element.Margin, initialAmount, maxAmount, isVertical);
+        var changeDelta = double.IsNaN(currentAmount)
+            ? 0d
+            : Math.Clamp(currentAmount - initialAmount, -maxAmount, maxAmount);
+        var changeLength = CalculateFillBarLength(hostLength, fillWidget.Element.Margin, Math.Abs(changeDelta), maxAmount, isVertical);
+
+        ConfigureFillBarElement(fillWidget, fillLength, isVertical, fillFromEnd, 0d);
+
+        if (TryResolveReferencedWidget(widget.Attributes, "ClipWidget", out var clipWidget))
+        {
+            clipWidget.Element.ClipToBounds = true;
+            ConfigureFillBarElement(clipWidget, fillLength, isVertical, fillFromEnd, 0d);
+        }
+
+        if (TryResolveReferencedWidget(widget.Attributes, "ChangeWidget", out var changeWidget))
+        {
+            var completelyFillChange = ResolveBoolean(widget.Attributes, "CompletelyFillChange");
+            var showNegativeChange = ResolveBoolean(widget.Attributes, "ShowNegativeChange");
+            var customChangeColor = ResolveBoolean(widget.Attributes, "CustomChangeColor");
+            var normalizedDelta = maxAmount > 0 ? Math.Clamp(changeDelta / maxAmount, -1d, 1d) : 0d;
+            if (normalizedDelta > 0)
             {
-                fillWidget.Element.Height = containerSize.Height;
+                var positiveLength = completelyFillChange
+                    ? CalculateFillBarLength(hostLength, changeWidget.Element.Margin, Math.Clamp(currentAmount, 0d, maxAmount), maxAmount, isVertical)
+                    : Math.Max(0d, Math.Min(changeLength, hostLength - fillLength));
+                ConfigureFillBarElement(changeWidget, positiveLength, isVertical, fillFromEnd, fillLength);
+                changeWidget.Element.Visibility = Visibility.Visible;
+                if (!customChangeColor)
+                {
+                    ApplyPreviewState(changeWidget, "Positive", includeChildren: false);
+                }
             }
-            else if (!isVertical && containerSize.Width > 0 && double.IsNaN(fillWidget.Element.Width))
+            else if (normalizedDelta < 0 && showNegativeChange)
             {
-                fillWidget.Element.Width = containerSize.Width;
+                ConfigureFillBarElement(changeWidget, changeLength, isVertical, fillFromEnd, fillLength - changeLength);
+                changeWidget.Element.Visibility = Visibility.Visible;
+                if (!customChangeColor)
+                {
+                    ApplyPreviewState(changeWidget, "Negative", includeChildren: false);
+                }
+            }
+            else
+            {
+                ConfigureFillBarElement(changeWidget, 0d, isVertical, fillFromEnd, fillLength);
+                changeWidget.Element.Visibility = Visibility.Collapsed;
+                ApplyPreviewState(changeWidget, "Default", includeChildren: false);
+            }
+
+            if (TryResolveReferencedWidget(widget.Attributes, "DividerWidget", out var dividerWidget))
+            {
+                dividerWidget.Element.Visibility = Math.Abs(normalizedDelta) > 0.0001
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+                PositionDividerWidget(dividerWidget, changeWidget, fillLength, changeLength, changeDelta, isVertical);
             }
         }
     }
@@ -519,6 +565,578 @@ public sealed class PrefabRenderContext
             BlurRadius = 16,
             ShadowDepth = 0,
             Opacity = 0.8
+        };
+    }
+
+    private void ApplyStateSyncWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!widget.NodeName.Contains("StateSyncWidget", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!TryResolveReferencedWidget(widget.Attributes, "SourceWidget", out var sourceWidget))
+        {
+            return;
+        }
+
+        var sourceState = ResolveWidgetPreviewState(sourceWidget);
+        if (TryResolveReferencedWidget(widget.Attributes, "TargetWidget", out var targetWidget))
+        {
+            ApplyPreviewState(targetWidget, sourceState, includeChildren: ResolveBoolean(targetWidget.Attributes, "UpdateChildrenStates"));
+            return;
+        }
+
+        ApplyPreviewState(widget, sourceState, includeChildren: ResolveBoolean(widget.Attributes, "UpdateChildrenStates"));
+    }
+
+    private void ApplyDelayedStateChangerBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!widget.NodeName.Contains("DelayedStateChanger", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var targetWidget = TryResolveReferencedWidget(widget.Attributes, "TargetWidget", out var resolvedTargetWidget)
+            ? resolvedTargetWidget
+            : widget;
+        var trigger = ResolveBoolean(widget.Attributes, "Trigger");
+        var autoStart = ResolveBoolean(widget.Attributes, "AutoStart");
+        var stateResetable = ResolveBoolean(widget.Attributes, "StateResetable");
+        var includeChildren = ResolveBoolean(widget.Attributes, "IncludeChildren");
+        var requestedState = ResolveBinding(widget.Attributes.TryGetValue("State", out var stateValue) ? stateValue : string.Empty);
+
+        CapturePreviewBaseState(targetWidget);
+        if ((!trigger && !autoStart) || string.IsNullOrWhiteSpace(requestedState))
+        {
+            if (stateResetable)
+            {
+                ApplyPreviewState(targetWidget, GetPreviewBaseState(targetWidget), includeChildren);
+            }
+
+            return;
+        }
+
+        ApplyPreviewState(targetWidget, requestedState, includeChildren);
+    }
+
+    private void ApplyTwoWaySliderWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!widget.NodeName.Contains("TwoWaySliderWidget", StringComparison.OrdinalIgnoreCase) &&
+            !HasAttribute(widget.Attributes, "ChangeFillWidget"))
+        {
+            return;
+        }
+
+        if (!TryResolveReferencedWidget(widget.Attributes, "ChangeFillWidget", out var changeFillWidget))
+        {
+            return;
+        }
+
+        var sliderSize = Measure(widget.Element, widget.Attributes, ResolveRegisteredParentSize(widget));
+        if (sliderSize.Width <= 0)
+        {
+            return;
+        }
+
+        var minValue = ResolveDouble(widget.Attributes, "MinValueFloat", double.NaN);
+        if (double.IsNaN(minValue))
+        {
+            minValue = ResolveDouble(widget.Attributes, "MinValueInt", 0);
+        }
+
+        var maxValue = ResolveDouble(widget.Attributes, "MaxValueFloat", double.NaN);
+        if (double.IsNaN(maxValue))
+        {
+            maxValue = ResolveDouble(widget.Attributes, "MaxValueInt", double.NaN);
+        }
+
+        if (double.IsNaN(maxValue) || Math.Abs(maxValue - minValue) < 0.0001)
+        {
+            return;
+        }
+
+        var baseValue = ResolveDouble(widget.Attributes, "BaseValueInt", minValue);
+        var currentValue = HasAttribute(widget.Attributes, "ValueFloat")
+            ? ResolveDouble(widget.Attributes, "ValueFloat", baseValue)
+            : ResolveDouble(widget.Attributes, "ValueInt", baseValue);
+        var normalizedBase = Math.Clamp((baseValue - minValue) / (maxValue - minValue), 0d, 1d);
+        var baseOffset = normalizedBase * sliderSize.Width;
+
+        changeFillWidget.Element.HorizontalAlignment = HorizontalAlignment.Left;
+        if (currentValue < baseValue)
+        {
+            var width = Math.Clamp((baseValue - currentValue) / (maxValue - minValue), 0d, 1d) * sliderSize.Width;
+            changeFillWidget.Element.Width = width;
+            Canvas.SetLeft(changeFillWidget.Element, Math.Max(0d, baseOffset - width));
+            ApplyPreviewState(changeFillWidget, "Positive", includeChildren: false);
+        }
+        else if (currentValue > baseValue)
+        {
+            var width = Math.Clamp((currentValue - baseValue) / (maxValue - minValue), 0d, 1d) * sliderSize.Width;
+            changeFillWidget.Element.Width = width;
+            Canvas.SetLeft(changeFillWidget.Element, baseOffset);
+            ApplyPreviewState(changeFillWidget, "Negative", includeChildren: false);
+        }
+        else
+        {
+            changeFillWidget.Element.Width = 0;
+            Canvas.SetLeft(changeFillWidget.Element, baseOffset);
+            ApplyPreviewState(changeFillWidget, "Default", includeChildren: false);
+        }
+    }
+
+    private void ApplyClipContentsBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!ResolveBoolean(widget.Attributes, "ClipContents"))
+        {
+            return;
+        }
+
+        widget.Element.ClipToBounds = true;
+        if (widget.ChildHost is not null)
+        {
+            widget.ChildHost.ClipToBounds = true;
+        }
+    }
+
+    private void ApplyScrollablePanelReferenceBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsScrollablePanelLike(widget))
+        {
+            return;
+        }
+
+        if (!TryResolveReferencedWidget(widget.Attributes, "ClipRect", out var clipRectWidget) ||
+            !TryResolveReferencedWidget(widget.Attributes, "InnerPanel", out var innerPanelWidget))
+        {
+            return;
+        }
+
+        clipRectWidget.Element.ClipToBounds = true;
+        if (clipRectWidget.ChildHost is not null)
+        {
+            clipRectWidget.ChildHost.ClipToBounds = true;
+        }
+
+        var viewportSize = Measure(clipRectWidget.Element, clipRectWidget.Attributes, clipRectWidget.ParentSize);
+        var contentSize = Measure(innerPanelWidget.Element, innerPanelWidget.Attributes, viewportSize);
+        var contentMargin = innerPanelWidget.Element.Margin;
+        var contentWidth = contentSize.Width + contentMargin.Left + contentMargin.Right;
+        var contentHeight = contentSize.Height + contentMargin.Top + contentMargin.Bottom;
+        var horizontalOverflow = Math.Max(0d, contentWidth - viewportSize.Width);
+        var verticalOverflow = Math.Max(0d, contentHeight - viewportSize.Height);
+        var reverseInitialAlignment = ResolveBoolean(widget.Attributes, "ReverseInitialScrollBarAlignment");
+
+        if (TryResolveReferencedWidget(widget.Attributes, "HorizontalScrollbar", out var horizontalScrollbar))
+        {
+            var scrollbarValue = ResolveScrollbarValue(horizontalScrollbar.Attributes, horizontalOverflow, reverseInitialAlignment);
+            ApplyScrollbarViewportBehavior(
+                horizontalScrollbar,
+                horizontalOverflow > 0,
+                horizontalOverflow,
+                viewportSize.Width,
+                contentWidth,
+                widget.Attributes,
+                horizontalAxis: true);
+            ApplyScrollOffsetToInnerPanel(innerPanelWidget, clipRectWidget, scrollbarValue, horizontalAxis: true);
+        }
+
+        if (TryResolveReferencedWidget(widget.Attributes, "VerticalScrollbar", out var verticalScrollbar))
+        {
+            var scrollbarValue = ResolveScrollbarValue(verticalScrollbar.Attributes, verticalOverflow, reverseInitialAlignment);
+            ApplyScrollbarViewportBehavior(
+                verticalScrollbar,
+                verticalOverflow > 0,
+                verticalOverflow,
+                viewportSize.Height,
+                contentHeight,
+                widget.Attributes,
+                horizontalAxis: false);
+            ApplyScrollOffsetToInnerPanel(innerPanelWidget, clipRectWidget, scrollbarValue, horizontalAxis: false);
+        }
+    }
+
+    private void ApplyScrollbarWidgetReferenceBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsScrollbarWidgetLike(widget))
+        {
+            return;
+        }
+
+        if (!TryResolveReferencedWidget(widget.Attributes, "Handle", out var handleWidget))
+        {
+            return;
+        }
+
+        var scrollbarSize = Measure(widget.Element, widget.Attributes, widget.ParentSize);
+        var minValue = ResolveDouble(widget.Attributes, "MinValue", 0);
+        var maxValue = ResolveDouble(widget.Attributes, "MaxValue", minValue);
+        var currentValue = ResolveScrollbarValue(widget.Attributes, maxValue, reverseInitialAlignment: false);
+        UpdateScrollbarHandleVisual(widget, handleWidget, scrollbarSize, minValue, maxValue, currentValue);
+    }
+
+    private bool IsScrollablePanelLike(RenderedWidgetRegistration widget)
+    {
+        return widget.NodeName.Contains("ScrollablePanel", StringComparison.OrdinalIgnoreCase) ||
+               HasAttribute(widget.Attributes, "ClipRect") && HasAttribute(widget.Attributes, "InnerPanel");
+    }
+
+    private bool IsScrollbarWidgetLike(RenderedWidgetRegistration widget)
+    {
+        return widget.NodeName.Contains("ScrollbarWidget", StringComparison.OrdinalIgnoreCase) ||
+               HasAttribute(widget.Attributes, "Handle") && HasAttribute(widget.Attributes, "AlignmentAxis");
+    }
+
+    private void ApplyScrollbarViewportBehavior(
+        RenderedWidgetRegistration scrollbarWidget,
+        bool canScroll,
+        double overflowAmount,
+        double viewportLength,
+        double contentLength,
+        IReadOnlyDictionary<string, string> ownerAttributes,
+        bool horizontalAxis)
+    {
+        var updateVisibility = ResolveBoolean(ownerAttributes, "UpdateScrollbarVisibility", true);
+        var autoHideBars = ResolveBoolean(ownerAttributes, "AutoHideScrollBars");
+        var autoHideHandle = ResolveBoolean(ownerAttributes, "AutoHideScrollBarHandle");
+        var autoAdjustHandle = !HasAttribute(ownerAttributes, "AutoAdjustScrollbarHandleSize") ||
+                               ResolveBoolean(ownerAttributes, "AutoAdjustScrollbarHandleSize", true);
+        var minValue = ResolveDouble(scrollbarWidget.Attributes, "MinValue", 0);
+        var maxValue = canScroll ? Math.Max(1d, overflowAmount) : minValue;
+        var currentValue = ResolveScrollbarValue(scrollbarWidget.Attributes, maxValue, reverseInitialAlignment: false);
+
+        if (TryResolveReferencedWidget(scrollbarWidget.Attributes, "Handle", out var handleWidget))
+        {
+            if (autoAdjustHandle)
+            {
+                var trackSize = Measure(scrollbarWidget.Element, scrollbarWidget.Attributes, scrollbarWidget.ParentSize);
+                var handleLength = contentLength > 0
+                    ? Math.Max(0d, (horizontalAxis ? trackSize.Width : trackSize.Height) * (viewportLength / contentLength))
+                    : 0d;
+                if (horizontalAxis)
+                {
+                    if (handleLength > 0)
+                    {
+                        handleWidget.Element.Width = handleLength;
+                    }
+                }
+                else if (handleLength > 0)
+                {
+                    handleWidget.Element.Height = handleLength;
+                }
+            }
+
+            if (updateVisibility)
+            {
+                handleWidget.Element.Visibility = !canScroll && (autoHideBars || autoHideHandle)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+            }
+
+            var scrollbarSize = Measure(scrollbarWidget.Element, scrollbarWidget.Attributes, scrollbarWidget.ParentSize);
+            UpdateScrollbarHandleVisual(scrollbarWidget, handleWidget, scrollbarSize, minValue, maxValue, currentValue);
+        }
+
+        if (updateVisibility)
+        {
+            scrollbarWidget.Element.Visibility = !canScroll && autoHideBars
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+    }
+
+    private void ApplyScrollOffsetToInnerPanel(
+        RenderedWidgetRegistration innerPanelWidget,
+        RenderedWidgetRegistration clipRectWidget,
+        double scrollValue,
+        bool horizontalAxis)
+    {
+        if (clipRectWidget.ChildHost is not Canvas)
+        {
+            return;
+        }
+
+        if (horizontalAxis)
+        {
+            var currentLeft = Canvas.GetLeft(innerPanelWidget.Element);
+            if (double.IsNaN(currentLeft))
+            {
+                currentLeft = 0;
+            }
+
+            var alignment = innerPanelWidget.Attributes.TryGetValue("HorizontalAlignment", out var horizontalAlignment)
+                ? ResolveDebugValue(innerPanelWidget.Attributes, "HorizontalAlignment", horizontalAlignment)
+                : "Left";
+            var delta = string.Equals(alignment, "Right", StringComparison.OrdinalIgnoreCase)
+                ? scrollValue
+                : -scrollValue;
+            Canvas.SetLeft(innerPanelWidget.Element, currentLeft + delta);
+            return;
+        }
+
+        var currentTop = Canvas.GetTop(innerPanelWidget.Element);
+        if (double.IsNaN(currentTop))
+        {
+            currentTop = 0;
+        }
+
+        var vertical = innerPanelWidget.Attributes.TryGetValue("VerticalAlignment", out var verticalAlignment)
+            ? ResolveDebugValue(innerPanelWidget.Attributes, "VerticalAlignment", verticalAlignment)
+            : "Top";
+        var verticalDelta = string.Equals(vertical, "Bottom", StringComparison.OrdinalIgnoreCase)
+            ? scrollValue
+            : -scrollValue;
+        Canvas.SetTop(innerPanelWidget.Element, currentTop + verticalDelta);
+    }
+
+    private double ResolveScrollbarValue(
+        IReadOnlyDictionary<string, string> attributes,
+        double maxValue,
+        bool reverseInitialAlignment)
+    {
+        var minValue = ResolveDouble(attributes, "MinValue", 0);
+        var explicitValue = HasAttribute(attributes, "ValueFloat")
+            ? ResolveDouble(attributes, "ValueFloat", minValue)
+            : HasAttribute(attributes, "ValueInt")
+                ? ResolveDouble(attributes, "ValueInt", minValue)
+                : minValue;
+        var effectiveMax = Math.Max(minValue, maxValue);
+        if (reverseInitialAlignment && Math.Abs(explicitValue - minValue) < 0.01)
+        {
+            explicitValue = effectiveMax;
+        }
+
+        return Math.Clamp(explicitValue, minValue, effectiveMax);
+    }
+
+    private void UpdateScrollbarHandleVisual(
+        RenderedWidgetRegistration scrollbarWidget,
+        RenderedWidgetRegistration handleWidget,
+        Size scrollbarSize,
+        double minValue,
+        double maxValue,
+        double currentValue)
+    {
+        if (scrollbarWidget.ChildHost is not Canvas)
+        {
+            return;
+        }
+
+        var horizontalAxis = string.Equals(
+            ResolveAttributeLiteral(scrollbarWidget.Attributes, "AlignmentAxis"),
+            "Horizontal",
+            StringComparison.OrdinalIgnoreCase);
+        var handleSize = Measure(handleWidget.Element, handleWidget.Attributes, scrollbarSize);
+        var range = Math.Max(0d, maxValue - minValue);
+        var normalized = range <= 0.0001 ? 0d : Math.Clamp((currentValue - minValue) / range, 0d, 1d);
+
+        if (horizontalAxis)
+        {
+            var maxTravel = Math.Max(0d, scrollbarSize.Width - handleSize.Width);
+            Canvas.SetLeft(handleWidget.Element, maxTravel * normalized);
+            Canvas.SetTop(handleWidget.Element, 0);
+            return;
+        }
+
+        var verticalTravel = Math.Max(0d, scrollbarSize.Height - handleSize.Height);
+        Canvas.SetLeft(handleWidget.Element, 0);
+        Canvas.SetTop(handleWidget.Element, verticalTravel * normalized);
+    }
+
+    private Size ResolveFillBarHostSize(RenderedWidgetRegistration widget, RenderedWidgetRegistration fillWidget, bool isVertical)
+    {
+        if (TryResolveReferencedWidget(widget.Attributes, "ContainerWidget", out var containerWidget))
+        {
+            return Measure(containerWidget.Element, containerWidget.Attributes, ResolveRegisteredParentSize(containerWidget));
+        }
+
+        if (TryResolveReferencedWidget(widget.Attributes, "ClipWidget", out var clipWidget))
+        {
+            return Measure(clipWidget.Element, clipWidget.Attributes, ResolveRegisteredParentSize(clipWidget));
+        }
+
+        return Measure(fillWidget.Element, fillWidget.Attributes, ResolveRegisteredParentSize(fillWidget));
+    }
+
+    private static double CalculateFillBarLength(
+        double hostLength,
+        Thickness margin,
+        double amount,
+        double maxAmount,
+        bool isVertical)
+    {
+        if (maxAmount <= 0 || hostLength <= 0)
+        {
+            return 0d;
+        }
+
+        var availableLength = isVertical
+            ? Math.Max(0d, hostLength - margin.Top - margin.Bottom)
+            : Math.Max(0d, hostLength - margin.Left - margin.Right);
+        return Math.Clamp(amount / maxAmount, 0d, 1d) * availableLength;
+    }
+
+    private static void ConfigureFillBarElement(
+        RenderedWidgetRegistration widget,
+        double length,
+        bool isVertical,
+        bool fillFromEnd,
+        double offset)
+    {
+        widget.Element.RenderTransform = Transform.Identity;
+        if (isVertical)
+        {
+            widget.Element.VerticalAlignment = fillFromEnd ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+            widget.Element.Height = Math.Max(0d, length);
+            Canvas.SetTop(widget.Element, Math.Max(0d, offset));
+        }
+        else
+        {
+            widget.Element.HorizontalAlignment = fillFromEnd ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+            widget.Element.Width = Math.Max(0d, length);
+            Canvas.SetLeft(widget.Element, Math.Max(0d, offset));
+        }
+
+        widget.Element.Opacity = Math.Max(widget.Element.Opacity, length <= 0 ? 0.2 : 0.45);
+    }
+
+    private static void PositionDividerWidget(
+        RenderedWidgetRegistration dividerWidget,
+        RenderedWidgetRegistration changeWidget,
+        double fillLength,
+        double changeLength,
+        double changeDelta,
+        bool isVertical)
+    {
+        var dividerSize = isVertical ? dividerWidget.Element.DesiredSize.Height : dividerWidget.Element.DesiredSize.Width;
+        if (isVertical)
+        {
+            var boundary = changeDelta >= 0 ? fillLength + changeLength : fillLength;
+            Canvas.SetTop(dividerWidget.Element, Math.Max(0d, boundary - dividerSize));
+        }
+        else
+        {
+            var boundary = changeDelta >= 0 ? fillLength + changeLength : fillLength;
+            Canvas.SetLeft(dividerWidget.Element, Math.Max(0d, boundary - dividerSize));
+        }
+    }
+
+    private void ApplyPreviewState(
+        RenderedWidgetRegistration widget,
+        string stateName,
+        bool includeChildren)
+    {
+        foreach (var target in EnumeratePreviewStateTargets(widget, includeChildren))
+        {
+            CapturePreviewBaseState(target);
+            SetPreviewState(target, stateName);
+        }
+    }
+
+    private IEnumerable<RenderedWidgetRegistration> EnumeratePreviewStateTargets(
+        RenderedWidgetRegistration widget,
+        bool includeChildren)
+    {
+        yield return widget;
+        if (!includeChildren)
+        {
+            yield break;
+        }
+
+        var prefix = widget.WidgetPath + "\\";
+        foreach (var candidate in _renderedWidgetsByPath.Values)
+        {
+            if (candidate.WidgetPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private void CapturePreviewBaseState(RenderedWidgetRegistration widget)
+    {
+        if (!string.IsNullOrWhiteSpace(PreviewElementDebugProperties.GetPreviewBaseState(widget.Element)))
+        {
+            return;
+        }
+
+        PreviewElementDebugProperties.SetPreviewBaseState(widget.Element, ResolveWidgetPreviewState(widget));
+    }
+
+    private string GetPreviewBaseState(RenderedWidgetRegistration widget)
+    {
+        var stored = PreviewElementDebugProperties.GetPreviewBaseState(widget.Element);
+        return string.IsNullOrWhiteSpace(stored) ? "Default" : stored;
+    }
+
+    private void SetPreviewState(RenderedWidgetRegistration widget, string stateName)
+    {
+        var normalizedState = string.IsNullOrWhiteSpace(stateName) ? "Default" : stateName.Trim();
+        PreviewElementDebugProperties.SetPreviewState(widget.Element, normalizedState);
+        ApplyPreviewStatePresentation(widget.Element, normalizedState);
+    }
+
+    private string ResolveWidgetPreviewState(RenderedWidgetRegistration widget)
+    {
+        var stored = PreviewElementDebugProperties.GetPreviewState(widget.Element);
+        if (!string.IsNullOrWhiteSpace(stored))
+        {
+            return stored;
+        }
+
+        if (widget.Attributes.TryGetValue("CurrentState", out var currentState))
+        {
+            var resolved = ResolveBinding(currentState);
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+        }
+
+        if (ResolveBoolean(widget.Attributes, "IsDisabled") || HasAttribute(widget.Attributes, "IsEnabled") && !ResolveBoolean(widget.Attributes, "IsEnabled", true))
+        {
+            return "Disabled";
+        }
+
+        if (ResolveBoolean(widget.Attributes, "IsSelected"))
+        {
+            return "Selected";
+        }
+
+        return "Default";
+    }
+
+    private static void ApplyPreviewStatePresentation(FrameworkElement element, string stateName)
+    {
+        var normalizedState = stateName.Trim();
+        if (normalizedState.Equals("Default", StringComparison.OrdinalIgnoreCase))
+        {
+            if (element.Effect is DropShadowEffect)
+            {
+                element.Effect = null;
+            }
+
+            return;
+        }
+
+        var highlightColor = normalizedState.Contains("negative", StringComparison.OrdinalIgnoreCase) ||
+                             normalizedState.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
+                             normalizedState.Contains("disabled", StringComparison.OrdinalIgnoreCase)
+            ? Colors.OrangeRed
+            : normalizedState.Contains("positive", StringComparison.OrdinalIgnoreCase)
+                ? Colors.LimeGreen
+                : normalizedState.Contains("selected", StringComparison.OrdinalIgnoreCase) ||
+                  normalizedState.Contains("open", StringComparison.OrdinalIgnoreCase) ||
+                  normalizedState.Contains("hover", StringComparison.OrdinalIgnoreCase)
+                    ? Colors.Gold
+                    : Colors.DeepSkyBlue;
+        element.Effect = new DropShadowEffect
+        {
+            Color = highlightColor,
+            BlurRadius = 12,
+            ShadowDepth = 0,
+            Opacity = 0.75
         };
     }
 
@@ -600,9 +1218,15 @@ public sealed class PrefabRenderContext
     {
         foreach (var widget in _renderedWidgetsByPath.Values.ToArray())
         {
+            ApplyClipContentsBehavior(widget);
+            ApplyScrollablePanelReferenceBehavior(widget);
+            ApplyScrollbarWidgetReferenceBehavior(widget);
             ApplyFillWidgetReferenceBehavior(widget);
             ApplySortVisualReferenceBehavior(widget);
             ApplyTargetWidgetReferenceBehavior(widget);
+            ApplyStateSyncWidgetBehavior(widget);
+            ApplyDelayedStateChangerBehavior(widget);
+            ApplyTwoWaySliderWidgetBehavior(widget);
         }
     }
 
@@ -1310,6 +1934,25 @@ public sealed class PrefabRenderContext
                 PrepareGauntletStackLayoutChild(rendered.Element, child.Attributes, gauntletStackPanel.LayoutMethod);
                 AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, child.Attributes, parentSize));
                 gauntletStackPanel.Children.Add(rendered.Element);
+                continue;
+            }
+
+            if (host is GauntletGridLayoutPanel gauntletGridPanel)
+            {
+                if (rendered.AutoWidthInFlowLayout)
+                {
+                    rendered.Element.Width = double.NaN;
+                }
+
+                if (rendered.AutoHeightInFlowLayout)
+                {
+                    rendered.Element.Height = double.NaN;
+                }
+
+                ApplyFlowLayout(rendered.Element, child.Attributes);
+                PrepareGauntletGridLayoutChild(rendered.Element, child.Attributes, gauntletGridPanel);
+                AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, child.Attributes, parentSize));
+                gauntletGridPanel.Children.Add(rendered.Element);
                 continue;
             }
 
@@ -2958,6 +3601,25 @@ public sealed class PrefabRenderContext
             element.Width = double.NaN;
         }
         else if (isHorizontal && string.Equals(heightPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
+        {
+            element.Height = double.NaN;
+        }
+    }
+
+    public void PrepareGauntletGridLayoutChild(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        GauntletGridLayoutPanel _)
+    {
+        var widthPolicy = ResolveSizePolicy(attributes, "WidthSizePolicy");
+        var heightPolicy = ResolveSizePolicy(attributes, "HeightSizePolicy");
+
+        if (string.Equals(widthPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
+        {
+            element.Width = double.NaN;
+        }
+
+        if (string.Equals(heightPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
         {
             element.Height = double.NaN;
         }
