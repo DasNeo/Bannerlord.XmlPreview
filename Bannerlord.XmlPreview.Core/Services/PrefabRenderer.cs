@@ -38,6 +38,8 @@ public sealed class PrefabRenderer : IPrefabRenderer
     {
         var context = new PrefabRenderContext(
             document.Constants,
+            document.PropertyMap,
+            document.ReferenceMap,
             diagnostics,
             _assetCatalog,
             _brushMetricsProvider,
@@ -48,8 +50,13 @@ public sealed class PrefabRenderer : IPrefabRenderer
         context.EnsureBindings(document.BindingKeys);
 
         var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
-        var renderedRoot = document.RootNode.Render(context, rootSize);
-        var measuredRootSize = context.Measure(renderedRoot.Element, rootSize);
+        var renderedRoot = context.RegisterRenderedNode(
+            document.RootNode.Name,
+            document.RootNode.Attributes,
+            rootSize,
+            document.RootNode.Render(context, rootSize));
+        context.ApplyDeferredReferenceBehaviors();
+        var measuredRootSize = context.Measure(renderedRoot.Element, document.RootNode.Attributes, rootSize);
         context.AttachElementLayoutDebugMetadata(renderedRoot.Element, document.RootNode.Attributes, rootSize, measuredRootSize);
         diagnostics.SetRenderSummary(rootSize.Width, rootSize.Height, measuredRootSize.Width, measuredRootSize.Height);
         return renderedRoot.Element;

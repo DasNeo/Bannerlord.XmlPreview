@@ -64,35 +64,39 @@ public abstract class ContainerPrefabNode : PrefabNode
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, [spriteId], [brushId], isDisabled);
 
-        var containerSize = context.Measure(border, parentSize);
-        var childLayoutRect = !string.IsNullOrWhiteSpace(spriteId)
-            ? context.ResolveSpriteContentLayoutRect(spriteId, containerSize)
-            : new Rect(new Point(0, 0), containerSize);
-        var selectionRect = !string.IsNullOrWhiteSpace(spriteId)
-            ? context.ResolveSpriteSelectionRect(spriteId, containerSize)
-            : childLayoutRect;
-        context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
+        var measureInput = context.ResolveChildMeasureSize(border, Attributes, parentSize);
+        var containerSize = context.Measure(border, Attributes, parentSize);
+        Rect childLayoutRect = Rect.Empty;
+        Rect selectionRect = Rect.Empty;
 
-        var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
-        context.ApplyCanvasLayout(childCanvas, contentBounds);
-        var contentSize = contentBounds.IsEmpty ? new Size(0, 0) : contentBounds.Size;
-
-        if (context.ApplyCoverChildrenSize(border, Attributes, contentSize))
+        Size RenderContent(Size? overrideContainerSize = null)
         {
             childCanvas.Children.Clear();
-            containerSize = context.Measure(border, parentSize);
+
+            var baseContainerSize = overrideContainerSize ?? context.ResolveElementRenderSize(border, measureInput);
             childLayoutRect = !string.IsNullOrWhiteSpace(spriteId)
-                ? context.ResolveSpriteContentLayoutRect(spriteId, containerSize)
-                : new Rect(new Point(0, 0), containerSize);
+                ? context.ResolveSpriteContentLayoutRect(spriteId, baseContainerSize)
+                : new Rect(new Point(0, 0), baseContainerSize);
             selectionRect = !string.IsNullOrWhiteSpace(spriteId)
-                ? context.ResolveSpriteSelectionRect(spriteId, containerSize)
+                ? context.ResolveSpriteSelectionRect(spriteId, baseContainerSize)
                 : childLayoutRect;
             context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
-            contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
+
+            var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
             context.ApplyCanvasLayout(childCanvas, contentBounds);
-            contentSize = contentBounds.IsEmpty ? new Size(0, 0) : contentBounds.Size;
-            context.ApplyCoverChildrenSize(border, Attributes, contentSize);
+            return context.TryMeasureReferencedElement(Attributes, "InnerPanel", childLayoutRect.Size, out var innerPanelSize)
+                ? innerPanelSize
+                : contentBounds.IsEmpty ? new Size(0, 0) : contentBounds.Size;
         }
+
+        var contentSize = RenderContent(new Size(
+            containerSize.Width > 0 ? containerSize.Width : measureInput.Width,
+            containerSize.Height > 0 ? containerSize.Height : measureInput.Height));
+        containerSize = context.FinalizeCoverChildrenSize(
+            border,
+            Attributes,
+            contentSize,
+            () => RenderContent());
 
         PreviewElementDebugProperties.SetSelectionBounds(border, selectionRect);
 

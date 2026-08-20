@@ -36,14 +36,15 @@ public abstract class BrushChromeNodeBase : PrefabNode
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, null, chrome.DebugBrushIds, chrome.IsDisabled);
 
-        var initialChromeSize = context.Measure(border, parentSize);
-        PopulateContent(layout, context, initialChromeSize, chrome);
+        var measureInput = context.ResolveChildMeasureSize(border, Attributes, parentSize);
+        var initialChromeSize = context.Measure(border, Attributes, parentSize);
+        var contentHostSize = new Size(
+            initialChromeSize.Width > 0 ? initialChromeSize.Width : measureInput.Width,
+            initialChromeSize.Height > 0 ? initialChromeSize.Height : measureInput.Height);
+        PopulateContent(layout, context, contentHostSize, chrome);
 
-        var contentSize = context.Measure(layout, parentSize);
-        if (context.ApplyCoverChildrenSize(border, Attributes, contentSize))
-        {
-            initialChromeSize = context.Measure(border, parentSize);
-        }
+        var contentSize = context.Measure(layout, measureInput);
+        initialChromeSize = context.FinalizeCoverChildrenSize(border, Attributes, contentSize);
 
         context.AddBrushOverlay(layout, chrome.PrimaryBrushId, chrome.IsDisabled, initialChromeSize.Width, initialChromeSize.Height, 0);
 

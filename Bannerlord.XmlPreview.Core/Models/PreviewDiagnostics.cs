@@ -13,6 +13,8 @@ public sealed class PreviewDiagnostics
     private readonly Dictionary<string, int> _nodeTypeCounts = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _resolvedWidgetReferenceSamples = [];
     private readonly HashSet<string> _resolvedWidgetReferenceSet = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _resolvedWidgetPropertySamples = [];
+    private readonly HashSet<string> _resolvedWidgetPropertySet = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _measureFallbackSamples = [];
     private readonly HashSet<string> _measureFallbackSet = new(StringComparer.OrdinalIgnoreCase);
     private string? _sourcePath;
@@ -23,6 +25,8 @@ public sealed class PreviewDiagnostics
     private int _maxDepth;
     private int _resolvedWidgetReferenceCount;
     private int _unresolvedWidgetReferenceCount;
+    private int _supportedWidgetPropertyCount;
+    private int _unsupportedWidgetPropertyCount;
     private int _measureFallbackCount;
     private string? _requestedRootSize;
     private string? _measuredRootSize;
@@ -76,6 +80,18 @@ public sealed class PreviewDiagnostics
             sections.Add($"Resolved: {_resolvedWidgetReferenceCount}");
             sections.Add($"Unresolved: {_unresolvedWidgetReferenceCount}");
             foreach (var sample in _resolvedWidgetReferenceSamples.Take(8))
+            {
+                sections.Add(sample);
+            }
+        }
+
+        if (_supportedWidgetPropertyCount > 0 || _unsupportedWidgetPropertyCount > 0)
+        {
+            AddSectionSeparator(sections);
+            sections.Add("WidgetProperties");
+            sections.Add($"Supported: {_supportedWidgetPropertyCount}");
+            sections.Add($"Unsupported: {_unsupportedWidgetPropertyCount}");
+            foreach (var sample in _resolvedWidgetPropertySamples.Take(8))
             {
                 sections.Add(sample);
             }
@@ -159,6 +175,30 @@ public sealed class PreviewDiagnostics
     public void AddUnresolvedWidgetReference()
     {
         _unresolvedWidgetReferenceCount++;
+    }
+
+    public void AddResolvedWidgetProperty(
+        string widgetPath,
+        string attributeName,
+        string rawValue,
+        string declaredTypeName,
+        ResolvedWidgetPropertyValueKind valueKind,
+        bool isSupported)
+    {
+        if (isSupported)
+        {
+            _supportedWidgetPropertyCount++;
+        }
+        else
+        {
+            _unsupportedWidgetPropertyCount++;
+        }
+
+        var sample = $"{widgetPath} :: {attributeName} [{declaredTypeName} / {valueKind}] = {rawValue}";
+        if (_resolvedWidgetPropertySet.Add(sample))
+        {
+            _resolvedWidgetPropertySamples.Add(sample);
+        }
     }
 
     public void AddMeasureFallback(string elementType, double parentWidth, double parentHeight)

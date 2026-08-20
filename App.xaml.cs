@@ -63,6 +63,7 @@ public partial class App : Application
         services.AddSingleton<IBrushMetricsProvider, BannerlordBrushMetricsProvider>();
         services.AddSingleton<IBrushOverlayFeatureHandler, BannerlordBrushOverlayFeatureHandler>();
         services.AddSingleton<IPrefabReferenceResolver, BannerlordPrefabReferenceResolver>();
+        services.AddSingleton<IWidgetPropertyResolver, BannerlordWidgetPropertyResolver>();
         services.AddSingleton<IWidgetReferenceResolver, WidgetReferenceResolver>();
         services.AddSingleton<IWidgetNodeFactory, BannerlordWidgetNodeFactory>();
         services.AddSingleton<IPreviewDataSourceProvider, BannerlordPreviewDataSourceProvider>();

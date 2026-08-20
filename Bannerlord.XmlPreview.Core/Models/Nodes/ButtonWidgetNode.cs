@@ -19,9 +19,6 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
         var textBrushId = textNode?.Attributes.TryGetValue("Brush", out var childBrush) == true
             ? context.ResolveBinding(childBrush)
             : null;
-        var textFontSize = textNode?.Attributes.TryGetValue("Brush.FontSize", out var childFontSize) == true
-            ? childFontSize
-            : null;
         var isDisabled = context.IsDisabled(Attributes);
 
         return new BrushChromeRenderInfo(
@@ -40,26 +37,17 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
         var textBrushId = textNode?.Attributes.TryGetValue("Brush", out var childBrush) == true
             ? context.ResolveBinding(childBrush)
             : null;
-        var textFontSize = textNode?.Attributes.TryGetValue("Brush.FontSize", out var childFontSize) == true
-            ? childFontSize
-            : null;
         var textAttributes = textNode?.Attributes ?? Attributes;
-        var textHorizontalAlignment = textNode?.Attributes.TryGetValue("Brush.TextHorizontalAlignment", out var childHorizontalAlignment) == true
-            ? childHorizontalAlignment
-            : null;
-        var textVerticalAlignment = textNode?.Attributes.TryGetValue("Brush.TextVerticalAlignment", out var childVerticalAlignment) == true
-            ? childVerticalAlignment
-            : null;
         var horizontalAlignment = textNode is not null
             ? context.ResolveWidgetHorizontalAlignment(
                 textNode.Attributes,
-                context.ResolveTextHorizontalAlignment(textBrushId, textHorizontalAlignment))
-            : context.ResolveTextHorizontalAlignment(textBrushId, textHorizontalAlignment);
+                context.ResolveTextHorizontalAlignment(textBrushId, textAttributes))
+            : context.ResolveTextHorizontalAlignment(textBrushId, textAttributes);
         var verticalAlignment = textNode is not null
             ? context.ResolveWidgetVerticalAlignment(
                 textNode.Attributes,
-                context.ResolveTextVerticalAlignment(textBrushId, textVerticalAlignment))
-            : context.ResolveTextVerticalAlignment(textBrushId, textVerticalAlignment);
+                context.ResolveTextVerticalAlignment(textBrushId, textAttributes))
+            : context.ResolveTextVerticalAlignment(textBrushId, textAttributes);
 
         var textBlock = new TextBlock
         {
@@ -69,7 +57,7 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
             VerticalAlignment = verticalAlignment,
             TextWrapping = TextWrapping.NoWrap
         };
-        context.ApplyTextStyle(textBlock, textBrushId, textFontSize, textAttributes, 20);
+        context.ApplyTextStyle(textBlock, textBrushId, textAttributes, 20);
         context.ApplyVisualTextCentering(textBlock, chromeSize.Width);
 
         var contentHost = new Grid

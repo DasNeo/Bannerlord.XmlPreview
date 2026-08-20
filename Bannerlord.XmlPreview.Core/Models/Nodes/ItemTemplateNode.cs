@@ -30,7 +30,7 @@ public sealed class ItemTemplateNode : PrefabNode
         context.ApplyToolTip(canvas, Name, Attributes);
         context.AttachElementDebugMetadata(canvas, Name, Attributes);
 
-        var templateSize = context.Measure(canvas, parentSize);
+        var templateSize = context.ResolveChildMeasureSize(canvas, Attributes, parentSize);
         context.AttachChildren(canvas, Children, templateSize);
         return new RenderedPrefabNode(canvas, canvas);
     }

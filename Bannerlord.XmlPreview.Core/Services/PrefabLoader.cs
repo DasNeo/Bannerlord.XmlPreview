@@ -24,6 +24,7 @@ public sealed class PrefabLoader : IPrefabLoader
     private readonly IAssetCatalog _assetCatalog;
     private readonly IBrushMetricsProvider _brushMetricsProvider;
     private readonly IPrefabReferenceResolver _prefabReferenceResolver;
+    private readonly IWidgetPropertyResolver _widgetPropertyResolver;
     private readonly IWidgetReferenceResolver _widgetReferenceResolver;
     private readonly IWidgetNodeFactory _widgetNodeFactory;
 
@@ -31,12 +32,14 @@ public sealed class PrefabLoader : IPrefabLoader
         IAssetCatalog assetCatalog,
         IBrushMetricsProvider brushMetricsProvider,
         IPrefabReferenceResolver prefabReferenceResolver,
+        IWidgetPropertyResolver widgetPropertyResolver,
         IWidgetReferenceResolver widgetReferenceResolver,
         IWidgetNodeFactory widgetNodeFactory)
     {
         _assetCatalog = assetCatalog;
         _brushMetricsProvider = brushMetricsProvider;
         _prefabReferenceResolver = prefabReferenceResolver;
+        _widgetPropertyResolver = widgetPropertyResolver;
         _widgetReferenceResolver = widgetReferenceResolver;
         _widgetNodeFactory = widgetNodeFactory;
     }
@@ -56,9 +59,10 @@ public sealed class PrefabLoader : IPrefabLoader
             constants,
             diagnostics,
             state.ExpansionStack,
-            [],
             out _);
-        _widgetReferenceResolver.Resolve(expandedRoot, diagnostics);
+        PrefabVisualTreeHelper.AssignCanonicalPaths(expandedRoot);
+        var referenceMap = _widgetReferenceResolver.Resolve(expandedRoot, diagnostics);
+        var propertyMap = _widgetPropertyResolver.Resolve(expandedRoot, referenceMap, diagnostics);
 
         var bindingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rootNode = ParseNode(expandedRoot, bindingKeys);
@@ -72,7 +76,7 @@ public sealed class PrefabLoader : IPrefabLoader
             nodeTypeCounts.Values.Sum(),
             maxDepth,
             nodeTypeCounts);
-        return new PrefabDocument(fullPath, rootNode, constants, bindingKeys);
+        return new PrefabDocument(fullPath, rootNode, constants, bindingKeys, propertyMap, referenceMap);
     }
 
     private static XDocument LoadDocumentWithRetry(string path, PreviewDiagnostics diagnostics)
@@ -435,7 +439,6 @@ public sealed class PrefabLoader : IPrefabLoader
         IReadOnlyDictionary<string, string> constants,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
-        IReadOnlyList<XElement> logicalChildren,
         out bool logicalChildrenConsumed)
     {
         var expandedReference = TryExpandPrefabReference(
@@ -444,7 +447,6 @@ public sealed class PrefabLoader : IPrefabLoader
             constants,
             diagnostics,
             expansionStack,
-            logicalChildren,
             out logicalChildrenConsumed);
         if (expandedReference is not null)
         {
@@ -468,12 +470,7 @@ public sealed class PrefabLoader : IPrefabLoader
 
             if (string.Equals(childElement.Name.LocalName, "LogicalChildrenLocation", StringComparison.OrdinalIgnoreCase))
             {
-                foreach (var logicalChild in logicalChildren)
-                {
-                    clone.Add(new XElement(logicalChild));
-                }
-
-                logicalChildrenConsumed |= logicalChildren.Count > 0;
+                clone.Add(new XElement(childElement));
                 continue;
             }
 
@@ -483,7 +480,6 @@ public sealed class PrefabLoader : IPrefabLoader
                 constants,
                 diagnostics,
                 expansionStack,
-                logicalChildren,
                 out var childConsumed);
             logicalChildrenConsumed |= childConsumed;
             clone.Add(expandedChild);
@@ -498,7 +494,6 @@ public sealed class PrefabLoader : IPrefabLoader
         IReadOnlyDictionary<string, string> constants,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
-        IReadOnlyList<XElement> logicalChildren,
         out bool logicalChildrenConsumed)
     {
         logicalChildrenConsumed = false;
@@ -563,17 +558,98 @@ public sealed class PrefabLoader : IPrefabLoader
             includeConstants,
             diagnostics,
             nextStack,
-            callerChildren,
             out logicalChildrenConsumed);
 
-        if (callerChildren.Count > 0 && !logicalChildrenConsumed)
+        if (callerChildren.Count > 0)
         {
-            diagnostics.Add(
-                $"Prefab reference '{element.Name.LocalName}' passed children, but '{resolution.ResolvedPath}' has no LogicalChildrenLocation placeholder.");
+            logicalChildrenConsumed = TryInsertLogicalChildrenAtLogicalTarget(expandedRoot, callerChildren);
+            if (!logicalChildrenConsumed)
+            {
+                InsertLogicalChildrenIntoDefaultLocation(expandedRoot, callerChildren);
+                logicalChildrenConsumed = true;
+            }
         }
 
         MergeCallerAttributes(expandedRoot, element, parameters, constants);
         return expandedRoot;
+    }
+
+    private static bool TryInsertLogicalChildrenAtLogicalTarget(
+        XElement expandedRoot,
+        IReadOnlyList<XElement> logicalChildren)
+    {
+        var logicalTarget = FindLogicalChildrenTarget(expandedRoot);
+        if (logicalTarget is null)
+        {
+            return false;
+        }
+
+        logicalTarget.Elements()
+            .Where(element => string.Equals(element.Name.LocalName, "LogicalChildrenLocation", StringComparison.OrdinalIgnoreCase))
+            .Remove();
+
+        InsertLogicalChildrenIntoDefaultLocation(logicalTarget, logicalChildren);
+        return true;
+    }
+
+    private static XElement? FindLogicalChildrenTarget(XElement root)
+    {
+        foreach (var child in GetVisualChildElements(root))
+        {
+            if (HasDirectLogicalChildrenLocation(child))
+            {
+                return child;
+            }
+        }
+
+        foreach (var child in GetVisualChildElements(root))
+        {
+            var nestedTarget = FindLogicalChildrenTarget(child);
+            if (nestedTarget is not null)
+            {
+                return nestedTarget;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool HasDirectLogicalChildrenLocation(XElement element)
+    {
+        return element.Elements()
+            .Any(child => string.Equals(child.Name.LocalName, "LogicalChildrenLocation", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void InsertLogicalChildrenIntoDefaultLocation(
+        XElement targetElement,
+        IReadOnlyList<XElement> logicalChildren)
+    {
+        if (logicalChildren.Count == 0)
+        {
+            return;
+        }
+
+        if (string.Equals(targetElement.Name.LocalName, "Window", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var logicalChild in logicalChildren)
+            {
+                targetElement.Add(new XElement(logicalChild));
+            }
+
+            return;
+        }
+
+        var childrenElement = targetElement.Element("Children");
+        if (childrenElement is null)
+        {
+            childrenElement = new XElement("Children");
+            targetElement.Add(childrenElement);
+        }
+
+        foreach (var logicalChild in logicalChildren)
+        {
+            childrenElement.Add(new XElement(logicalChild));
+        }
     }
 
     private List<XElement> ExpandCallerChildren(
@@ -590,7 +666,7 @@ public sealed class PrefabLoader : IPrefabLoader
             foreach (var child in childrenElement.Elements())
             {
                 callerChildren.Add(
-                    ExpandElement(child, parameters, constants, diagnostics, expansionStack, [], out _));
+                    ExpandElement(child, parameters, constants, diagnostics, expansionStack, out _));
             }
         }
 
@@ -664,6 +740,16 @@ public sealed class PrefabLoader : IPrefabLoader
     }
 
     private static IEnumerable<XElement> GetParsedChildElements(XElement element)
+    {
+        if (string.Equals(element.Name.LocalName, "Window", StringComparison.OrdinalIgnoreCase))
+        {
+            return GetVisualChildElements(element);
+        }
+
+        return element.Element("Children")?.Elements() ?? [];
+    }
+
+    private static IEnumerable<XElement> GetVisualChildElements(XElement element)
     {
         if (string.Equals(element.Name.LocalName, "Window", StringComparison.OrdinalIgnoreCase))
         {

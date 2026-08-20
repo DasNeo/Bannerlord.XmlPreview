@@ -9,10 +9,14 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
 {
     private const string DebugAttributePrefix = "Debug.WidgetRef.";
 
-    public void Resolve(XElement rootElement, PreviewDiagnostics diagnostics)
+    public PrefabWidgetReferenceMap Resolve(XElement rootElement, PreviewDiagnostics diagnostics)
     {
+        var referencesByWidgetPath = new Dictionary<string, IReadOnlyDictionary<string, ResolvedWidgetReference>>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var element in rootElement.DescendantsAndSelf())
         {
+            var widgetPath = PrefabVisualTreeHelper.GetCanonicalElementPath(element);
+            var referencesForElement = new Dictionary<string, ResolvedWidgetReference>(StringComparer.OrdinalIgnoreCase);
             var attributes = element.Attributes().ToArray();
             foreach (var attribute in attributes)
             {
@@ -24,23 +28,46 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
 
                 if (TryResolveTarget(element, segments, out var targetElement, out var failureReason))
                 {
-                    var resolvedTargetPath = BuildCanonicalElementPath(targetElement);
+                    var resolvedTargetPath = PrefabVisualTreeHelper.GetCanonicalElementPath(targetElement);
                     element.SetAttributeValue(
                         $"{DebugAttributePrefix}{attribute.Name.LocalName}",
                         resolvedTargetPath);
                     diagnostics.AddResolvedWidgetReference(
-                        BuildCanonicalElementPath(element),
+                        widgetPath,
                         attribute.Name.LocalName,
                         attribute.Value,
                         resolvedTargetPath);
+                    referencesForElement[attribute.Name.LocalName] = new ResolvedWidgetReference(
+                        widgetPath,
+                        attribute.Name.LocalName,
+                        attribute.Value,
+                        resolvedTargetPath,
+                        IsResolved: true,
+                        FailureReason: null);
                     continue;
                 }
 
                 diagnostics.AddUnresolvedWidgetReference();
+                referencesForElement[attribute.Name.LocalName] = new ResolvedWidgetReference(
+                    widgetPath,
+                    attribute.Name.LocalName,
+                    attribute.Value,
+                    TargetWidgetPath: null,
+                    IsResolved: false,
+                    FailureReason: failureReason);
                 diagnostics.Add(
-                    $"Widget reference '{attribute.Name.LocalName}=\"{attribute.Value}\"' on '{DescribeElement(element)}' could not be resolved: {failureReason}");
+                    $"Widget reference '{attribute.Name.LocalName}=\"{attribute.Value}\"' on '{PrefabVisualTreeHelper.DescribeElement(element)}' could not be resolved: {failureReason}");
+            }
+
+            if (referencesForElement.Count > 0)
+            {
+                referencesByWidgetPath[widgetPath] = referencesForElement;
             }
         }
+
+        return referencesByWidgetPath.Count == 0
+            ? PrefabWidgetReferenceMap.Empty
+            : new PrefabWidgetReferenceMap(referencesByWidgetPath);
     }
 
     private static bool IsReferenceCandidate(string attributeName)
@@ -131,13 +158,13 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
                 .ToArray();
             if (childMatches.Length == 0)
             {
-                failureReason = $"segment '{segment}' was not found under '{DescribeElement(targetElement)}'";
+                failureReason = $"segment '{segment}' was not found under '{PrefabVisualTreeHelper.DescribeElement(targetElement)}'";
                 return false;
             }
 
             if (childMatches.Length > 1)
             {
-                failureReason = $"segment '{segment}' is ambiguous under '{DescribeElement(targetElement)}'";
+                failureReason = $"segment '{segment}' is ambiguous under '{PrefabVisualTreeHelper.DescribeElement(targetElement)}'";
                 return false;
             }
 
@@ -149,57 +176,11 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
 
     private static XElement? GetVisualParent(XElement element)
     {
-        var parent = element.Parent as XElement;
-        if (parent is null)
-        {
-            return null;
-        }
-
-        return string.Equals(parent.Name.LocalName, "Children", StringComparison.OrdinalIgnoreCase)
-            ? parent.Parent
-            : parent;
+        return PrefabVisualTreeHelper.GetVisualParent(element);
     }
 
     private static IEnumerable<XElement> GetVisualChildren(XElement element)
     {
-        var childrenElement = element.Element("Children");
-        if (childrenElement is not null)
-        {
-            foreach (var child in childrenElement.Elements())
-            {
-                yield return child;
-            }
-        }
-
-        foreach (var child in element.Elements())
-        {
-            if (child.Name.LocalName is "Children" or "Constants")
-            {
-                continue;
-            }
-
-            yield return child;
-        }
-    }
-
-    private static string BuildCanonicalElementPath(XElement element)
-    {
-        var segments = new Stack<string>();
-        XElement? current = element;
-        while (current is not null)
-        {
-            segments.Push(DescribeElement(current));
-            current = GetVisualParent(current);
-        }
-
-        return string.Join(" > ", segments);
-    }
-
-    private static string DescribeElement(XElement element)
-    {
-        var id = element.Attribute("Id")?.Value;
-        return string.IsNullOrWhiteSpace(id)
-            ? element.Name.LocalName
-            : $"{element.Name.LocalName}[Id={id}]";
+        return PrefabVisualTreeHelper.GetVisualChildren(element);
     }
 }

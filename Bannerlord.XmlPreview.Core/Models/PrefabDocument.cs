@@ -6,4 +6,6 @@ public sealed record PrefabDocument(
     string SourcePath,
     PrefabNode RootNode,
     IReadOnlyDictionary<string, string> Constants,
-    IReadOnlySet<string> BindingKeys);
+    IReadOnlySet<string> BindingKeys,
+    PrefabWidgetPropertyMap PropertyMap,
+    PrefabWidgetReferenceMap ReferenceMap);

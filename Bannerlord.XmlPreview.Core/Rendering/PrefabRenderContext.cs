@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Text;
@@ -16,11 +17,11 @@ namespace Bannerlord.XmlPreview.Rendering;
 
 public sealed class PrefabRenderContext
 {
-    private static readonly Size DefaultMeasureFallbackSize = new(1600, 1100);
     private const byte SignificantAlphaThreshold = 64;
     private const byte ContentCoreAlphaThreshold = 192;
     private readonly Dictionary<string, Int32Rect?> _spriteOpaqueBoundsCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Top, int Bottom)?> _spriteCoreVerticalBoundsCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, RenderedWidgetRegistration> _renderedWidgetsByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<IReadOnlyDictionary<string, string>> _bindingScopes = [];
 
     private static readonly Dictionary<string, string> MockBindings =
@@ -40,6 +41,8 @@ public sealed class PrefabRenderContext
 
     private readonly PreviewDiagnostics _diagnostics;
     private readonly IReadOnlyDictionary<string, string> _constants;
+    private readonly PrefabWidgetPropertyMap _propertyMap;
+    private readonly PrefabWidgetReferenceMap _referenceMap;
     private readonly IAssetCatalog _assetCatalog;
     private readonly IBrushMetricsProvider _brushMetricsProvider;
     private readonly IBrushOverlayFeatureHandler _brushOverlayFeatureHandler;
@@ -51,6 +54,8 @@ public sealed class PrefabRenderContext
 
     public PrefabRenderContext(
         IReadOnlyDictionary<string, string> constants,
+        PrefabWidgetPropertyMap propertyMap,
+        PrefabWidgetReferenceMap referenceMap,
         PreviewDiagnostics diagnostics,
         IAssetCatalog assetCatalog,
         IBrushMetricsProvider brushMetricsProvider,
@@ -60,6 +65,8 @@ public sealed class PrefabRenderContext
         IWidgetDebugMetadataProvider widgetDebugMetadataProvider)
     {
         _constants = constants;
+        _propertyMap = propertyMap;
+        _referenceMap = referenceMap;
         _diagnostics = diagnostics;
         _assetCatalog = assetCatalog;
         _brushMetricsProvider = brushMetricsProvider;
@@ -191,6 +198,22 @@ public sealed class PrefabRenderContext
         };
     }
 
+    public bool ResolveBoolean(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        bool fallback = false)
+    {
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
+            property.TryGetBoolean(out var typedValue))
+        {
+            return typedValue;
+        }
+
+        return ResolveBoolean(
+            attributes.TryGetValue(attributeName, out var rawValue) ? rawValue : null,
+            fallback);
+    }
+
     public double ResolveDouble(string? rawValue, double fallback)
     {
         if (string.IsNullOrWhiteSpace(rawValue))
@@ -216,16 +239,287 @@ public sealed class PrefabRenderContext
             : fallback;
     }
 
+    public double ResolveDouble(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        double fallback)
+    {
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
+            property.TryGetDouble(out var typedValue))
+        {
+            return typedValue;
+        }
+
+        return ResolveDouble(
+            attributes.TryGetValue(attributeName, out var rawValue) ? rawValue : null,
+            fallback);
+    }
+
     public bool IsDisabled(IReadOnlyDictionary<string, string> attributes)
     {
-        if (attributes.TryGetValue("IsEnabled", out var enabledValue) &&
-            !ResolveBoolean(enabledValue, true))
+        if (HasAttribute(attributes, "IsEnabled") &&
+            !ResolveBoolean(attributes, "IsEnabled", true))
         {
             return true;
         }
 
-        return attributes.TryGetValue("IsDisabled", out var disabledValue) &&
-               ResolveBoolean(disabledValue);
+        return HasAttribute(attributes, "IsDisabled") &&
+               ResolveBoolean(attributes, "IsDisabled");
+    }
+
+    public bool TryGetResolvedWidgetProperty(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        out ResolvedWidgetProperty property)
+    {
+        var widgetPath = TryGetWidgetPath(attributes);
+        if (widgetPath is not null &&
+            _propertyMap.TryGetProperty(widgetPath, attributeName, out property))
+        {
+            return true;
+        }
+
+        property = null!;
+        return false;
+    }
+
+    public bool TryGetResolvedWidgetReference(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        out ResolvedWidgetReference reference)
+    {
+        var widgetPath = TryGetWidgetPath(attributes);
+        if (widgetPath is not null &&
+            _referenceMap.TryGetReference(widgetPath, attributeName, out reference))
+        {
+            return true;
+        }
+
+        reference = null!;
+        return false;
+    }
+
+    public bool TryResolveReferencedElement(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        out FrameworkElement element)
+    {
+        if (TryResolveReferencedWidget(attributes, attributeName, out var widget))
+        {
+            element = widget.Element;
+            return true;
+        }
+
+        element = null!;
+        return false;
+    }
+
+    public bool TryMeasureReferencedElement(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        Size availableSize,
+        out Size measuredSize)
+    {
+        if (TryResolveReferencedWidget(attributes, attributeName, out var widget))
+        {
+            measuredSize = Measure(widget.Element, widget.Attributes, availableSize);
+            return true;
+        }
+
+        measuredSize = default;
+        return false;
+    }
+
+    public string? ResolveAttributeLiteral(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName)
+    {
+        if (!attributes.TryGetValue(attributeName, out var rawValue))
+        {
+            return null;
+        }
+
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
+            property.ParsedValue is not null)
+        {
+            return property.ParsedValue.ToString();
+        }
+
+        return rawValue;
+    }
+
+    private static bool HasAttribute(IReadOnlyDictionary<string, string> attributes, string attributeName)
+    {
+        return attributes.ContainsKey(attributeName);
+    }
+
+    private bool TryResolveReferencedWidget(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        out RenderedWidgetRegistration widget)
+    {
+        widget = null!;
+
+        if (!TryGetResolvedWidgetReference(attributes, attributeName, out var reference) ||
+            !reference.IsResolved ||
+            string.IsNullOrWhiteSpace(reference.TargetWidgetPath))
+        {
+            return false;
+        }
+
+        return _renderedWidgetsByPath.TryGetValue(reference.TargetWidgetPath, out widget!);
+    }
+
+    private static string? TryGetWidgetPath(IReadOnlyDictionary<string, string> attributes)
+    {
+        return attributes.TryGetValue(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, out var widgetPath) &&
+               !string.IsNullOrWhiteSpace(widgetPath)
+            ? widgetPath
+            : null;
+    }
+
+    private Size ResolveRegisteredParentSize(RenderedWidgetRegistration widget)
+    {
+        if (TryGetParentWidgetPath(widget.WidgetPath) is { } parentPath &&
+            _renderedWidgetsByPath.TryGetValue(parentPath, out var parentWidget))
+        {
+            return Measure(parentWidget.Element, parentWidget.Attributes, parentWidget.ParentSize);
+        }
+
+        return widget.ParentSize;
+    }
+
+    private static string? TryGetParentWidgetPath(string widgetPath)
+    {
+        var separatorIndex = widgetPath.LastIndexOf('\\');
+        return separatorIndex > 0 ? widgetPath[..separatorIndex] : null;
+    }
+
+    private static bool IsInternalDebugAttribute(string attributeName)
+    {
+        return attributeName.StartsWith("Debug.", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyFillWidgetReferenceBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!TryResolveReferencedWidget(widget.Attributes, "FillWidget", out var fillWidget))
+        {
+            return;
+        }
+
+        var maxAmount = ResolveDouble(widget.Attributes, "MaxAmountAsFloat", double.NaN);
+        if (double.IsNaN(maxAmount) || maxAmount <= 0)
+        {
+            maxAmount = ResolveDouble(widget.Attributes, "MaxAmount", double.NaN);
+        }
+
+        var initialAmount = ResolveDouble(widget.Attributes, "InitialAmountAsFloat", double.NaN);
+        if (double.IsNaN(initialAmount))
+        {
+            initialAmount = ResolveDouble(widget.Attributes, "InitialAmount", double.NaN);
+        }
+
+        if (double.IsNaN(maxAmount) || maxAmount <= 0 || double.IsNaN(initialAmount))
+        {
+            return;
+        }
+
+        var ratio = Math.Clamp(initialAmount / maxAmount, 0d, 1d);
+        var isVertical = widget.NodeName.Contains("Vertical", StringComparison.OrdinalIgnoreCase);
+        var fillFromEnd = isVertical
+            ? ResolveBoolean(widget.Attributes, "IsDirectionUpward")
+            : fillWidget.Element.HorizontalAlignment == HorizontalAlignment.Right;
+        fillWidget.Element.RenderTransformOrigin = isVertical
+            ? new Point(0.5, fillFromEnd ? 1 : 0)
+            : new Point(fillFromEnd ? 1 : 0, 0.5);
+        fillWidget.Element.RenderTransform = new ScaleTransform(
+            isVertical ? 1d : ratio,
+            isVertical ? ratio : 1d);
+        fillWidget.Element.Opacity = Math.Max(fillWidget.Element.Opacity, ratio <= 0 ? 0.2 : 0.35);
+
+        if (TryResolveReferencedWidget(widget.Attributes, "ContainerWidget", out var containerWidget))
+        {
+            var widgetParentSize = ResolveRegisteredParentSize(widget);
+            var widgetSize = Measure(widget.Element, widget.Attributes, widgetParentSize);
+            var containerSize = Measure(containerWidget.Element, containerWidget.Attributes, widgetSize);
+            if (isVertical && containerSize.Height > 0 && double.IsNaN(fillWidget.Element.Height))
+            {
+                fillWidget.Element.Height = containerSize.Height;
+            }
+            else if (!isVertical && containerSize.Width > 0 && double.IsNaN(fillWidget.Element.Width))
+            {
+                fillWidget.Element.Width = containerSize.Width;
+            }
+        }
+    }
+
+    private void ApplySortVisualReferenceBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!TryResolveReferencedWidget(widget.Attributes, "SortVisualWidget", out var sortVisual))
+        {
+            return;
+        }
+
+        var state = ResolveBinding(widget.Attributes.TryGetValue("SortState", out var sortState) ? sortState : string.Empty);
+        var isSelected = ResolveBoolean(widget.Attributes, "IsSelected", !string.IsNullOrWhiteSpace(state));
+        var normalizedState = state.Trim();
+        var showArrow = isSelected || !string.IsNullOrWhiteSpace(normalizedState);
+
+        sortVisual.Element.Visibility = showArrow ? Visibility.Visible : Visibility.Collapsed;
+        sortVisual.Element.Opacity = showArrow ? 1d : 0.35;
+        sortVisual.Element.RenderTransformOrigin = new Point(0.5, 0.5);
+
+        var isDescending =
+            normalizedState.Contains("desc", StringComparison.OrdinalIgnoreCase) ||
+            normalizedState.Contains("down", StringComparison.OrdinalIgnoreCase) ||
+            normalizedState.Contains("high", StringComparison.OrdinalIgnoreCase);
+        sortVisual.Element.RenderTransform = new RotateTransform(isDescending ? 180d : 0d);
+    }
+
+    private void ApplyTargetWidgetReferenceBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!TryResolveReferencedWidget(widget.Attributes, "TargetWidget", out var targetWidget))
+        {
+            return;
+        }
+
+        var isActive = ResolveBoolean(widget.Attributes, "Trigger", false);
+        if (!isActive && HasAttribute(widget.Attributes, "BooleanCheck"))
+        {
+            isActive = ResolveBoolean(widget.Attributes, "BooleanCheck");
+        }
+
+        if (!isActive &&
+            !HasAttribute(widget.Attributes, "Trigger") &&
+            !HasAttribute(widget.Attributes, "BooleanCheck") &&
+            HasAttribute(widget.Attributes, "State"))
+        {
+            isActive = true;
+        }
+
+        if (!isActive)
+        {
+            return;
+        }
+
+        var stateName = ResolveBinding(widget.Attributes.TryGetValue("State", out var state) ? state : string.Empty);
+        if (string.IsNullOrWhiteSpace(stateName) && widget.Attributes.TryGetValue("TrueState", out var trueState))
+        {
+            stateName = ResolveBinding(trueState);
+        }
+
+        var highlightColor = stateName.Contains("warning", StringComparison.OrdinalIgnoreCase)
+            ? Colors.OrangeRed
+            : stateName.Contains("open", StringComparison.OrdinalIgnoreCase) || stateName.Contains("selected", StringComparison.OrdinalIgnoreCase)
+                ? Colors.Gold
+                : Colors.DeepSkyBlue;
+        targetWidget.Element.Effect = new DropShadowEffect
+        {
+            Color = highlightColor,
+            BlurRadius = 16,
+            ShadowDepth = 0,
+            Opacity = 0.8
+        };
     }
 
     private bool TryResolveScopedBindingValue(string key, out string value)
@@ -281,10 +575,41 @@ public sealed class PrefabRenderContext
         }
     }
 
+    public RenderedPrefabNode RegisterRenderedNode(
+        string nodeName,
+        IReadOnlyDictionary<string, string> attributes,
+        Size parentSize,
+        RenderedPrefabNode renderedNode)
+    {
+        var widgetPath = TryGetWidgetPath(attributes);
+        if (!string.IsNullOrWhiteSpace(widgetPath))
+        {
+            _renderedWidgetsByPath[widgetPath] = new RenderedWidgetRegistration(
+                widgetPath,
+                nodeName,
+                attributes,
+                parentSize,
+                renderedNode.Element,
+                renderedNode.ChildHost);
+        }
+
+        return renderedNode;
+    }
+
+    public void ApplyDeferredReferenceBehaviors()
+    {
+        foreach (var widget in _renderedWidgetsByPath.Values.ToArray())
+        {
+            ApplyFillWidgetReferenceBehavior(widget);
+            ApplySortVisualReferenceBehavior(widget);
+            ApplyTargetWidgetReferenceBehavior(widget);
+        }
+    }
+
     public bool IsVisible(IReadOnlyDictionary<string, string> attributes)
     {
-        return !attributes.TryGetValue("IsVisible", out var visibleValue) ||
-               ResolveBoolean(visibleValue, true);
+        return !HasAttribute(attributes, "IsVisible") ||
+               ResolveBoolean(attributes, "IsVisible", true);
     }
 
     public Brush ResolvePanelBrush(string? brushId, bool isDisabled = false)
@@ -529,6 +854,8 @@ public sealed class PrefabRenderContext
 
     public void ApplySizing(FrameworkElement element, IReadOnlyDictionary<string, string> attributes, Size parentSize)
     {
+        ApplyMeasurementBounds(element, attributes);
+
         var width = ResolveDimension(attributes, "WidthSizePolicy", "SuggestedWidth", parentSize.Width);
         var height = ResolveDimension(attributes, "HeightSizePolicy", "SuggestedHeight", parentSize.Height);
 
@@ -682,11 +1009,33 @@ public sealed class PrefabRenderContext
                 : null);
     }
 
+    public void ApplyTextStyle(
+        TextBlock textBlock,
+        string? brushId,
+        IReadOnlyDictionary<string, string> attributes,
+        double fallbackFontSize)
+    {
+        ApplyTextStyle(
+            textBlock,
+            brushId,
+            ResolveAttributeLiteral(attributes, "Brush.FontSize"),
+            attributes,
+            fallbackFontSize);
+    }
+
     public HorizontalAlignment ResolveTextHorizontalAlignment(string? brushName, string? rawOverride = null)
     {
         return ResolveHorizontalAlignment(
             rawOverride ?? ResolveCatalogBrush(brushName)?.TextHorizontalAlignment,
             HorizontalAlignment.Left);
+    }
+
+    public HorizontalAlignment ResolveTextHorizontalAlignment(
+        string? brushName,
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName = "Brush.TextHorizontalAlignment")
+    {
+        return ResolveTextHorizontalAlignment(brushName, ResolveAttributeLiteral(attributes, attributeName));
     }
 
     public VerticalAlignment ResolveTextVerticalAlignment(string? brushName, string? rawOverride = null)
@@ -696,22 +1045,48 @@ public sealed class PrefabRenderContext
             VerticalAlignment.Center);
     }
 
+    public VerticalAlignment ResolveTextVerticalAlignment(
+        string? brushName,
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName = "Brush.TextVerticalAlignment")
+    {
+        return ResolveTextVerticalAlignment(brushName, ResolveAttributeLiteral(attributes, attributeName));
+    }
+
     public HorizontalAlignment ResolveWidgetHorizontalAlignment(
         IReadOnlyDictionary<string, string> attributes,
         HorizontalAlignment fallback = HorizontalAlignment.Left)
     {
-        return attributes.TryGetValue("HorizontalAlignment", out var rawAlignment)
-            ? ResolveHorizontalAlignment(rawAlignment, fallback)
-            : fallback;
+        if (!attributes.TryGetValue("HorizontalAlignment", out var rawAlignment))
+        {
+            return fallback;
+        }
+
+        if (TryGetResolvedWidgetProperty(attributes, "HorizontalAlignment", out var property) &&
+            property.ParsedValue is not null)
+        {
+            return ResolveHorizontalAlignment(property.ParsedValue.ToString(), fallback);
+        }
+
+        return ResolveHorizontalAlignment(rawAlignment, fallback);
     }
 
     public VerticalAlignment ResolveWidgetVerticalAlignment(
         IReadOnlyDictionary<string, string> attributes,
         VerticalAlignment fallback = VerticalAlignment.Top)
     {
-        return attributes.TryGetValue("VerticalAlignment", out var rawAlignment)
-            ? ResolveVerticalAlignment(rawAlignment, fallback)
-            : fallback;
+        if (!attributes.TryGetValue("VerticalAlignment", out var rawAlignment))
+        {
+            return fallback;
+        }
+
+        if (TryGetResolvedWidgetProperty(attributes, "VerticalAlignment", out var property) &&
+            property.ParsedValue is not null)
+        {
+            return ResolveVerticalAlignment(property.ParsedValue.ToString(), fallback);
+        }
+
+        return ResolveVerticalAlignment(rawAlignment, fallback);
     }
 
     private static HorizontalAlignment ResolveHorizontalAlignment(string? rawAlignment, HorizontalAlignment fallback)
@@ -839,20 +1214,56 @@ public sealed class PrefabRenderContext
         element.Measure(parentSize);
         var desired = element.DesiredSize;
 
-        var width = !double.IsNaN(element.Width) && element.Width > 0 ? element.Width : desired.Width;
-        var height = !double.IsNaN(element.Height) && element.Height > 0 ? element.Height : desired.Height;
-        var widthUsesFallback = width <= 0;
-        var heightUsesFallback = height <= 0;
-        var measuredSize = new Size(
-            widthUsesFallback ? Math.Min(parentSize.Width, DefaultMeasureFallbackSize.Width) : width,
-            heightUsesFallback ? Math.Min(parentSize.Height, DefaultMeasureFallbackSize.Height) : height);
+        return new Size(
+            ResolveMeasuredLength(element.Width, desired.Width),
+            ResolveMeasuredLength(element.Height, desired.Height));
+    }
 
-        if (widthUsesFallback || heightUsesFallback)
+    public Size Measure(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        Size parentSize)
+    {
+        ApplyMeasurementBounds(element, attributes);
+
+        var measureInput = ResolveChildMeasureSize(element, attributes, parentSize);
+        element.Measure(measureInput);
+
+        var desired = element.DesiredSize;
+        var width = ResolveMeasuredAxis(
+            element,
+            attributes,
+            "WidthSizePolicy",
+            "SuggestedWidth",
+            measureInput.Width,
+            desired.Width);
+        var height = ResolveMeasuredAxis(
+            element,
+            attributes,
+            "HeightSizePolicy",
+            "SuggestedHeight",
+            measureInput.Height,
+            desired.Height);
+
+        if ((width <= 0 && measureInput.Width > 0) ||
+            (height <= 0 && measureInput.Height > 0))
         {
-            _diagnostics.AddMeasureFallback(element.GetType().Name, parentSize.Width, parentSize.Height);
+            _diagnostics.AddMeasureFallback(element.GetType().Name, measureInput.Width, measureInput.Height);
         }
 
-        return measuredSize;
+        if (UsesStretchToParent(attributes, "WidthSizePolicy") &&
+            !DoubleUtil.AreClose(element.Width, width))
+        {
+            element.Width = width;
+        }
+
+        if (UsesStretchToParent(attributes, "HeightSizePolicy") &&
+            !DoubleUtil.AreClose(element.Height, height))
+        {
+            element.Height = height;
+        }
+
+        return new Size(width, height);
     }
 
     public void AttachChildren(Panel host, IEnumerable<PrefabNode> children, Size parentSize)
@@ -864,7 +1275,7 @@ public sealed class PrefabRenderContext
     {
         foreach (var child in children)
         {
-            var rendered = child.Render(this, parentSize);
+            var rendered = RegisterRenderedNode(child.Name, child.Attributes, parentSize, child.Render(this, parentSize));
             if (host is StackPanel stackPanel)
             {
                 if (rendered.AutoWidthInFlowLayout)
@@ -878,12 +1289,31 @@ public sealed class PrefabRenderContext
                 }
 
                 ApplyFlowLayout(rendered.Element, child.Attributes);
-                AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, parentSize));
+                AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, child.Attributes, parentSize));
                 stackPanel.Children.Add(rendered.Element);
                 continue;
             }
 
-            var elementSize = Measure(rendered.Element, parentSize);
+            if (host is GauntletStackLayoutPanel gauntletStackPanel)
+            {
+                if (rendered.AutoWidthInFlowLayout)
+                {
+                    rendered.Element.Width = double.NaN;
+                }
+
+                if (rendered.AutoHeightInFlowLayout)
+                {
+                    rendered.Element.Height = double.NaN;
+                }
+
+                ApplyFlowLayout(rendered.Element, child.Attributes);
+                PrepareGauntletStackLayoutChild(rendered.Element, child.Attributes, gauntletStackPanel.LayoutMethod);
+                AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, child.Attributes, parentSize));
+                gauntletStackPanel.Children.Add(rendered.Element);
+                continue;
+            }
+
+            var elementSize = Measure(rendered.Element, child.Attributes, parentSize);
             var position = ComputePosition(child.Attributes, parentSize, elementSize, rendered.AlignmentBounds);
             host.Children.Add(rendered.Element);
             Canvas.SetLeft(rendered.Element, origin.X + position.X);
@@ -999,7 +1429,11 @@ public sealed class PrefabRenderContext
 
         if (UsesCoverChildren(attributes, "WidthSizePolicy"))
         {
-            var targetWidth = Math.Max(element.MinWidth, Math.Max(0, contentSize.Width));
+            var targetWidth = CoerceAxisToBoundaries(
+                attributes,
+                "MinWidth",
+                "MaxWidth",
+                Math.Max(element.MinWidth, Math.Max(0, contentSize.Width)));
             if (!DoubleUtil.AreClose(element.Width, targetWidth))
             {
                 element.Width = targetWidth;
@@ -1009,7 +1443,11 @@ public sealed class PrefabRenderContext
 
         if (UsesCoverChildren(attributes, "HeightSizePolicy"))
         {
-            var targetHeight = Math.Max(element.MinHeight, Math.Max(0, contentSize.Height));
+            var targetHeight = CoerceAxisToBoundaries(
+                attributes,
+                "MinHeight",
+                "MaxHeight",
+                Math.Max(element.MinHeight, Math.Max(0, contentSize.Height)));
             if (!DoubleUtil.AreClose(element.Height, targetHeight))
             {
                 element.Height = targetHeight;
@@ -1020,10 +1458,56 @@ public sealed class PrefabRenderContext
         return resized;
     }
 
+    public Size FinalizeCoverChildrenSize(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        Size contentSize,
+        Func<Size>? relayout = null)
+    {
+        if (ApplyCoverChildrenSize(element, attributes, contentSize) &&
+            relayout is not null)
+        {
+            var updatedContentSize = relayout();
+            ApplyCoverChildrenSize(element, attributes, updatedContentSize);
+            contentSize = updatedContentSize;
+        }
+
+        return ResolveElementRenderSize(element, contentSize);
+    }
+
     public bool UsesCoverChildren(IReadOnlyDictionary<string, string> attributes, string policyKey)
     {
-        return attributes.TryGetValue(policyKey, out var policy) &&
-               string.Equals(policy, "CoverChildren", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(ResolveSizePolicy(attributes, policyKey), "CoverChildren", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public bool UsesStretchToParent(IReadOnlyDictionary<string, string> attributes, string policyKey)
+    {
+        return string.Equals(ResolveSizePolicy(attributes, policyKey), "StretchToParent", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public Size ResolveChildMeasureSize(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        Size parentSize)
+    {
+        return new Size(
+            ResolveMeasureInputAxis(element, attributes, "WidthSizePolicy", "SuggestedWidth", "MarginLeft", "MarginRight", "MinWidth", "MaxWidth", parentSize.Width, element.Width),
+            ResolveMeasureInputAxis(element, attributes, "HeightSizePolicy", "SuggestedHeight", "MarginTop", "MarginBottom", "MinHeight", "MaxHeight", parentSize.Height, element.Height));
+    }
+
+    public Size ResolveChildMeasureSize(IReadOnlyDictionary<string, string> attributes, Size parentSize)
+    {
+        return new Size(
+            ResolveMeasureInputAxis(null, attributes, "WidthSizePolicy", "SuggestedWidth", "MarginLeft", "MarginRight", "MinWidth", "MaxWidth", parentSize.Width, double.NaN),
+            ResolveMeasureInputAxis(null, attributes, "HeightSizePolicy", "SuggestedHeight", "MarginTop", "MarginBottom", "MinHeight", "MaxHeight", parentSize.Height, double.NaN));
+    }
+
+    public Size ResolveElementRenderSize(FrameworkElement element, Size fallback)
+    {
+        var desired = element.DesiredSize;
+        return new Size(
+            ResolveMeasuredLength(element.Width, ResolveMeasuredLength(desired.Width, fallback.Width)),
+            ResolveMeasuredLength(element.Height, ResolveMeasuredLength(desired.Height, fallback.Height)));
     }
 
     public Point ComputePosition(
@@ -1032,14 +1516,18 @@ public sealed class PrefabRenderContext
         Size elementSize,
         Rect? alignmentBounds = null)
     {
-        var horizontalAlignment = attributes.TryGetValue("HorizontalAlignment", out var horizontalValue) ? horizontalValue : "Left";
-        var verticalAlignment = attributes.TryGetValue("VerticalAlignment", out var verticalValue) ? verticalValue : "Top";
-        var offsetX = ResolveDouble(attributes.TryGetValue("PositionXOffset", out var xOffsetValue) ? xOffsetValue : null, 0);
-        var offsetY = ResolveDouble(attributes.TryGetValue("PositionYOffset", out var yOffsetValue) ? yOffsetValue : null, 0);
-        var marginLeft = ResolveDouble(attributes.TryGetValue("MarginLeft", out var marginLeftValue) ? marginLeftValue : null, 0);
-        var marginTop = ResolveDouble(attributes.TryGetValue("MarginTop", out var marginTopValue) ? marginTopValue : null, 0);
-        var marginRight = ResolveDouble(attributes.TryGetValue("MarginRight", out var marginRightValue) ? marginRightValue : null, 0);
-        var marginBottom = ResolveDouble(attributes.TryGetValue("MarginBottom", out var marginBottomValue) ? marginBottomValue : null, 0);
+        var horizontalAlignment = attributes.TryGetValue("HorizontalAlignment", out var horizontalValue)
+            ? ResolveDebugValue(attributes, "HorizontalAlignment", horizontalValue)
+            : "Left";
+        var verticalAlignment = attributes.TryGetValue("VerticalAlignment", out var verticalValue)
+            ? ResolveDebugValue(attributes, "VerticalAlignment", verticalValue)
+            : "Top";
+        var offsetX = ResolveDouble(attributes, "PositionXOffset", 0);
+        var offsetY = ResolveDouble(attributes, "PositionYOffset", 0);
+        var marginLeft = ResolveDouble(attributes, "MarginLeft", 0);
+        var marginTop = ResolveDouble(attributes, "MarginTop", 0);
+        var marginRight = ResolveDouble(attributes, "MarginRight", 0);
+        var marginBottom = ResolveDouble(attributes, "MarginBottom", 0);
         var anchorBounds = alignmentBounds is { IsEmpty: false } bounds
             ? bounds
             : new Rect(new Point(0, 0), elementSize);
@@ -1829,21 +2317,193 @@ public sealed class PrefabRenderContext
         string sizeKey,
         double parentSize)
     {
-        attributes.TryGetValue(policyKey, out var policy);
-        var suggestedSize = ResolveDouble(attributes.TryGetValue(sizeKey, out var rawSize) ? rawSize : null, 0);
+        var policy = ResolveSizePolicy(attributes, policyKey);
+        var suggestedSize = ResolveDouble(attributes, sizeKey, 0);
         var startMarginKey = policyKey.StartsWith("Width", StringComparison.Ordinal) ? "MarginLeft" : "MarginTop";
         var endMarginKey = policyKey.StartsWith("Width", StringComparison.Ordinal) ? "MarginRight" : "MarginBottom";
-        var marginStart = ResolveDouble(attributes.TryGetValue(startMarginKey, out var startMarginValue) ? startMarginValue : null, 0);
-        var marginEnd = ResolveDouble(attributes.TryGetValue(endMarginKey, out var endMarginValue) ? endMarginValue : null, 0);
+        var marginStart = ResolveDouble(attributes, startMarginKey, 0);
+        var marginEnd = ResolveDouble(attributes, endMarginKey, 0);
 
-        return policy switch
+        double? dimension = policy switch
         {
             "Fixed" when suggestedSize > 0 => suggestedSize,
             "StretchToParent" => Math.Max(0, parentSize - marginStart - marginEnd),
-            "CoverChildren" => null,
+            "CoverChildren" => (double?)null,
             _ when suggestedSize > 0 => suggestedSize,
-            _ => null
+            _ => (double?)null
         };
+
+        if (!dimension.HasValue)
+        {
+            return null;
+        }
+
+        var minKey = policyKey.StartsWith("Width", StringComparison.Ordinal) ? "MinWidth" : "MinHeight";
+        var maxKey = policyKey.StartsWith("Width", StringComparison.Ordinal) ? "MaxWidth" : "MaxHeight";
+        return CoerceAxisToBoundaries(attributes, minKey, maxKey, dimension.Value);
+    }
+
+    private string? ResolveSizePolicy(IReadOnlyDictionary<string, string> attributes, string policyKey)
+    {
+        attributes.TryGetValue(policyKey, out var policy);
+        if (TryGetResolvedWidgetProperty(attributes, policyKey, out var resolvedPolicy) &&
+            resolvedPolicy.ParsedValue is not null)
+        {
+            policy = resolvedPolicy.ParsedValue.ToString() ?? policy;
+        }
+
+        return policy;
+    }
+
+    private void ApplyMeasurementBounds(FrameworkElement element, IReadOnlyDictionary<string, string> attributes)
+    {
+        if (ResolveOptionalDouble(attributes, "MinWidth") is { } minWidth)
+        {
+            element.MinWidth = Math.Max(element.MinWidth, minWidth);
+        }
+
+        if (ResolveOptionalDouble(attributes, "MinHeight") is { } minHeight)
+        {
+            element.MinHeight = Math.Max(element.MinHeight, minHeight);
+        }
+
+        if (ResolveOptionalDouble(attributes, "MaxWidth") is { } maxWidth && maxWidth > 0)
+        {
+            element.MaxWidth = Math.Min(element.MaxWidth, maxWidth);
+        }
+
+        if (ResolveOptionalDouble(attributes, "MaxHeight") is { } maxHeight && maxHeight > 0)
+        {
+            element.MaxHeight = Math.Min(element.MaxHeight, maxHeight);
+        }
+    }
+
+    private double ResolveMeasureInputAxis(
+        FrameworkElement? element,
+        IReadOnlyDictionary<string, string> attributes,
+        string policyKey,
+        string suggestedKey,
+        string startMarginKey,
+        string endMarginKey,
+        string minKey,
+        string maxKey,
+        double parentSize,
+        double explicitSize)
+    {
+        var policy = ResolveSizePolicy(attributes, policyKey);
+        var suggestedSize = ResolveDouble(attributes, suggestedKey, 0);
+        var marginStart = ResolveDouble(attributes, startMarginKey, 0);
+        var marginEnd = ResolveDouble(attributes, endMarginKey, 0);
+        var elementSize = !double.IsNaN(explicitSize) && explicitSize > 0
+            ? explicitSize
+            : element is null
+                ? double.NaN
+                : policyKey.StartsWith("Width", StringComparison.Ordinal)
+                    ? element.ActualWidth
+                    : element.ActualHeight;
+
+        var measureSize = policy switch
+        {
+            "Fixed" when suggestedSize > 0 => suggestedSize,
+            "Fixed" when !double.IsNaN(elementSize) && elementSize > 0 => elementSize,
+            "StretchToParent" => Math.Max(0, parentSize - marginStart - marginEnd),
+            _ when suggestedSize > 0 => suggestedSize,
+            _ when !double.IsNaN(elementSize) && elementSize > 0 => elementSize,
+            _ => Math.Max(0, parentSize)
+        };
+
+        return CoerceAxisToBoundaries(attributes, minKey, maxKey, measureSize);
+    }
+
+    private double ResolveMeasuredAxis(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        string policyKey,
+        string suggestedKey,
+        double measureInput,
+        double desired)
+    {
+        var policy = ResolveSizePolicy(attributes, policyKey);
+        var suggestedSize = ResolveDouble(attributes, suggestedKey, 0);
+        var explicitSize = policyKey.StartsWith("Width", StringComparison.Ordinal) ? element.Width : element.Height;
+        var minKey = policyKey.StartsWith("Width", StringComparison.Ordinal) ? "MinWidth" : "MinHeight";
+        var maxKey = policyKey.StartsWith("Width", StringComparison.Ordinal) ? "MaxWidth" : "MaxHeight";
+
+        var measured = policy switch
+        {
+            "Fixed" when suggestedSize > 0 => suggestedSize,
+            "Fixed" when !double.IsNaN(explicitSize) && explicitSize > 0 => explicitSize,
+            "CoverChildren" => desired,
+            "StretchToParent" => measureInput,
+            _ when !double.IsNaN(explicitSize) && explicitSize > 0 => explicitSize,
+            _ when suggestedSize > 0 => suggestedSize,
+            _ => desired
+        };
+
+        var fallback = policy switch
+        {
+            "Fixed" => measureInput,
+            "StretchToParent" => measureInput,
+            _ when !double.IsNaN(explicitSize) && explicitSize > 0 => explicitSize,
+            _ when suggestedSize > 0 => suggestedSize,
+            _ => 0
+        };
+
+        return CoerceAxisToBoundaries(attributes, minKey, maxKey, ResolveMeasuredLength(measured, fallback));
+    }
+
+    private double ResolveMeasuredLength(double preferred, double fallback)
+    {
+        if (!double.IsNaN(preferred) && !double.IsInfinity(preferred) && preferred > 0)
+        {
+            return preferred;
+        }
+
+        if (!double.IsNaN(fallback) && !double.IsInfinity(fallback) && fallback > 0)
+        {
+            return fallback;
+        }
+
+        return 0;
+    }
+
+    private double CoerceAxisToBoundaries(
+        IReadOnlyDictionary<string, string> attributes,
+        string minKey,
+        string maxKey,
+        double value)
+    {
+        var result = Math.Max(0, value);
+        if (ResolveOptionalDouble(attributes, minKey) is { } minValue)
+        {
+            result = Math.Max(result, minValue);
+        }
+
+        if (ResolveOptionalDouble(attributes, maxKey) is { } maxValue && maxValue > 0)
+        {
+            result = Math.Min(result, maxValue);
+        }
+
+        return result;
+    }
+
+    private double? ResolveOptionalDouble(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName)
+    {
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
+            property.TryGetDouble(out var typedValue))
+        {
+            return typedValue;
+        }
+
+        if (!attributes.TryGetValue(attributeName, out var rawValue))
+        {
+            return null;
+        }
+
+        var resolvedValue = ResolveDouble(rawValue, double.NaN);
+        return double.IsNaN(resolvedValue) ? null : resolvedValue;
     }
 
     private static Brush CreateGradientBrush(string fill, string stroke)
@@ -1904,10 +2564,44 @@ public sealed class PrefabRenderContext
             lines.Add("Attributes");
             foreach (var attribute in attributes.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var resolvedValue = ResolveDebugValue(attribute.Value);
+                if (IsInternalDebugAttribute(attribute.Key))
+                {
+                    continue;
+                }
+
+                var resolvedValue = ResolveDebugValue(attributes, attribute.Key, attribute.Value);
                 lines.Add(string.Equals(resolvedValue, attribute.Value, StringComparison.Ordinal)
                     ? $"{attribute.Key}: {attribute.Value}"
                     : $"{attribute.Key}: {attribute.Value} -> {resolvedValue}");
+            }
+        }
+
+        var widgetPath = TryGetWidgetPath(attributes);
+        if (!string.IsNullOrWhiteSpace(widgetPath))
+        {
+            var resolvedProperties = _propertyMap.GetProperties(widgetPath);
+            if (resolvedProperties.Count > 0)
+            {
+                lines.Add(string.Empty);
+                lines.Add("ResolvedProperties");
+                foreach (var property in resolvedProperties.Values.OrderBy(property => property.AttributeName, StringComparer.OrdinalIgnoreCase))
+                {
+                    lines.Add(
+                        $"{property.AttributeName}: {property.DeclaredTypeName} [{property.ValueKind}] = {property.GetDisplayValue()}");
+                }
+            }
+
+            var resolvedReferences = _referenceMap.GetReferences(widgetPath);
+            if (resolvedReferences.Count > 0)
+            {
+                lines.Add(string.Empty);
+                lines.Add("WidgetReferences");
+                foreach (var reference in resolvedReferences.Values.OrderBy(reference => reference.AttributeName, StringComparer.OrdinalIgnoreCase))
+                {
+                    lines.Add(reference.IsResolved
+                        ? $"{reference.AttributeName}: {reference.RawValue} -> {reference.TargetWidgetPath}"
+                        : $"{reference.AttributeName}: {reference.RawValue} (unresolved: {reference.FailureReason})");
+                }
             }
         }
 
@@ -1971,7 +2665,9 @@ public sealed class PrefabRenderContext
         attributes.TryGetValue("HeightSizePolicy", out var heightPolicy);
         if (!string.IsNullOrWhiteSpace(widthPolicy) || !string.IsNullOrWhiteSpace(heightPolicy))
         {
-            lines.Add($"SizePolicy: W={widthPolicy ?? "-"} H={heightPolicy ?? "-"}");
+            lines.Add(
+                $"SizePolicy: W={ResolveDebugValue(attributes, "WidthSizePolicy", widthPolicy ?? "-")} " +
+                $"H={ResolveDebugValue(attributes, "HeightSizePolicy", heightPolicy ?? "-")}");
         }
 
         attributes.TryGetValue("SuggestedWidth", out var suggestedWidth);
@@ -1979,14 +2675,17 @@ public sealed class PrefabRenderContext
         if (!string.IsNullOrWhiteSpace(suggestedWidth) || !string.IsNullOrWhiteSpace(suggestedHeight))
         {
             lines.Add(
-                $"SuggestedSize: W={ResolveDebugValue(suggestedWidth ?? "-")} H={ResolveDebugValue(suggestedHeight ?? "-")}");
+                $"SuggestedSize: W={ResolveDebugValue(attributes, "SuggestedWidth", suggestedWidth ?? "-")} " +
+                $"H={ResolveDebugValue(attributes, "SuggestedHeight", suggestedHeight ?? "-")}");
         }
 
         attributes.TryGetValue("HorizontalAlignment", out var horizontalAlignment);
         attributes.TryGetValue("VerticalAlignment", out var verticalAlignment);
         if (!string.IsNullOrWhiteSpace(horizontalAlignment) || !string.IsNullOrWhiteSpace(verticalAlignment))
         {
-            lines.Add($"Alignment: H={horizontalAlignment ?? "Left"} V={verticalAlignment ?? "Top"}");
+            lines.Add(
+                $"Alignment: H={ResolveDebugValue(attributes, "HorizontalAlignment", horizontalAlignment ?? "Left")} " +
+                $"V={ResolveDebugValue(attributes, "VerticalAlignment", verticalAlignment ?? "Top")}");
         }
 
         lines.Add($"Margin: {FormatThickness(element.Margin, attributes)}");
@@ -1996,7 +2695,8 @@ public sealed class PrefabRenderContext
         if (!string.IsNullOrWhiteSpace(positionXOffset) || !string.IsNullOrWhiteSpace(positionYOffset))
         {
             lines.Add(
-                $"Offsets: X={ResolveDebugValue(positionXOffset ?? "0")} Y={ResolveDebugValue(positionYOffset ?? "0")}");
+                $"Offsets: X={ResolveDebugValue(attributes, "PositionXOffset", positionXOffset ?? "0")} " +
+                $"Y={ResolveDebugValue(attributes, "PositionYOffset", positionYOffset ?? "0")}");
         }
 
         lines.Add(
@@ -2013,6 +2713,26 @@ public sealed class PrefabRenderContext
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private string ResolveDebugValue(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        string rawValue)
+    {
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property))
+        {
+            return property.GetDisplayValue();
+        }
+
+        if (TryGetResolvedWidgetReference(attributes, attributeName, out var reference))
+        {
+            return reference.IsResolved && !string.IsNullOrWhiteSpace(reference.TargetWidgetPath)
+                ? reference.TargetWidgetPath
+                : rawValue;
+        }
+
+        return ResolveDebugValue(rawValue);
     }
 
     private string ResolveDebugValue(string rawValue)
@@ -2061,10 +2781,10 @@ public sealed class PrefabRenderContext
             return $"L={FormatDouble(margin.Left)} T={FormatDouble(margin.Top)} R={FormatDouble(margin.Right)} B={FormatDouble(margin.Bottom)}";
         }
 
-        var marginLeft = ResolveDebugValue(attributes.TryGetValue("MarginLeft", out var marginLeftValue) ? marginLeftValue : "0");
-        var marginTop = ResolveDebugValue(attributes.TryGetValue("MarginTop", out var marginTopValue) ? marginTopValue : "0");
-        var marginRight = ResolveDebugValue(attributes.TryGetValue("MarginRight", out var marginRightValue) ? marginRightValue : "0");
-        var marginBottom = ResolveDebugValue(attributes.TryGetValue("MarginBottom", out var marginBottomValue) ? marginBottomValue : "0");
+        var marginLeft = ResolveDebugValue(attributes, "MarginLeft", attributes.TryGetValue("MarginLeft", out var marginLeftValue) ? marginLeftValue : "0");
+        var marginTop = ResolveDebugValue(attributes, "MarginTop", attributes.TryGetValue("MarginTop", out var marginTopValue) ? marginTopValue : "0");
+        var marginRight = ResolveDebugValue(attributes, "MarginRight", attributes.TryGetValue("MarginRight", out var marginRightValue) ? marginRightValue : "0");
+        var marginBottom = ResolveDebugValue(attributes, "MarginBottom", attributes.TryGetValue("MarginBottom", out var marginBottomValue) ? marginBottomValue : "0");
         return $"L={marginLeft} T={marginTop} R={marginRight} B={marginBottom}";
     }
 
@@ -2177,15 +2897,15 @@ public sealed class PrefabRenderContext
 
     public void ApplyFlowLayout(FrameworkElement element, IReadOnlyDictionary<string, string> attributes)
     {
-        var marginLeft = ResolveDouble(attributes.TryGetValue("MarginLeft", out var marginLeftValue) ? marginLeftValue : null, 0);
-        var marginTop = ResolveDouble(attributes.TryGetValue("MarginTop", out var marginTopValue) ? marginTopValue : null, 0);
-        var marginRight = ResolveDouble(attributes.TryGetValue("MarginRight", out var marginRightValue) ? marginRightValue : null, 0);
-        var marginBottom = ResolveDouble(attributes.TryGetValue("MarginBottom", out var marginBottomValue) ? marginBottomValue : null, 0);
+        var marginLeft = ResolveDouble(attributes, "MarginLeft", 0);
+        var marginTop = ResolveDouble(attributes, "MarginTop", 0);
+        var marginRight = ResolveDouble(attributes, "MarginRight", 0);
+        var marginBottom = ResolveDouble(attributes, "MarginBottom", 0);
         element.Margin = new Thickness(marginLeft, marginTop, marginRight, marginBottom);
 
-        if (attributes.TryGetValue("HorizontalAlignment", out var horizontalAlignment))
+        if (HasAttribute(attributes, "HorizontalAlignment"))
         {
-            element.HorizontalAlignment = ParseHorizontalAlignment(horizontalAlignment);
+            element.HorizontalAlignment = ResolveWidgetHorizontalAlignment(attributes);
         }
         else if (attributes.TryGetValue("WidthSizePolicy", out var widthPolicy) &&
                  string.Equals(widthPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
@@ -2193,14 +2913,53 @@ public sealed class PrefabRenderContext
             element.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
 
-        if (attributes.TryGetValue("VerticalAlignment", out var verticalAlignment))
+        if (HasAttribute(attributes, "VerticalAlignment"))
         {
-            element.VerticalAlignment = ParseVerticalAlignment(verticalAlignment);
+            element.VerticalAlignment = ResolveWidgetVerticalAlignment(attributes);
         }
         else if (attributes.TryGetValue("HeightSizePolicy", out var heightPolicy) &&
                  string.Equals(heightPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
         {
             element.VerticalAlignment = VerticalAlignment.Stretch;
+        }
+
+        GauntletLayoutProperties.SetWidthSizePolicy(element, ResolveSizePolicy(attributes, "WidthSizePolicy") ?? string.Empty);
+        GauntletLayoutProperties.SetHeightSizePolicy(element, ResolveSizePolicy(attributes, "HeightSizePolicy") ?? string.Empty);
+        var sharedStretchRatio = ResolveOptionalDouble(attributes, "StretchRatio");
+        var widthStretchRatio = ResolveOptionalDouble(attributes, "WidthStretchRatio") ?? sharedStretchRatio ?? 1d;
+        var heightStretchRatio = ResolveOptionalDouble(attributes, "HeightStretchRatio") ?? sharedStretchRatio ?? 1d;
+        GauntletLayoutProperties.SetWidthStretchRatio(element, widthStretchRatio > 0 ? widthStretchRatio : 1d);
+        GauntletLayoutProperties.SetHeightStretchRatio(element, heightStretchRatio > 0 ? heightStretchRatio : 1d);
+    }
+
+    public void PrepareGauntletStackLayoutChild(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        GauntletStackLayoutMethod layoutMethod)
+    {
+        var isHorizontal = layoutMethod is GauntletStackLayoutMethod.HorizontalLeftToRight
+            or GauntletStackLayoutMethod.HorizontalRightToLeft
+            or GauntletStackLayoutMethod.HorizontalCentered
+            or GauntletStackLayoutMethod.HorizontalSpaced;
+        var widthPolicy = ResolveSizePolicy(attributes, "WidthSizePolicy");
+        var heightPolicy = ResolveSizePolicy(attributes, "HeightSizePolicy");
+
+        if (isHorizontal && string.Equals(widthPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
+        {
+            element.Width = double.NaN;
+        }
+        else if (!isHorizontal && string.Equals(heightPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
+        {
+            element.Height = double.NaN;
+        }
+
+        if (!isHorizontal && string.Equals(widthPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
+        {
+            element.Width = double.NaN;
+        }
+        else if (isHorizontal && string.Equals(heightPolicy, "StretchToParent", StringComparison.OrdinalIgnoreCase))
+        {
+            element.Height = double.NaN;
         }
     }
 
@@ -2233,4 +2992,12 @@ public sealed class PrefabRenderContext
             lines.Add($"  Note: {spriteAsset.Note}");
         }
     }
+
+    private sealed record RenderedWidgetRegistration(
+        string WidgetPath,
+        string NodeName,
+        IReadOnlyDictionary<string, string> Attributes,
+        Size ParentSize,
+        FrameworkElement Element,
+        Panel? ChildHost);
 }

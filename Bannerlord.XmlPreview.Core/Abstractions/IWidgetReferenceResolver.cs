@@ -5,5 +5,5 @@ namespace Bannerlord.XmlPreview.Core.Abstractions;
 
 public interface IWidgetReferenceResolver
 {
-    void Resolve(XElement rootElement, PreviewDiagnostics diagnostics);
+    PrefabWidgetReferenceMap Resolve(XElement rootElement, PreviewDiagnostics diagnostics);
 }

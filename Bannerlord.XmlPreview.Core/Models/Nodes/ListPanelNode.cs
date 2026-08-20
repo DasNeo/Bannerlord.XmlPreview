@@ -13,9 +13,9 @@ public sealed class ListPanelNode : PrefabNode
 
     public override RenderedPrefabNode Render(PrefabRenderContext context, Size parentSize)
     {
-        var panel = new StackPanel
+        var panel = new GauntletStackLayoutPanel
         {
-            Orientation = Orientation.Vertical
+            LayoutMethod = GauntletStackLayoutPanel.Parse(context.ResolveAttributeLiteral(Attributes, "StackLayout.LayoutMethod"))
         };
 
         context.ApplySizing(panel, Attributes, parentSize);
@@ -23,7 +23,7 @@ public sealed class ListPanelNode : PrefabNode
         context.ApplyVisibility(panel, Attributes);
         context.ApplyToolTip(panel, Name, Attributes);
         context.AttachElementDebugMetadata(panel, Name, Attributes);
-        context.AttachChildren(panel, Children, context.Measure(panel, parentSize));
+        context.AttachChildren(panel, Children, context.ResolveChildMeasureSize(panel, Attributes, parentSize));
         return new RenderedPrefabNode(panel, panel);
     }
 }
