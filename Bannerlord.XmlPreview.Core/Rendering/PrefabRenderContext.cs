@@ -19,8 +19,12 @@ public sealed class PrefabRenderContext
 {
     private const byte SignificantAlphaThreshold = 64;
     private const byte ContentCoreAlphaThreshold = 192;
+    private const int MaxRenderedNodeCount = 5000;
     private readonly Dictionary<string, Int32Rect?> _spriteOpaqueBoundsCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Top, int Bottom)?> _spriteCoreVerticalBoundsCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SpriteDefinition?> _spriteDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, BrushDefinition?> _brushDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SpriteAssetResolution> _spriteAssetResolutionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RenderedWidgetRegistration> _renderedWidgetsByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<IReadOnlyDictionary<string, string>> _bindingScopes = [];
 
@@ -51,6 +55,8 @@ public sealed class PrefabRenderContext
     private readonly IWidgetDebugMetadataProvider _widgetDebugMetadataProvider;
     private readonly HashSet<string> _reportedBindings = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _reportedNodes = new(StringComparer.OrdinalIgnoreCase);
+    private int _renderedNodeCount;
+    private bool _renderBudgetExceeded;
 
     public PrefabRenderContext(
         IReadOnlyDictionary<string, string> constants,
@@ -1199,6 +1205,7 @@ public sealed class PrefabRenderContext
         Size parentSize,
         RenderedPrefabNode renderedNode)
     {
+        _renderedNodeCount++;
         var widgetPath = TryGetWidgetPath(attributes);
         if (!string.IsNullOrWhiteSpace(widgetPath))
         {
@@ -1899,6 +1906,11 @@ public sealed class PrefabRenderContext
     {
         foreach (var child in children)
         {
+            if (!TryAllowAdditionalNodeRendering())
+            {
+                return;
+            }
+
             var rendered = RegisterRenderedNode(child.Name, child.Attributes, parentSize, child.Render(this, parentSize));
             if (host is StackPanel stackPanel)
             {
@@ -1963,6 +1975,24 @@ public sealed class PrefabRenderContext
             Canvas.SetTop(rendered.Element, origin.Y + position.Y);
             AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, elementSize, position, rendered.AlignmentBounds);
         }
+    }
+
+    private bool TryAllowAdditionalNodeRendering()
+    {
+        if (_renderedNodeCount < MaxRenderedNodeCount)
+        {
+            return true;
+        }
+
+        if (_renderBudgetExceeded)
+        {
+            return false;
+        }
+
+        _renderBudgetExceeded = true;
+        _diagnostics.Add(
+            $"Render node budget of {MaxRenderedNodeCount} was reached. Remaining descendant widgets were skipped to keep the preview responsive.");
+        return false;
     }
 
     public Rect MeasureCanvasChildrenBounds(Canvas canvas)
@@ -2206,7 +2236,19 @@ public sealed class PrefabRenderContext
 
     public SpriteDefinition? FindSprite(string? spriteName)
     {
-        return _assetCatalog.FindSprite(spriteName);
+        if (string.IsNullOrWhiteSpace(spriteName))
+        {
+            return null;
+        }
+
+        if (_spriteDefinitionCache.TryGetValue(spriteName, out var cachedSprite))
+        {
+            return cachedSprite;
+        }
+
+        var resolvedSprite = _assetCatalog.FindSprite(spriteName);
+        _spriteDefinitionCache[spriteName] = resolvedSprite;
+        return resolvedSprite;
     }
 
     public bool IsSpriteMissing(string? spriteName)
@@ -2217,7 +2259,19 @@ public sealed class PrefabRenderContext
 
     public BrushDefinition? FindBrush(string? brushName)
     {
-        return _assetCatalog.FindBrush(brushName);
+        if (string.IsNullOrWhiteSpace(brushName))
+        {
+            return null;
+        }
+
+        if (_brushDefinitionCache.TryGetValue(brushName, out var cachedBrush))
+        {
+            return cachedBrush;
+        }
+
+        var resolvedBrush = _assetCatalog.FindBrush(brushName);
+        _brushDefinitionCache[brushName] = resolvedBrush;
+        return resolvedBrush;
     }
 
     public void AttachElementDebugMetadata(
@@ -2282,9 +2336,16 @@ public sealed class PrefabRenderContext
 
     private SpriteAssetResolution ResolveSpriteAsset(string? spriteName)
     {
+        if (!string.IsNullOrWhiteSpace(spriteName) &&
+            _spriteAssetResolutionCache.TryGetValue(spriteName, out var cachedSpriteAsset))
+        {
+            return cachedSpriteAsset;
+        }
+
         var spriteAsset = _assetCatalog.ResolveSpriteAsset(spriteName);
         if (!string.IsNullOrWhiteSpace(spriteName))
         {
+            _spriteAssetResolutionCache[spriteName] = spriteAsset;
             _diagnostics.AddResolvedSprite(spriteName, spriteAsset);
         }
 
@@ -3627,7 +3688,7 @@ public sealed class PrefabRenderContext
 
     private void AppendSpriteDebug(ICollection<string> lines, string spriteName, string usage)
     {
-        var spriteAsset = _assetCatalog.ResolveSpriteAsset(spriteName);
+        var spriteAsset = ResolveSpriteAsset(spriteName);
         lines.Add($"Sprite: {spriteName} [{usage}]");
         lines.Add($"  Status: {spriteAsset.Kind}");
         if (!string.IsNullOrWhiteSpace(spriteAsset.MatchedKey))

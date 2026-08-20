@@ -7,6 +7,7 @@ namespace Bannerlord.XmlPreview.Services;
 
 public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
 {
+    private const string DebugAttributeNamespacePrefix = "Debug.";
     private const string DebugAttributePrefix = "Debug.WidgetRef.";
 
     public PrefabWidgetReferenceMap Resolve(XElement rootElement, PreviewDiagnostics diagnostics)
@@ -72,7 +73,8 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
 
     private static bool IsReferenceCandidate(string attributeName)
     {
-        if (attributeName.StartsWith(DebugAttributePrefix, StringComparison.OrdinalIgnoreCase))
+        if (attributeName.StartsWith(DebugAttributeNamespacePrefix, StringComparison.OrdinalIgnoreCase) ||
+            attributeName.StartsWith(DebugAttributePrefix, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Collections.ObjectModel;
 using System.Windows.Documents;
+using System.Text;
 
 namespace Bannerlord.XmlPreview.ViewModels;
 
@@ -171,6 +172,44 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             OpenPrefabPath(prefabPath);
         }
+    }
+
+    public void ExportDiagnosticsSnapshot(string outputPath)
+    {
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.Invoke(() => ExportDiagnosticsSnapshot(outputPath));
+            return;
+        }
+
+        var directoryPath = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrWhiteSpace(directoryPath))
+        {
+            Directory.CreateDirectory(directoryPath);
+        }
+
+        var lines = new List<string>
+        {
+            $"GeneratedAtUtc: {DateTime.UtcNow:O}",
+            $"Status: {StatusText}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(_currentPrefabPath))
+        {
+            lines.Add($"Prefab: {_currentPrefabPath}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(BannerlordInstallPath))
+        {
+            lines.Add($"BannerlordRoot: {BannerlordInstallPath}");
+        }
+
+        lines.Add(string.Empty);
+        lines.Add(string.IsNullOrWhiteSpace(DiagnosticsText)
+            ? "No diagnostics were generated."
+            : DiagnosticsText);
+
+        File.WriteAllText(outputPath, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
     }
 
     private void OpenPrefab()

@@ -6,8 +6,10 @@ using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Core.Abstractions;
 using Bannerlord.XmlPreview.Adapters.Bannerlord;
 using Bannerlord.XmlPreview.Preview.Bannerlord;
+using Bannerlord.XmlPreview.Models;
 using System.Text;
 using System.Windows.Threading;
+using System.IO;
 
 namespace Bannerlord.XmlPreview;
 
@@ -29,12 +31,29 @@ public partial class App : Application
             ConfigureServices(services);
 
             _serviceProvider = services.BuildServiceProvider();
+            var startupOptions = ParseStartupOptions(e.Args);
+
+            if (ShouldRunHeadlessDiagnosticsExport(startupOptions))
+            {
+                RunHeadlessDiagnosticsExport(startupOptions);
+                Shutdown(0);
+                return;
+            }
 
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-            var startupOptions = ParseStartupOptions(e.Args);
             if (mainWindow.DataContext is MainWindowViewModel viewModel)
             {
                 viewModel.ApplyStartupOptions(startupOptions.BannerlordInstallRoot, startupOptions.PrefabPath);
+                if (!string.IsNullOrWhiteSpace(startupOptions.DiagnosticsOutputPath))
+                {
+                    viewModel.ExportDiagnosticsSnapshot(startupOptions.DiagnosticsOutputPath);
+                }
+            }
+
+            if (startupOptions.ExitAfterLoad)
+            {
+                Shutdown(0);
+                return;
             }
 
             MainWindow = mainWindow;
@@ -79,10 +98,149 @@ public partial class App : Application
         services.AddSingleton<MainWindow>();
     }
 
+    private void RunHeadlessDiagnosticsExport(StartupOptions startupOptions)
+    {
+        if (_serviceProvider is null)
+        {
+            throw new InvalidOperationException("Service provider is not initialized.");
+        }
+
+        if (string.IsNullOrWhiteSpace(startupOptions.PrefabPath))
+        {
+            throw new InvalidOperationException("Headless diagnostics export requires a prefab path.");
+        }
+
+        if (string.IsNullOrWhiteSpace(startupOptions.DiagnosticsOutputPath))
+        {
+            throw new InvalidOperationException("Headless diagnostics export requires a diagnostics output path.");
+        }
+
+        var outputPath = startupOptions.DiagnosticsOutputPath;
+        var appSettingsService = _serviceProvider.GetRequiredService<IAppSettingsService>();
+        var effectiveBannerlordRoot = startupOptions.BannerlordInstallRoot;
+        WriteDiagnosticsSnapshot(
+            outputPath,
+            startupOptions.PrefabPath,
+            effectiveBannerlordRoot ?? appSettingsService.BannerlordInstallRoot,
+            "Starting headless diagnostics export.",
+            "Starting",
+            diagnosticsText: null);
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(effectiveBannerlordRoot))
+            {
+                if (!appSettingsService.TrySetBannerlordInstallRoot(
+                        effectiveBannerlordRoot,
+                        out var normalizedRoot,
+                        out var errorMessage))
+                {
+                    throw new InvalidOperationException(errorMessage);
+                }
+
+                effectiveBannerlordRoot = normalizedRoot;
+            }
+
+            var diagnostics = new PreviewDiagnostics();
+            var prefabLoader = _serviceProvider.GetRequiredService<IPrefabLoader>();
+            var prefabRenderer = _serviceProvider.GetRequiredService<IPrefabRenderer>();
+            var loadStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var document = prefabLoader.Load(startupOptions.PrefabPath, diagnostics);
+            loadStopwatch.Stop();
+            WriteDiagnosticsSnapshot(
+                outputPath,
+                document.SourcePath,
+                effectiveBannerlordRoot ?? appSettingsService.BannerlordInstallRoot,
+                $"Loaded {Path.GetFileName(document.SourcePath)}. Starting render.",
+                "Loaded",
+                loadDurationMs: loadStopwatch.ElapsedMilliseconds,
+                diagnosticsText: null);
+
+            var renderStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            prefabRenderer.Render(document, diagnostics);
+            renderStopwatch.Stop();
+            WriteDiagnosticsSnapshot(
+                outputPath,
+                document.SourcePath,
+                effectiveBannerlordRoot ?? appSettingsService.BannerlordInstallRoot,
+                $"Loaded {Path.GetFileName(document.SourcePath)}",
+                "Completed",
+                loadDurationMs: loadStopwatch.ElapsedMilliseconds,
+                renderDurationMs: renderStopwatch.ElapsedMilliseconds,
+                diagnosticsText: diagnostics.ToDisplayText());
+        }
+        catch (Exception exception)
+        {
+            WriteDiagnosticsSnapshot(
+                outputPath,
+                startupOptions.PrefabPath,
+                effectiveBannerlordRoot ?? appSettingsService.BannerlordInstallRoot,
+                $"Headless diagnostics export failed: {exception.Message}",
+                "Failed",
+                diagnosticsText: exception.ToString());
+            throw;
+        }
+    }
+
+    private static bool ShouldRunHeadlessDiagnosticsExport(StartupOptions startupOptions)
+    {
+        return startupOptions.ExitAfterLoad &&
+               !string.IsNullOrWhiteSpace(startupOptions.DiagnosticsOutputPath);
+    }
+
+    private static void WriteDiagnosticsSnapshot(
+        string outputPath,
+        string prefabPath,
+        string bannerlordInstallRoot,
+        string statusText,
+        string stage,
+        long? loadDurationMs = null,
+        long? renderDurationMs = null,
+        string? diagnosticsText = null)
+    {
+        var directoryPath = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrWhiteSpace(directoryPath))
+        {
+            Directory.CreateDirectory(directoryPath);
+        }
+
+        var lines = new List<string>
+        {
+            $"GeneratedAtUtc: {DateTime.UtcNow:O}",
+            $"Stage: {stage}",
+            $"Status: {statusText}",
+            $"Prefab: {prefabPath}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(bannerlordInstallRoot))
+        {
+            lines.Add($"BannerlordRoot: {bannerlordInstallRoot}");
+        }
+
+        if (loadDurationMs.HasValue)
+        {
+            lines.Add($"LoadDurationMs: {loadDurationMs.Value}");
+        }
+
+        if (renderDurationMs.HasValue)
+        {
+            lines.Add($"RenderDurationMs: {renderDurationMs.Value}");
+        }
+
+        lines.Add(string.Empty);
+        lines.Add(string.IsNullOrWhiteSpace(diagnosticsText)
+            ? "No diagnostics were generated."
+            : diagnosticsText);
+
+        File.WriteAllText(outputPath, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+    }
+
     private static StartupOptions ParseStartupOptions(IReadOnlyList<string> args)
     {
         string? prefabPath = null;
         string? bannerlordInstallRoot = null;
+        string? diagnosticsOutputPath = null;
+        var exitAfterLoad = false;
 
         for (var index = 0; index < args.Count; index++)
         {
@@ -102,6 +260,19 @@ public partial class App : Application
                 continue;
             }
 
+            if (string.Equals(argument, "--diagnostics-out", StringComparison.OrdinalIgnoreCase) &&
+                index + 1 < args.Count)
+            {
+                diagnosticsOutputPath = args[++index];
+                continue;
+            }
+
+            if (string.Equals(argument, "--exit-after-load", StringComparison.OrdinalIgnoreCase))
+            {
+                exitAfterLoad = true;
+                continue;
+            }
+
             if (!argument.StartsWith("-", StringComparison.Ordinal) &&
                 string.IsNullOrWhiteSpace(prefabPath))
             {
@@ -109,7 +280,7 @@ public partial class App : Application
             }
         }
 
-        return new StartupOptions(prefabPath, bannerlordInstallRoot);
+        return new StartupOptions(prefabPath, bannerlordInstallRoot, diagnosticsOutputPath, exitAfterLoad);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -151,5 +322,9 @@ public partial class App : Application
         Console.WriteLine(message);
     }
 
-    private sealed record StartupOptions(string? PrefabPath, string? BannerlordInstallRoot);
+    private sealed record StartupOptions(
+        string? PrefabPath,
+        string? BannerlordInstallRoot,
+        string? DiagnosticsOutputPath,
+        bool ExitAfterLoad);
 }
