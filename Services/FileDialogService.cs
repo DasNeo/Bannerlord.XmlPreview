@@ -11,11 +11,17 @@ public sealed class FileDialogService : IFileDialogService
         var dialog = new OpenFileDialog
         {
             Filter = "Bannerlord Prefabs (*.xml)|*.xml|All Files (*.*)|*.*",
-            Title = "Open Bannerlord Prefab",
-            FileName = seedPath
+            Title = "Open Bannerlord Prefab"
         };
 
-        var initialDirectory = Path.GetDirectoryName(seedPath);
+        if (File.Exists(seedPath))
+        {
+            dialog.FileName = seedPath;
+        }
+
+        var initialDirectory = Directory.Exists(seedPath)
+            ? seedPath
+            : Path.GetDirectoryName(seedPath);
         if (!string.IsNullOrWhiteSpace(initialDirectory) && Directory.Exists(initialDirectory))
         {
             dialog.InitialDirectory = initialDirectory;

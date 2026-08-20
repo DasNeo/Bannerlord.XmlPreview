@@ -4,6 +4,13 @@ namespace Bannerlord.XmlPreview.Rendering;
 
 public static class PreviewElementDebugProperties
 {
+    public static readonly DependencyProperty DebugBaseTextProperty =
+        DependencyProperty.RegisterAttached(
+            "DebugBaseText",
+            typeof(string),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(string.Empty));
+
     public static readonly DependencyProperty DebugTextProperty =
         DependencyProperty.RegisterAttached(
             "DebugText",
@@ -24,6 +31,16 @@ public static class PreviewElementDebugProperties
             typeof(Rect),
             typeof(PreviewElementDebugProperties),
             new PropertyMetadata(Rect.Empty));
+
+    public static string GetDebugBaseText(DependencyObject element)
+    {
+        return (string)element.GetValue(DebugBaseTextProperty);
+    }
+
+    public static void SetDebugBaseText(DependencyObject element, string value)
+    {
+        element.SetValue(DebugBaseTextProperty, value);
+    }
 
     public static string GetDebugText(DependencyObject element)
     {

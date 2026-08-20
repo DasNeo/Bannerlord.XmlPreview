@@ -580,7 +580,9 @@ public sealed class PrefabRenderContext
                 if (widthUsesCoverChildren)
                 {
                     var padding = ResolveBrushContentPadding(brushId, isDisabled);
-                    element.MinWidth = Math.Max(element.MinWidth, padding.Left + padding.Right + 24);
+                    element.MinWidth = Math.Max(
+                        element.MinWidth,
+                        Math.Max(metricWidth ?? 0, padding.Left + padding.Right + 24));
                 }
                 else
                 {
@@ -839,10 +841,18 @@ public sealed class PrefabRenderContext
 
         var width = !double.IsNaN(element.Width) && element.Width > 0 ? element.Width : desired.Width;
         var height = !double.IsNaN(element.Height) && element.Height > 0 ? element.Height : desired.Height;
+        var widthUsesFallback = width <= 0;
+        var heightUsesFallback = height <= 0;
+        var measuredSize = new Size(
+            widthUsesFallback ? Math.Min(parentSize.Width, DefaultMeasureFallbackSize.Width) : width,
+            heightUsesFallback ? Math.Min(parentSize.Height, DefaultMeasureFallbackSize.Height) : height);
 
-        return new Size(
-            width > 0 ? width : Math.Min(parentSize.Width, DefaultMeasureFallbackSize.Width),
-            height > 0 ? height : Math.Min(parentSize.Height, DefaultMeasureFallbackSize.Height));
+        if (widthUsesFallback || heightUsesFallback)
+        {
+            _diagnostics.AddMeasureFallback(element.GetType().Name, parentSize.Width, parentSize.Height);
+        }
+
+        return measuredSize;
     }
 
     public void AttachChildren(Panel host, IEnumerable<PrefabNode> children, Size parentSize)
@@ -868,6 +878,7 @@ public sealed class PrefabRenderContext
                 }
 
                 ApplyFlowLayout(rendered.Element, child.Attributes);
+                AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, parentSize));
                 stackPanel.Children.Add(rendered.Element);
                 continue;
             }
@@ -877,6 +888,7 @@ public sealed class PrefabRenderContext
             host.Children.Add(rendered.Element);
             Canvas.SetLeft(rendered.Element, origin.X + position.X);
             Canvas.SetTop(rendered.Element, origin.Y + position.Y);
+            AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, elementSize, position, rendered.AlignmentBounds);
         }
     }
 
@@ -987,9 +999,7 @@ public sealed class PrefabRenderContext
 
         if (UsesCoverChildren(attributes, "WidthSizePolicy"))
         {
-            var targetWidth = Math.Max(
-                ResolveDouble(attributes.TryGetValue("SuggestedWidth", out var suggestedWidth) ? suggestedWidth : null, 0),
-                contentSize.Width);
+            var targetWidth = Math.Max(element.MinWidth, Math.Max(0, contentSize.Width));
             if (!DoubleUtil.AreClose(element.Width, targetWidth))
             {
                 element.Width = targetWidth;
@@ -999,9 +1009,7 @@ public sealed class PrefabRenderContext
 
         if (UsesCoverChildren(attributes, "HeightSizePolicy"))
         {
-            var targetHeight = Math.Max(
-                ResolveDouble(attributes.TryGetValue("SuggestedHeight", out var suggestedHeight) ? suggestedHeight : null, 0),
-                contentSize.Height);
+            var targetHeight = Math.Max(element.MinHeight, Math.Max(0, contentSize.Height));
             if (!DoubleUtil.AreClose(element.Height, targetHeight))
             {
                 element.Height = targetHeight;
@@ -1035,22 +1043,26 @@ public sealed class PrefabRenderContext
         var anchorBounds = alignmentBounds is { IsEmpty: false } bounds
             ? bounds
             : new Rect(new Point(0, 0), elementSize);
+        var availableLeft = marginLeft;
+        var availableTop = marginTop;
+        var availableWidth = Math.Max(0, parentSize.Width - marginLeft - marginRight);
+        var availableHeight = Math.Max(0, parentSize.Height - marginTop - marginBottom);
 
         var anchorLeft = horizontalAlignment switch
         {
-            "Center" => (parentSize.Width - anchorBounds.Width) / 2 + offsetX + (marginLeft - marginRight) / 2,
-            "Right" => parentSize.Width - anchorBounds.Width - marginRight - offsetX,
-            _ => marginLeft + offsetX
+            "Center" => availableLeft + (availableWidth - anchorBounds.Width) / 2,
+            "Right" => availableLeft + availableWidth - anchorBounds.Width,
+            _ => availableLeft
         };
 
         var anchorTop = verticalAlignment switch
         {
-            "Center" => (parentSize.Height - anchorBounds.Height) / 2 + offsetY + (marginTop - marginBottom) / 2,
-            "Bottom" => parentSize.Height - anchorBounds.Height - marginBottom - offsetY,
-            _ => marginTop + offsetY
+            "Center" => availableTop + (availableHeight - anchorBounds.Height) / 2,
+            "Bottom" => availableTop + availableHeight - anchorBounds.Height,
+            _ => availableTop
         };
 
-        return new Point(anchorLeft - anchorBounds.X, anchorTop - anchorBounds.Y);
+        return new Point(anchorLeft - anchorBounds.X + offsetX, anchorTop - anchorBounds.Y + offsetY);
     }
 
     private static class DoubleUtil
@@ -1085,10 +1097,30 @@ public sealed class PrefabRenderContext
         IEnumerable<string?>? brushNames = null,
         bool isDisabled = false)
     {
+        var baseDebugText = BuildElementDebugText(nodeName, attributes, spriteNames, brushNames, isDisabled);
+        PreviewElementDebugProperties.SetDebugBaseText(element, baseDebugText);
+        PreviewElementDebugProperties.SetDebugText(element, baseDebugText);
+        PreviewElementDebugProperties.SetTreeLabel(element, BuildElementTreeLabel(nodeName, attributes));
+    }
+
+    public void AttachElementLayoutDebugMetadata(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        Size parentSize,
+        Size measuredSize,
+        Point? position = null,
+        Rect? alignmentBounds = null)
+    {
+        var baseDebugText = PreviewElementDebugProperties.GetDebugBaseText(element);
+        if (string.IsNullOrWhiteSpace(baseDebugText))
+        {
+            return;
+        }
+
+        var layoutDebugText = BuildLayoutDebugText(element, attributes, parentSize, measuredSize, position, alignmentBounds);
         PreviewElementDebugProperties.SetDebugText(
             element,
-            BuildElementDebugText(nodeName, attributes, spriteNames, brushNames, isDisabled));
-        PreviewElementDebugProperties.SetTreeLabel(element, BuildElementTreeLabel(nodeName, attributes));
+            string.Concat(baseDebugText, Environment.NewLine, Environment.NewLine, layoutDebugText));
     }
 
     public bool BrushExists(string? brushName)
@@ -1533,65 +1565,10 @@ public sealed class PrefabRenderContext
 
     public double ApplyVisualTextCentering(TextBlock textBlock, double availableWidth)
     {
-        if (textBlock.FontSize <= 0)
-        {
-            return 0;
-        }
-
-        textBlock.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
-        textBlock.LineHeight = textBlock.FontSize;
-
-        var offset = ResolveTextVisualVerticalOffset(textBlock, availableWidth);
-        if (Math.Abs(offset) < 0.1)
-        {
-            return 0;
-        }
-
-        textBlock.RenderTransform = new TranslateTransform(0, offset);
-        return offset;
-    }
-
-    private static double ResolveTextVisualVerticalOffset(TextBlock textBlock, double availableWidth)
-    {
-        if (string.IsNullOrWhiteSpace(textBlock.Text) || textBlock.FontSize <= 0)
-        {
-            return 0;
-        }
-
-        var typeface = new Typeface(
-            textBlock.FontFamily,
-            textBlock.FontStyle,
-            textBlock.FontWeight,
-            textBlock.FontStretch);
-        var formattedText = new FormattedText(
-            textBlock.Text,
-            CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
-            typeface,
-            textBlock.FontSize,
-            Brushes.Black,
-            1.0);
-
-        if (textBlock.TextWrapping == TextWrapping.Wrap &&
-            availableWidth > 0 &&
-            !double.IsInfinity(availableWidth))
-        {
-            formattedText.MaxTextWidth = availableWidth;
-        }
-
-        // FormattedText.BuildGeometry uses the provided point as the baseline origin.
-        // Using the real baseline keeps the glyph bounds in the same coordinate space
-        // as the rendered line box instead of shifting centered titles downward.
-        var glyphGeometry = formattedText.BuildGeometry(new Point(0, formattedText.Baseline));
-        var bounds = glyphGeometry.Bounds;
-        if (bounds.IsEmpty || formattedText.Height <= 0)
-        {
-            return 0;
-        }
-
-        var lineHeight = textBlock.LineHeight > 0 ? textBlock.LineHeight : formattedText.Height;
-        var offset = ((lineHeight - bounds.Height) / 2d) - bounds.Top;
-        return Math.Clamp(offset, -textBlock.FontSize * 0.35, textBlock.FontSize * 0.35);
+        textBlock.ClearValue(TextBlock.LineStackingStrategyProperty);
+        textBlock.ClearValue(TextBlock.LineHeightProperty);
+        textBlock.RenderTransform = Transform.Identity;
+        return 0;
     }
 
     private FrameworkElement CreateNineSliceVisual(
@@ -1863,7 +1840,7 @@ public sealed class PrefabRenderContext
         {
             "Fixed" when suggestedSize > 0 => suggestedSize,
             "StretchToParent" => Math.Max(0, parentSize - marginStart - marginEnd),
-            "CoverChildren" when suggestedSize > 0 => suggestedSize,
+            "CoverChildren" => null,
             _ when suggestedSize > 0 => suggestedSize,
             _ => null
         };
@@ -1975,6 +1952,69 @@ public sealed class PrefabRenderContext
         return string.Join(Environment.NewLine, lines);
     }
 
+    private string BuildLayoutDebugText(
+        FrameworkElement element,
+        IReadOnlyDictionary<string, string> attributes,
+        Size parentSize,
+        Size measuredSize,
+        Point? position,
+        Rect? alignmentBounds)
+    {
+        var lines = new List<string>
+        {
+            "Layout",
+            $"ParentSize: {FormatSize(parentSize)}",
+            $"MeasuredSize: {FormatSize(measuredSize)}"
+        };
+
+        attributes.TryGetValue("WidthSizePolicy", out var widthPolicy);
+        attributes.TryGetValue("HeightSizePolicy", out var heightPolicy);
+        if (!string.IsNullOrWhiteSpace(widthPolicy) || !string.IsNullOrWhiteSpace(heightPolicy))
+        {
+            lines.Add($"SizePolicy: W={widthPolicy ?? "-"} H={heightPolicy ?? "-"}");
+        }
+
+        attributes.TryGetValue("SuggestedWidth", out var suggestedWidth);
+        attributes.TryGetValue("SuggestedHeight", out var suggestedHeight);
+        if (!string.IsNullOrWhiteSpace(suggestedWidth) || !string.IsNullOrWhiteSpace(suggestedHeight))
+        {
+            lines.Add(
+                $"SuggestedSize: W={ResolveDebugValue(suggestedWidth ?? "-")} H={ResolveDebugValue(suggestedHeight ?? "-")}");
+        }
+
+        attributes.TryGetValue("HorizontalAlignment", out var horizontalAlignment);
+        attributes.TryGetValue("VerticalAlignment", out var verticalAlignment);
+        if (!string.IsNullOrWhiteSpace(horizontalAlignment) || !string.IsNullOrWhiteSpace(verticalAlignment))
+        {
+            lines.Add($"Alignment: H={horizontalAlignment ?? "Left"} V={verticalAlignment ?? "Top"}");
+        }
+
+        lines.Add($"Margin: {FormatThickness(element.Margin, attributes)}");
+
+        attributes.TryGetValue("PositionXOffset", out var positionXOffset);
+        attributes.TryGetValue("PositionYOffset", out var positionYOffset);
+        if (!string.IsNullOrWhiteSpace(positionXOffset) || !string.IsNullOrWhiteSpace(positionYOffset))
+        {
+            lines.Add(
+                $"Offsets: X={ResolveDebugValue(positionXOffset ?? "0")} Y={ResolveDebugValue(positionYOffset ?? "0")}");
+        }
+
+        lines.Add(
+            $"WpfSize: W={FormatOptionalDimension(double.IsNaN(element.Width) ? null : element.Width)} H={FormatOptionalDimension(double.IsNaN(element.Height) ? null : element.Height)}");
+
+        if (position.HasValue)
+        {
+            lines.Add($"CanvasPosition: {FormatPoint(position.Value)}");
+        }
+
+        if (alignmentBounds is { IsEmpty: false } bounds)
+        {
+            lines.Add($"AlignmentBounds: {FormatRect(bounds)}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
     private string ResolveDebugValue(string rawValue)
     {
         if (string.IsNullOrWhiteSpace(rawValue))
@@ -1996,6 +2036,46 @@ public sealed class PrefabRenderContext
         }
 
         return rawValue;
+    }
+
+    private static string FormatSize(Size size)
+    {
+        return $"{FormatDouble(size.Width)} x {FormatDouble(size.Height)}";
+    }
+
+    private static string FormatPoint(Point point)
+    {
+        return $"({FormatDouble(point.X)}, {FormatDouble(point.Y)})";
+    }
+
+    private static string FormatRect(Rect rect)
+    {
+        return $"{FormatPoint(rect.Location)} {FormatSize(rect.Size)}";
+    }
+
+    private string FormatThickness(Thickness? elementMargin, IReadOnlyDictionary<string, string> attributes)
+    {
+        if (elementMargin.HasValue)
+        {
+            var margin = elementMargin.Value;
+            return $"L={FormatDouble(margin.Left)} T={FormatDouble(margin.Top)} R={FormatDouble(margin.Right)} B={FormatDouble(margin.Bottom)}";
+        }
+
+        var marginLeft = ResolveDebugValue(attributes.TryGetValue("MarginLeft", out var marginLeftValue) ? marginLeftValue : "0");
+        var marginTop = ResolveDebugValue(attributes.TryGetValue("MarginTop", out var marginTopValue) ? marginTopValue : "0");
+        var marginRight = ResolveDebugValue(attributes.TryGetValue("MarginRight", out var marginRightValue) ? marginRightValue : "0");
+        var marginBottom = ResolveDebugValue(attributes.TryGetValue("MarginBottom", out var marginBottomValue) ? marginBottomValue : "0");
+        return $"L={marginLeft} T={marginTop} R={marginRight} B={marginBottom}";
+    }
+
+    private static string FormatOptionalDimension(double? value)
+    {
+        return value.HasValue ? FormatDouble(value.Value) : "Auto";
+    }
+
+    private static string FormatDouble(double value)
+    {
+        return value.ToString("0.##", CultureInfo.InvariantCulture);
     }
 
     private string BuildElementTreeLabel(string nodeName, IReadOnlyDictionary<string, string> attributes)

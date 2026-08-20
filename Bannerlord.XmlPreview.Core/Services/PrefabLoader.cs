@@ -24,17 +24,20 @@ public sealed class PrefabLoader : IPrefabLoader
     private readonly IAssetCatalog _assetCatalog;
     private readonly IBrushMetricsProvider _brushMetricsProvider;
     private readonly IPrefabReferenceResolver _prefabReferenceResolver;
+    private readonly IWidgetReferenceResolver _widgetReferenceResolver;
     private readonly IWidgetNodeFactory _widgetNodeFactory;
 
     public PrefabLoader(
         IAssetCatalog assetCatalog,
         IBrushMetricsProvider brushMetricsProvider,
         IPrefabReferenceResolver prefabReferenceResolver,
+        IWidgetReferenceResolver widgetReferenceResolver,
         IWidgetNodeFactory widgetNodeFactory)
     {
         _assetCatalog = assetCatalog;
         _brushMetricsProvider = brushMetricsProvider;
         _prefabReferenceResolver = prefabReferenceResolver;
+        _widgetReferenceResolver = widgetReferenceResolver;
         _widgetNodeFactory = widgetNodeFactory;
     }
 
@@ -55,9 +58,20 @@ public sealed class PrefabLoader : IPrefabLoader
             state.ExpansionStack,
             [],
             out _);
+        _widgetReferenceResolver.Resolve(expandedRoot, diagnostics);
 
         var bindingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rootNode = ParseNode(expandedRoot, bindingKeys);
+        var nodeTypeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var maxDepth = CollectNodeStatistics(rootNode, nodeTypeCounts, 1);
+        diagnostics.SetDocumentSummary(
+            fullPath,
+            rootNode.Name,
+            constants.Count,
+            bindingKeys.Count,
+            nodeTypeCounts.Values.Sum(),
+            maxDepth,
+            nodeTypeCounts);
         return new PrefabDocument(fullPath, rootNode, constants, bindingKeys);
     }
 
@@ -580,17 +594,6 @@ public sealed class PrefabLoader : IPrefabLoader
             }
         }
 
-        foreach (var child in callerElement.Elements())
-        {
-            if (child.Name.LocalName is "Children" or "Constants")
-            {
-                continue;
-            }
-
-            callerChildren.Add(
-                ExpandElement(child, parameters, constants, diagnostics, expansionStack, [], out _));
-        }
-
         return callerChildren;
     }
 
@@ -652,26 +655,23 @@ public sealed class PrefabLoader : IPrefabLoader
         }
 
         var children = new List<PrefabNode>();
-        var childrenElement = element.Element("Children");
-        if (childrenElement is not null)
+        foreach (var child in GetParsedChildElements(element))
         {
-            foreach (var child in childrenElement.Elements())
-            {
-                children.Add(ParseNode(child, bindingKeys));
-            }
-        }
-
-        foreach (var child in element.Elements())
-        {
-            if (child.Name.LocalName is "Children" or "Constants")
-            {
-                continue;
-            }
-
             children.Add(ParseNode(child, bindingKeys));
         }
 
         return _widgetNodeFactory.CreateNode(element.Name.LocalName, attributes, children);
+    }
+
+    private static IEnumerable<XElement> GetParsedChildElements(XElement element)
+    {
+        if (string.Equals(element.Name.LocalName, "Window", StringComparison.OrdinalIgnoreCase))
+        {
+            return element.Elements()
+                .Where(child => !MetadataElementNames.Contains(child.Name.LocalName, StringComparer.OrdinalIgnoreCase));
+        }
+
+        return element.Element("Children")?.Elements() ?? [];
     }
 
     private static XElement GetIncludeRootElement(XElement rootWindow, string path)
@@ -719,6 +719,29 @@ public sealed class PrefabLoader : IPrefabLoader
         }
 
         bindingKeys.Add(rawValue[1..]);
+    }
+
+    private static int CollectNodeStatistics(
+        PrefabNode node,
+        IDictionary<string, int> nodeTypeCounts,
+        int depth)
+    {
+        if (nodeTypeCounts.TryGetValue(node.Name, out var existingCount))
+        {
+            nodeTypeCounts[node.Name] = existingCount + 1;
+        }
+        else
+        {
+            nodeTypeCounts[node.Name] = 1;
+        }
+
+        var maxDepth = depth;
+        foreach (var child in node.Children)
+        {
+            maxDepth = Math.Max(maxDepth, CollectNodeStatistics(child, nodeTypeCounts, depth + 1));
+        }
+
+        return maxDepth;
     }
 
     private sealed record PrefabExpansionState(

@@ -31,6 +31,12 @@ public partial class App : Application
             _serviceProvider = services.BuildServiceProvider();
 
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            var startupOptions = ParseStartupOptions(e.Args);
+            if (mainWindow.DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.ApplyStartupOptions(startupOptions.BannerlordInstallRoot, startupOptions.PrefabPath);
+            }
+
             MainWindow = mainWindow;
             mainWindow.Show();
         }
@@ -57,6 +63,7 @@ public partial class App : Application
         services.AddSingleton<IBrushMetricsProvider, BannerlordBrushMetricsProvider>();
         services.AddSingleton<IBrushOverlayFeatureHandler, BannerlordBrushOverlayFeatureHandler>();
         services.AddSingleton<IPrefabReferenceResolver, BannerlordPrefabReferenceResolver>();
+        services.AddSingleton<IWidgetReferenceResolver, WidgetReferenceResolver>();
         services.AddSingleton<IWidgetNodeFactory, BannerlordWidgetNodeFactory>();
         services.AddSingleton<IPreviewDataSourceProvider, BannerlordPreviewDataSourceProvider>();
         services.AddSingleton<IRootLayoutHints, BannerlordRootLayoutHints>();
@@ -69,6 +76,39 @@ public partial class App : Application
         
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
+    }
+
+    private static StartupOptions ParseStartupOptions(IReadOnlyList<string> args)
+    {
+        string? prefabPath = null;
+        string? bannerlordInstallRoot = null;
+
+        for (var index = 0; index < args.Count; index++)
+        {
+            var argument = args[index];
+            if (string.Equals(argument, "--prefab", StringComparison.OrdinalIgnoreCase) &&
+                index + 1 < args.Count)
+            {
+                prefabPath = args[++index];
+                continue;
+            }
+
+            if ((string.Equals(argument, "--bannerlord-root", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(argument, "--bannerlord-install", StringComparison.OrdinalIgnoreCase)) &&
+                index + 1 < args.Count)
+            {
+                bannerlordInstallRoot = args[++index];
+                continue;
+            }
+
+            if (!argument.StartsWith("-", StringComparison.Ordinal) &&
+                string.IsNullOrWhiteSpace(prefabPath))
+            {
+                prefabPath = argument;
+            }
+        }
+
+        return new StartupOptions(prefabPath, bannerlordInstallRoot);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -109,4 +149,6 @@ public partial class App : Application
 
         Console.WriteLine(message);
     }
+
+    private sealed record StartupOptions(string? PrefabPath, string? BannerlordInstallRoot);
 }

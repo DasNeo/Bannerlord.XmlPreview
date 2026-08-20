@@ -17,8 +17,10 @@ namespace Bannerlord.XmlPreview.ViewModels;
 public sealed class MainWindowViewModel : ViewModelBase
 {
     private const string DefaultWindowTitle = "Bannerlord XML Preview";
-    private const string DefaultPrefabPath =
-        @"D:\Source\AgricultureEstateUpdated\Agriculture_Estate\_Module\GUI\Prefabs\LandManagement.xml";
+    private const string Phase0PrimaryPrefabRelativePath =
+        @"Modules\Native\GUI\Prefabs\Standard\Standard.ScrollablePanel.xml";
+    private const string Phase0SecondaryPrefabRelativePath =
+        @"Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml";
 
     private readonly IPrefabLoader _prefabLoader;
     private readonly IPrefabRenderer _prefabRenderer;
@@ -157,13 +159,53 @@ public sealed class MainWindowViewModel : ViewModelBase
     #endregion
 
     #region Methods
+    public void ApplyStartupOptions(string? bannerlordInstallPath, string? prefabPath)
+    {
+        if (!string.IsNullOrWhiteSpace(bannerlordInstallPath))
+        {
+            BannerlordInstallPath = bannerlordInstallPath;
+            ApplyBannerlordInstall();
+        }
+
+        if (!string.IsNullOrWhiteSpace(prefabPath))
+        {
+            OpenPrefabPath(prefabPath);
+        }
+    }
+
     private void OpenPrefab()
     {
-        var selectedPath = _fileDialogService.OpenPrefab(_currentPrefabPath ?? DefaultPrefabPath);
+        var selectedPath = _fileDialogService.OpenPrefab(GetOpenPrefabSeedPath());
         if (!string.IsNullOrWhiteSpace(selectedPath))
         {
             OpenPrefabPath(selectedPath);
         }
+    }
+
+    private string GetOpenPrefabSeedPath()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentPrefabPath))
+        {
+            return _currentPrefabPath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(BannerlordInstallPath) &&
+            Directory.Exists(BannerlordInstallPath))
+        {
+            var primaryPhase0Path = Path.Combine(BannerlordInstallPath, Phase0PrimaryPrefabRelativePath);
+            if (File.Exists(primaryPhase0Path))
+            {
+                return primaryPhase0Path;
+            }
+
+            var secondaryPhase0Path = Path.Combine(BannerlordInstallPath, Phase0SecondaryPrefabRelativePath);
+            if (File.Exists(secondaryPhase0Path))
+            {
+                return secondaryPhase0Path;
+            }
+        }
+
+        return BannerlordInstallPath;
     }
 
     private bool CanReloadPrefab()

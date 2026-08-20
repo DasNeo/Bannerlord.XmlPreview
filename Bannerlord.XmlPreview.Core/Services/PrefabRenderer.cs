@@ -48,6 +48,10 @@ public sealed class PrefabRenderer : IPrefabRenderer
         context.EnsureBindings(document.BindingKeys);
 
         var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
-        return document.RootNode.Render(context, rootSize).Element;
+        var renderedRoot = document.RootNode.Render(context, rootSize);
+        var measuredRootSize = context.Measure(renderedRoot.Element, rootSize);
+        context.AttachElementLayoutDebugMetadata(renderedRoot.Element, document.RootNode.Attributes, rootSize, measuredRootSize);
+        diagnostics.SetRenderSummary(rootSize.Width, rootSize.Height, measuredRootSize.Width, measuredRootSize.Height);
+        return renderedRoot.Element;
     }
 }

@@ -71,8 +71,15 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
         };
         context.ApplyTextStyle(textBlock, textBrushId, textFontSize, textAttributes, 20);
         context.ApplyVisualTextCentering(textBlock, chromeSize.Width);
-        textBlock.Margin = context.ResolveBrushContentPadding(chrome.PrimaryBrushId, chrome.IsDisabled);
-        layout.Children.Add(textBlock);
+
+        var contentHost = new Grid
+        {
+            Margin = context.ResolveBrushContentPadding(chrome.PrimaryBrushId, chrome.IsDisabled),
+            ClipToBounds = false,
+            IsHitTestVisible = false
+        };
+        contentHost.Children.Add(textBlock);
+        layout.Children.Add(contentHost);
     }
 
     private string ResolveButtonText(PrefabRenderContext context)
