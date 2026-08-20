@@ -3,6 +3,9 @@ using Bannerlord.XmlPreview.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 using Bannerlord.XmlPreview.Interfaces;
+using Bannerlord.XmlPreview.Core.Abstractions;
+using Bannerlord.XmlPreview.Adapters.Bannerlord;
+using Bannerlord.XmlPreview.Preview.Bannerlord;
 using System.Text;
 using System.Windows.Threading;
 
@@ -50,7 +53,15 @@ public partial class App : Application
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
-        services.AddSingleton<IBannerlordAssetCatalog, BannerlordAssetCatalog>();
+        services.AddSingleton<IAssetCatalog, BannerlordAssetCatalog>();
+        services.AddSingleton<IBrushMetricsProvider, BannerlordBrushMetricsProvider>();
+        services.AddSingleton<IBrushOverlayFeatureHandler, BannerlordBrushOverlayFeatureHandler>();
+        services.AddSingleton<IPrefabReferenceResolver, BannerlordPrefabReferenceResolver>();
+        services.AddSingleton<IWidgetNodeFactory, BannerlordWidgetNodeFactory>();
+        services.AddSingleton<IPreviewDataSourceProvider, BannerlordPreviewDataSourceProvider>();
+        services.AddSingleton<IRootLayoutHints, BannerlordRootLayoutHints>();
+        services.AddSingleton<IWidgetTextSourceProvider, BannerlordWidgetTextSourceProvider>();
+        services.AddSingleton<IWidgetDebugMetadataProvider, BannerlordWidgetDebugMetadataProvider>();
         services.AddSingleton<IPrefabLoader, PrefabLoader>();
         services.AddSingleton<IPrefabRenderer, PrefabRenderer>();
         services.AddSingleton<IFileDialogService, FileDialogService>();

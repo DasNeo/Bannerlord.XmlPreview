@@ -14,7 +14,26 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Remove="Bannerlord\**\*.cs" />
+        <Compile Remove="Core\**\*.cs" />
         <Compile Remove="Bannerlord.XmlPreview.DemoData\**\*.cs" />
-        <ProjectReference Include="Bannerlord.XmlPreview.DemoData\Bannerlord.XmlPreview.DemoData.csproj" />
+        <Compile Remove="Bannerlord.XmlPreview.Core\**\*.cs" />
+        <Compile Remove="Bannerlord.XmlPreview.Bannerlord\**\*.cs" />
+        <Compile Remove="Models\**\*.cs" />
+        <Compile Remove="Rendering\PreviewElementDebugProperties.cs" />
+        <Compile Remove="Rendering\PrefabRenderContext.cs" />
+        <Compile Remove="Rendering\RenderedPrefabNode.cs" />
+        <Compile Remove="Interfaces\IAppSettingsService.cs" />
+        <Compile Remove="Interfaces\IAssetCatalog.cs" />
+        <Compile Remove="Interfaces\IPrefabLoader.cs" />
+        <Compile Remove="Interfaces\IPrefabRenderer.cs" />
+        <Compile Remove="Services\BannerlordAssetCatalog.cs" />
+        <Compile Remove="Services\PrefabLoader.cs" />
+        <Compile Remove="Services\PrefabRenderer.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="Bannerlord.XmlPreview.Core\Bannerlord.XmlPreview.Core.csproj" />
+        <ProjectReference Include="Bannerlord.XmlPreview.Bannerlord\Bannerlord.XmlPreview.Bannerlord.csproj" />
     </ItemGroup>
 </Project>
