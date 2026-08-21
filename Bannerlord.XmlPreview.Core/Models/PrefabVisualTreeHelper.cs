@@ -6,19 +6,19 @@ public static class PrefabVisualTreeHelper
 {
     public const string DebugWidgetPathAttributeName = "Debug.WidgetPath";
 
-    private static readonly string[] MetadataElementNames =
-    [
+    private static readonly HashSet<string> MetadataElementNames = new(StringComparer.OrdinalIgnoreCase)
+    {
         "Children",
         "Constants",
         "Parameters",
         "Variables",
         "VisualDefinitions",
         "LogicalChildrenLocation"
-    ];
+    };
 
     public static void AssignCanonicalPaths(XElement rootElement)
     {
-        AssignCanonicalPaths(rootElement, null);
+        AssignCanonicalPaths(rootElement, DescribeElement(rootElement), null);
     }
 
     public static string GetCanonicalElementPath(XElement element)
@@ -82,17 +82,36 @@ public static class PrefabVisualTreeHelper
             : $"{element.Name.LocalName}[Id={id}]";
     }
 
-    private static void AssignCanonicalPaths(XElement element, string? parentPath)
+    private static void AssignCanonicalPaths(XElement element, string segment, string? parentPath)
     {
-        var segment = DescribeElementForPath(element);
         var currentPath = string.IsNullOrWhiteSpace(parentPath)
             ? segment
             : $"{parentPath} > {segment}";
         element.SetAttributeValue(DebugWidgetPathAttributeName, currentPath);
 
-        foreach (var child in GetVisualChildren(element))
+        var children = GetVisualChildren(element).ToArray();
+        if (children.Length == 0)
         {
-            AssignCanonicalPaths(child, currentPath);
+            return;
+        }
+
+        var totalCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var child in children)
+        {
+            var childLabel = DescribeElement(child);
+            totalCounts[childLabel] = totalCounts.GetValueOrDefault(childLabel) + 1;
+        }
+
+        var seenCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var child in children)
+        {
+            var childLabel = DescribeElement(child);
+            var childOrdinal = seenCounts.GetValueOrDefault(childLabel) + 1;
+            seenCounts[childLabel] = childOrdinal;
+            var childSegment = totalCounts[childLabel] > 1
+                ? $"{childLabel}#{childOrdinal}"
+                : childLabel;
+            AssignCanonicalPaths(child, childSegment, currentPath);
         }
     }
 

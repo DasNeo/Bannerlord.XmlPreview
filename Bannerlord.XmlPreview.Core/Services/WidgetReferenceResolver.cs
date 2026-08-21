@@ -12,6 +12,7 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
 
     public PrefabWidgetReferenceMap Resolve(XElement rootElement, PreviewDiagnostics diagnostics)
     {
+        using var timing = diagnostics.MeasurePhase("WidgetReferenceResolver.Resolve.Total");
         var referencesByWidgetPath = new Dictionary<string, IReadOnlyDictionary<string, ResolvedWidgetReference>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var element in rootElement.DescendantsAndSelf())

@@ -1,10 +1,13 @@
 using Bannerlord.XmlPreview.Models.Assets;
 using System.Globalization;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Bannerlord.XmlPreview.Models;
 
 public sealed class PreviewDiagnostics
 {
+    private static readonly AsyncLocal<PreviewDiagnostics?> AmbientDiagnostics = new();
     private readonly List<string> _messages = [];
     private readonly Dictionary<string, string> _resolvedConstants = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _resolvedBrushes = new(StringComparer.OrdinalIgnoreCase);
@@ -17,7 +20,8 @@ public sealed class PreviewDiagnostics
     private readonly HashSet<string> _resolvedWidgetPropertySet = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _measureFallbackSamples = [];
     private readonly HashSet<string> _measureFallbackSet = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<string> _elementLayoutSnapshots = [];
+    private readonly List<ElementLayoutSnapshot> _elementLayoutSnapshots = [];
+    private readonly Dictionary<string, TimingAggregate> _timings = new(StringComparer.OrdinalIgnoreCase);
     private string? _sourcePath;
     private string? _rootNodeName;
     private int _bindingCount;
@@ -34,6 +38,21 @@ public sealed class PreviewDiagnostics
     private string? _actualRootSize;
 
     public IReadOnlyList<string> Messages => _messages;
+
+    public IDisposable BeginTimingScope()
+    {
+        return new DiagnosticsTimingContext(this);
+    }
+
+    public IDisposable MeasurePhase(string phaseName)
+    {
+        return new TimingScope(this, phaseName);
+    }
+
+    public static IDisposable MeasureCurrentPhase(string phaseName)
+    {
+        return new TimingScope(AmbientDiagnostics.Value, phaseName);
+    }
 
     public void Add(string message)
     {
@@ -132,11 +151,25 @@ public sealed class PreviewDiagnostics
             sections.Add($"Captured: {_elementLayoutSnapshots.Count}");
             for (var index = 0; index < _elementLayoutSnapshots.Count; index++)
             {
-                sections.Add(_elementLayoutSnapshots[index]);
+                sections.Add(_elementLayoutSnapshots[index].ToString());
                 if (index < _elementLayoutSnapshots.Count - 1)
                 {
                     sections.Add(string.Empty);
                 }
+            }
+        }
+
+        if (_timings.Count > 0)
+        {
+            AddSectionSeparator(sections);
+            sections.Add("Timings");
+            foreach (var entry in _timings
+                         .OrderByDescending(entry => entry.Value.TotalMs)
+                         .ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                sections.Add(
+                    $"{entry.Key}: {FormatNumber(entry.Value.TotalMs)} ms total " +
+                    $"({entry.Value.Count}x, avg {FormatNumber(entry.Value.AverageMs)} ms, max {FormatNumber(entry.Value.MaxMs)} ms)");
             }
         }
 
@@ -190,11 +223,10 @@ public sealed class PreviewDiagnostics
         _actualRootSize = FormatSize(actualWidth, actualHeight);
     }
 
-    public void SetElementLayoutSnapshots(IEnumerable<string> snapshots)
+    public void SetElementLayoutSnapshots(IEnumerable<ElementLayoutSnapshot> snapshots)
     {
         _elementLayoutSnapshots.Clear();
-        _elementLayoutSnapshots.AddRange(
-            snapshots.Where(snapshot => !string.IsNullOrWhiteSpace(snapshot)));
+        _elementLayoutSnapshots.AddRange(snapshots.Where(snapshot => snapshot is not null));
     }
 
     public void AddResolvedWidgetReference(string originPath, string attributeName, string rawValue, string targetPath)
@@ -256,6 +288,11 @@ public sealed class PreviewDiagnostics
 
     public void AddResolvedBrush(string requestedName, BrushDefinition brush)
     {
+        if (_resolvedBrushes.ContainsKey(requestedName))
+        {
+            return;
+        }
+
         var metadata = new List<string>();
         if (!string.IsNullOrWhiteSpace(brush.FontName))
         {
@@ -310,6 +347,11 @@ public sealed class PreviewDiagnostics
 
     public void AddResolvedSprite(string requestedName, SpriteAssetResolution resolution)
     {
+        if (_resolvedSprites.ContainsKey(requestedName))
+        {
+            return;
+        }
+
         var lines = new List<string> { $"Status: {resolution.Kind}" };
         if (resolution.SpriteDefinition is not null)
         {
@@ -352,6 +394,24 @@ public sealed class PreviewDiagnostics
         if (_reportedMessages.Add(message))
         {
             _messages.Add(message);
+        }
+    }
+
+    private void RecordTiming(string phaseName, long elapsedTicks)
+    {
+        if (string.IsNullOrWhiteSpace(phaseName))
+        {
+            return;
+        }
+
+        var elapsedMs = elapsedTicks * 1000d / Stopwatch.Frequency;
+        if (_timings.TryGetValue(phaseName, out var aggregate))
+        {
+            _timings[phaseName] = aggregate.Add(elapsedMs);
+        }
+        else
+        {
+            _timings[phaseName] = new TimingAggregate(1, elapsedMs, elapsedMs);
         }
     }
 
@@ -414,5 +474,60 @@ public sealed class PreviewDiagnostics
     private static string FormatNumber(double value)
     {
         return value.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+
+    private sealed class DiagnosticsTimingContext : IDisposable
+    {
+        private readonly PreviewDiagnostics? _previousDiagnostics;
+
+        public DiagnosticsTimingContext(PreviewDiagnostics diagnostics)
+        {
+            _previousDiagnostics = AmbientDiagnostics.Value;
+            AmbientDiagnostics.Value = diagnostics;
+        }
+
+        public void Dispose()
+        {
+            AmbientDiagnostics.Value = _previousDiagnostics;
+        }
+    }
+
+    private sealed class TimingScope : IDisposable
+    {
+        private readonly PreviewDiagnostics? _diagnostics;
+        private readonly string? _phaseName;
+        private readonly long _startedAt;
+
+        public TimingScope(PreviewDiagnostics? diagnostics, string? phaseName)
+        {
+            _diagnostics = diagnostics;
+            _phaseName = phaseName;
+            _startedAt = diagnostics is null || string.IsNullOrWhiteSpace(phaseName)
+                ? 0
+                : Stopwatch.GetTimestamp();
+        }
+
+        public void Dispose()
+        {
+            if (_diagnostics is null || string.IsNullOrWhiteSpace(_phaseName) || _startedAt == 0)
+            {
+                return;
+            }
+
+            _diagnostics.RecordTiming(_phaseName, Stopwatch.GetTimestamp() - _startedAt);
+        }
+    }
+
+    private readonly record struct TimingAggregate(
+        int Count,
+        double TotalMs,
+        double MaxMs)
+    {
+        public double AverageMs => Count > 0 ? TotalMs / Count : 0d;
+
+        public TimingAggregate Add(double elapsedMs)
+        {
+            return new TimingAggregate(Count + 1, TotalMs + elapsedMs, Math.Max(MaxMs, elapsedMs));
+        }
     }
 }

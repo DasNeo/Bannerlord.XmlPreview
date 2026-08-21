@@ -1,4 +1,5 @@
 using Bannerlord.XmlPreview.Interfaces;
+using Bannerlord.XmlPreview.Models;
 using Bannerlord.XmlPreview.Models.Assets;
 using System.IO;
 using System.Globalization;
@@ -63,6 +64,23 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
             }
         }
 
+        if (snapshot.SpriteImages.EnsureModuleSpriteImagesIndexed())
+        {
+            foreach (var candidate in BuildImageLookupCandidates(normalizedName, sprite))
+            {
+                if (TryGetSpriteImagePath(snapshot.SpriteImages, candidate.Key, candidate.UseBaseName, out var imagePath))
+                {
+                    return new SpriteAssetResolution(
+                        normalizedName,
+                        candidate.Kind,
+                        candidate.Key,
+                        imagePath,
+                        sprite,
+                        candidate.Note);
+                }
+            }
+        }
+
         var note = sprite is null
             ? "No matching sprite metadata or extracted PNG was found."
             : $"Sprite metadata exists in {sprite.CategoryName} sheet {sprite.SheetId}, but no extracted PNG matched.";
@@ -119,6 +137,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
 
     private static AssetSnapshot LoadSnapshot(string installRoot)
     {
+        using var totalTiming = PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSnapshot.Total");
         var spriteParts = new Dictionary<string, SpritePartDefinition>(StringComparer.OrdinalIgnoreCase);
         var sprites = new Dictionary<string, SpriteDefinition>(StringComparer.OrdinalIgnoreCase);
         var brushes = new Dictionary<string, BrushDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -130,15 +149,21 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
             return new AssetSnapshot(sprites, brushes, spriteImages);
         }
 
-        foreach (var spriteDataPath in Directory.EnumerateFiles(modulesPath, "*SpriteData.xml", SearchOption.AllDirectories))
+        using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSnapshot.SpriteDataFiles"))
         {
-            LoadSpriteData(spriteDataPath, spriteParts, sprites);
+            foreach (var spriteDataPath in Directory.EnumerateFiles(modulesPath, "*SpriteData.xml", SearchOption.AllDirectories))
+            {
+                LoadSpriteData(spriteDataPath, spriteParts, sprites);
+            }
         }
 
-        foreach (var brushPath in Directory.EnumerateFiles(modulesPath, "*.xml", SearchOption.AllDirectories)
-                     .Where(path => path.Contains($"{Path.DirectorySeparatorChar}GUI{Path.DirectorySeparatorChar}Brushes{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)))
+        using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSnapshot.BrushXmlFiles"))
         {
-            LoadBrushData(brushPath, brushes);
+            foreach (var brushPath in Directory.EnumerateFiles(modulesPath, "*.xml", SearchOption.AllDirectories)
+                         .Where(path => path.Contains($"{Path.DirectorySeparatorChar}GUI{Path.DirectorySeparatorChar}Brushes{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)))
+            {
+                LoadBrushData(brushPath, brushes);
+            }
         }
 
         return new AssetSnapshot(sprites, brushes, spriteImages);
@@ -181,25 +206,20 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
 
     private static SpriteImageIndex LoadSpriteImages(string installRoot)
     {
+        using var totalTiming = PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSpriteImages.Total");
         var exactMatches = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var baseNameCandidates = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var root in EnumerateSpriteImageRoots())
+        using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSpriteImages.BaseRoots"))
         {
-            IndexManifest(root, exactMatches, baseNameCandidates);
-            IndexPngFiles(root, exactMatches, baseNameCandidates);
+            foreach (var root in EnumerateSpriteImageRoots())
+            {
+                IndexManifest(root, exactMatches, baseNameCandidates);
+                IndexPngFiles(root, exactMatches, baseNameCandidates);
+            }
         }
 
-        IndexModulePngFiles(installRoot, exactMatches, baseNameCandidates);
-
-        var uniqueBaseNameMatches = baseNameCandidates
-            .Where(entry => entry.Value.Count == 1)
-            .ToDictionary(
-                entry => entry.Key,
-                entry => entry.Value.Single(),
-                StringComparer.OrdinalIgnoreCase);
-
-        return new SpriteImageIndex(exactMatches, uniqueBaseNameMatches);
+        return new SpriteImageIndex(installRoot, exactMatches, baseNameCandidates);
     }
 
     private static IEnumerable<string> EnumerateSpriteImageRoots()
@@ -240,6 +260,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         Dictionary<string, string> exactMatches,
         Dictionary<string, HashSet<string>> baseNameCandidates)
     {
+        using var timing = PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSpriteImages.IndexManifest");
         var manifestPath = Path.Combine(root, "_manifest.csv");
         if (!File.Exists(manifestPath))
         {
@@ -271,6 +292,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         Dictionary<string, string> exactMatches,
         Dictionary<string, HashSet<string>> baseNameCandidates)
     {
+        using var timing = PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSpriteImages.IndexExtractedPngFiles");
         foreach (var filePath in Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories))
         {
             var relativePath = Path.GetRelativePath(root, filePath);
@@ -285,6 +307,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         Dictionary<string, string> exactMatches,
         Dictionary<string, HashSet<string>> baseNameCandidates)
     {
+        using var timing = PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSpriteImages.IndexModulePngFiles");
         var modulesPath = Path.Combine(installRoot, "Modules");
         if (!Directory.Exists(modulesPath))
         {
@@ -723,9 +746,57 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         IReadOnlyDictionary<string, BrushDefinition> Brushes,
         SpriteImageIndex SpriteImages);
 
-    private sealed record SpriteImageIndex(
-        IReadOnlyDictionary<string, string> ExactMatches,
-        IReadOnlyDictionary<string, string> UniqueBaseNameMatches);
+    private sealed class SpriteImageIndex
+    {
+        private readonly object _sync = new();
+        private readonly Dictionary<string, HashSet<string>> _baseNameCandidates;
+        private Dictionary<string, string> _uniqueBaseNameMatches;
+        private bool _moduleSpriteImagesIndexed;
+
+        public SpriteImageIndex(
+            string installRoot,
+            Dictionary<string, string> exactMatches,
+            Dictionary<string, HashSet<string>> baseNameCandidates)
+        {
+            InstallRoot = installRoot;
+            ExactMatches = exactMatches;
+            _baseNameCandidates = baseNameCandidates;
+            _uniqueBaseNameMatches = BuildUniqueBaseNameMatches(baseNameCandidates);
+        }
+
+        public string InstallRoot { get; }
+
+        public Dictionary<string, string> ExactMatches { get; }
+
+        public IReadOnlyDictionary<string, string> UniqueBaseNameMatches => _uniqueBaseNameMatches;
+
+        public bool EnsureModuleSpriteImagesIndexed()
+        {
+            lock (_sync)
+            {
+                if (_moduleSpriteImagesIndexed)
+                {
+                    return false;
+                }
+
+                IndexModulePngFiles(InstallRoot, ExactMatches, _baseNameCandidates);
+                _uniqueBaseNameMatches = BuildUniqueBaseNameMatches(_baseNameCandidates);
+                _moduleSpriteImagesIndexed = true;
+                return true;
+            }
+        }
+
+        private static Dictionary<string, string> BuildUniqueBaseNameMatches(
+            IReadOnlyDictionary<string, HashSet<string>> baseNameCandidates)
+        {
+            return baseNameCandidates
+                .Where(entry => entry.Value.Count == 1)
+                .ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value.Single(),
+                    StringComparer.OrdinalIgnoreCase);
+        }
+    }
 
     private sealed record ImageLookupCandidate(
         string Key,

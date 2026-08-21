@@ -39,30 +39,66 @@ public sealed class PrefabRenderer : IPrefabRenderer
 
     public FrameworkElement Render(PrefabDocument document, PreviewDiagnostics diagnostics)
     {
-        var context = new PrefabRenderContext(
-            document.Constants,
-            document.PropertyMap,
-            document.ReferenceMap,
-            diagnostics,
-            _assetCatalog,
-            _brushMetricsProvider,
-            _brushOverlayFeatureHandler,
-            _previewDataSourceProvider,
-            _widgetTextSourceProvider,
-            _widgetDebugMetadataProvider);
-        context.EnsureBindings(document.BindingKeys);
+        using var totalTiming = diagnostics.MeasurePhase("PrefabRenderer.Render.Total");
+        PrefabRenderContext context;
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.CreateContext"))
+        {
+            context = new PrefabRenderContext(
+                document.Constants,
+                document.PropertyMap,
+                document.ReferenceMap,
+                diagnostics,
+                _assetCatalog,
+                _brushMetricsProvider,
+                _brushOverlayFeatureHandler,
+                _previewDataSourceProvider,
+                _widgetTextSourceProvider,
+                _widgetDebugMetadataProvider);
+        }
+
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.EnsureBindings"))
+        {
+            context.EnsureBindings(document.BindingKeys);
+        }
 
         var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
-        var renderedRoot = context.RegisterRenderedNode(
-            document.RootNode.Name,
-            document.RootNode.Attributes,
-            rootSize,
-            document.RootNode.Render(context, rootSize));
-        context.ApplyDeferredReferenceBehaviors();
-        var measuredRootSize = context.Measure(renderedRoot.Element, document.RootNode.Attributes, rootSize);
-        context.AttachElementLayoutDebugMetadata(renderedRoot.Element, document.RootNode.Attributes, rootSize, measuredRootSize);
-        ArrangeRenderedRoot(renderedRoot.Element, rootSize, measuredRootSize);
-        RefreshElementDebugText(renderedRoot.Element);
+        RenderedPrefabNode renderedRoot;
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.RootNodeRender"))
+        {
+            renderedRoot = context.RegisterRenderedNode(
+                document.RootNode.Name,
+                document.RootNode.Attributes,
+                rootSize,
+                document.RootNode.Render(context, rootSize));
+        }
+
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.ApplyDeferredReferenceBehaviors"))
+        {
+            context.ApplyDeferredReferenceBehaviors();
+        }
+
+        Size measuredRootSize;
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.MeasureRoot"))
+        {
+            measuredRootSize = context.Measure(renderedRoot.Element, document.RootNode.Attributes, rootSize);
+        }
+
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.AttachRootLayoutDebugMetadata"))
+        {
+            context.AttachElementLayoutDebugMetadata(renderedRoot.Element, document.RootNode.Attributes, rootSize, measuredRootSize);
+        }
+
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.ArrangeRoot"))
+        {
+            ArrangeRenderedRoot(renderedRoot.Element, rootSize, measuredRootSize);
+        }
+
+        IReadOnlyList<ElementLayoutSnapshot> elementLayoutSnapshots;
+        using (diagnostics.MeasurePhase("PrefabRenderer.Render.CaptureElementLayoutSnapshots"))
+        {
+            elementLayoutSnapshots = RefreshElementDebugInfoAndCaptureSnapshots(renderedRoot.Element);
+        }
+
         diagnostics.SetRenderSummary(
             rootSize.Width,
             rootSize.Height,
@@ -70,7 +106,7 @@ public sealed class PrefabRenderer : IPrefabRenderer
             measuredRootSize.Height,
             renderedRoot.Element.ActualWidth,
             renderedRoot.Element.ActualHeight);
-        diagnostics.SetElementLayoutSnapshots(CaptureElementLayoutSnapshots(renderedRoot.Element));
+        diagnostics.SetElementLayoutSnapshots(elementLayoutSnapshots);
         return renderedRoot.Element;
     }
 
@@ -96,65 +132,26 @@ public sealed class PrefabRenderer : IPrefabRenderer
         return !double.IsNaN(value) && !double.IsInfinity(value) && value > 0d;
     }
 
-    private static void RefreshElementDebugText(FrameworkElement rootElement)
+    private static IReadOnlyList<ElementLayoutSnapshot> RefreshElementDebugInfoAndCaptureSnapshots(FrameworkElement rootElement)
     {
-        RefreshElementDebugText(rootElement, rootElement);
-    }
-
-    private static void RefreshElementDebugText(DependencyObject current, FrameworkElement rootElement)
-    {
-        if (current is FrameworkElement element)
-        {
-            var baseDebugText = PreviewElementDebugProperties.GetDebugBaseText(element);
-            if (!string.IsNullOrWhiteSpace(baseDebugText))
-            {
-                var layoutDebugText = PreviewElementDebugProperties.GetLayoutDebugText(element);
-                var actualLayoutDebugText = BuildActualLayoutDebugText(element, rootElement);
-                var sections = new List<string> { baseDebugText };
-
-                if (!string.IsNullOrWhiteSpace(layoutDebugText))
-                {
-                    sections.Add(layoutDebugText);
-                }
-
-                sections.Add(actualLayoutDebugText);
-                PreviewElementDebugProperties.SetDebugText(
-                    element,
-                    string.Join(Environment.NewLine + Environment.NewLine, sections));
-            }
-        }
-
-        if (current is not Visual && current is not Visual3D)
-        {
-            return;
-        }
-
-        var childCount = VisualTreeHelper.GetChildrenCount(current);
-        for (var index = 0; index < childCount; index++)
-        {
-            RefreshElementDebugText(VisualTreeHelper.GetChild(current, index), rootElement);
-        }
-    }
-
-    private static IReadOnlyList<string> CaptureElementLayoutSnapshots(FrameworkElement rootElement)
-    {
-        var snapshots = new List<string>();
-        CaptureElementLayoutSnapshots(rootElement, rootElement, "0", snapshots);
+        var snapshots = new List<ElementLayoutSnapshot>();
+        RefreshElementDebugInfoAndCaptureSnapshots(rootElement, rootElement, "0", snapshots);
         return snapshots;
     }
 
-    private static void CaptureElementLayoutSnapshots(
+    private static void RefreshElementDebugInfoAndCaptureSnapshots(
         DependencyObject current,
         FrameworkElement rootElement,
         string visualPath,
-        ICollection<string> snapshots)
+        ICollection<ElementLayoutSnapshot> snapshots)
     {
         if (current is FrameworkElement element)
         {
-            var debugText = PreviewElementDebugProperties.GetDebugText(element);
-            if (!string.IsNullOrWhiteSpace(debugText))
+            var debugInfo = PreviewElementDebugProperties.GetDebugInfo(element);
+            if (debugInfo is not null)
             {
-                snapshots.Add(BuildElementLayoutSnapshot(element, rootElement, visualPath));
+                debugInfo.ActualLayout = BuildActualLayoutDebugInfo(element, rootElement);
+                snapshots.Add(BuildElementLayoutSnapshot(element, visualPath, debugInfo));
             }
         }
 
@@ -167,14 +164,14 @@ public sealed class PrefabRenderer : IPrefabRenderer
         for (var index = 0; index < childCount; index++)
         {
             var child = VisualTreeHelper.GetChild(current, index);
-            CaptureElementLayoutSnapshots(child, rootElement, $"{visualPath}.{index}", snapshots);
+            RefreshElementDebugInfoAndCaptureSnapshots(child, rootElement, $"{visualPath}.{index}", snapshots);
         }
     }
 
-    private static string BuildElementLayoutSnapshot(
+    private static ElementLayoutSnapshot BuildElementLayoutSnapshot(
         FrameworkElement element,
-        FrameworkElement rootElement,
-        string visualPath)
+        string visualPath,
+        ElementDebugInfo debugInfo)
     {
         var label = PreviewElementDebugProperties.GetTreeLabel(element);
         if (string.IsNullOrWhiteSpace(label))
@@ -182,67 +179,70 @@ public sealed class PrefabRenderer : IPrefabRenderer
             label = element.GetType().Name;
         }
 
-        var lines = BuildActualLayoutLines(element, rootElement, includeSectionHeader: false);
-        lines.Insert(0, $"Type: {element.GetType().Name}");
-        lines.Insert(0, $"[{visualPath}] {label}");
-        return string.Join(Environment.NewLine, lines);
+        return new ElementLayoutSnapshot(
+            visualPath,
+            label,
+            element.GetType().Name,
+            debugInfo.ActualLayout!);
     }
 
-    private static string BuildActualLayoutDebugText(FrameworkElement element, FrameworkElement rootElement)
-    {
-        return string.Join(
-            Environment.NewLine,
-            BuildActualLayoutLines(element, rootElement, includeSectionHeader: true));
-    }
-
-    private static List<string> BuildActualLayoutLines(
-        FrameworkElement element,
-        FrameworkElement rootElement,
-        bool includeSectionHeader)
+    private static ElementDebugSection BuildActualLayoutDebugInfo(FrameworkElement element, FrameworkElement rootElement)
     {
         var actualBounds = GetActualBounds(element, rootElement);
-        var lines = new List<string>();
-        if (includeSectionHeader)
-        {
-            lines.Add("Actual Layout");
-        }
+        var actualLayout = new ElementDebugSection("Actual Layout");
+        actualLayout.Fields.Add(new ElementDebugField("ActualBounds", FormatRect(actualBounds)));
+        actualLayout.Fields.Add(new ElementDebugField("RenderSize", FormatSize(element.RenderSize)));
+        actualLayout.Fields.Add(new ElementDebugField("DesiredSize", FormatSize(element.DesiredSize)));
 
-        lines.Add($"ActualBounds: {FormatRect(actualBounds)}");
-        lines.Add($"RenderSize: {FormatSize(element.RenderSize)}");
-        lines.Add($"DesiredSize: {FormatSize(element.DesiredSize)}");
-        lines.Add($"ParentSize: {FormatSizeOrUnknown(PreviewElementDebugProperties.GetLayoutParentSize(element))}");
-        lines.Add($"MeasuredSize: {FormatSizeOrUnknown(PreviewElementDebugProperties.GetLayoutMeasuredSize(element))}");
-        lines.Add($"WpfSize: W={FormatOptionalDimension(double.IsNaN(element.Width) ? null : element.Width)} H={FormatOptionalDimension(double.IsNaN(element.Height) ? null : element.Height)}");
-        lines.Add($"Margin: {FormatThickness(element.Margin)}");
+        var debugInfo = PreviewElementDebugProperties.GetDebugInfo(element);
+        actualLayout.Fields.Add(new ElementDebugField(
+            "ParentSize",
+            debugInfo?.Layout?.GetValue("ParentSize") ?? "-"));
+        actualLayout.Fields.Add(new ElementDebugField(
+            "MeasuredSize",
+            debugInfo?.Layout?.GetValue("MeasuredSize") ?? "-"));
+        actualLayout.Fields.Add(new ElementDebugField(
+            "WpfSize",
+            $"W={FormatOptionalDimension(double.IsNaN(element.Width) ? null : element.Width)} H={FormatOptionalDimension(double.IsNaN(element.Height) ? null : element.Height)}"));
+        actualLayout.Fields.Add(new ElementDebugField("Margin", FormatThickness(element.Margin)));
 
         var canvasLeft = Canvas.GetLeft(element);
         var canvasTop = Canvas.GetTop(element);
         if (!double.IsNaN(canvasLeft) || !double.IsNaN(canvasTop))
         {
-            lines.Add($"CanvasPosition: ({FormatOptionalAxis(canvasLeft)}, {FormatOptionalAxis(canvasTop)})");
+            actualLayout.Fields.Add(new ElementDebugField(
+                "CanvasPosition",
+                $"({FormatOptionalAxis(canvasLeft)}, {FormatOptionalAxis(canvasTop)})"));
         }
 
-        var computedPosition = PreviewElementDebugProperties.GetLayoutComputedPosition(element);
-        if (!double.IsNaN(computedPosition.X) || !double.IsNaN(computedPosition.Y))
+        var computedPosition = debugInfo?.Layout?.GetValue("CanvasPosition");
+        if (!string.IsNullOrWhiteSpace(computedPosition))
         {
-            lines.Add($"ComputedCanvasPosition: {FormatPoint(computedPosition)}");
+            actualLayout.Fields.Add(new ElementDebugField("ComputedCanvasPosition", computedPosition));
         }
 
         var selectionBounds = PreviewElementDebugProperties.GetSelectionBounds(element);
         if (!selectionBounds.IsEmpty)
         {
-            lines.Add($"SelectionBoundsLocal: {FormatRect(selectionBounds)}");
-            lines.Add($"SelectionBoundsRoot: {FormatRect(TranslateRect(selectionBounds, actualBounds.Location))}");
+            actualLayout.Fields.Add(new ElementDebugField("SelectionBoundsLocal", FormatRect(selectionBounds)));
+            actualLayout.Fields.Add(new ElementDebugField("SelectionBoundsRoot", FormatRect(TranslateRect(selectionBounds, actualBounds.Location))));
         }
 
-        var alignmentBounds = PreviewElementDebugProperties.GetLayoutAlignmentBounds(element);
-        if (!alignmentBounds.IsEmpty)
+        var alignmentBounds = debugInfo?.Layout?.GetValue("AlignmentBounds");
+        if (!string.IsNullOrWhiteSpace(alignmentBounds))
         {
-            lines.Add($"AlignmentBoundsLocal: {FormatRect(alignmentBounds)}");
-            lines.Add($"AlignmentBoundsRoot: {FormatRect(TranslateRect(alignmentBounds, actualBounds.Location))}");
+            actualLayout.Fields.Add(new ElementDebugField("AlignmentBoundsLocal", alignmentBounds));
+
+            var localBounds = ParseRect(alignmentBounds);
+            if (!localBounds.IsEmpty)
+            {
+                actualLayout.Fields.Add(new ElementDebugField(
+                    "AlignmentBoundsRoot",
+                    FormatRect(TranslateRect(localBounds, actualBounds.Location))));
+            }
         }
 
-        return lines;
+        return actualLayout;
     }
 
     private static Rect GetActualBounds(FrameworkElement element, UIElement rootElement)
@@ -263,6 +263,28 @@ public sealed class PrefabRenderer : IPrefabRenderer
         return new Rect(rect.X + offset.X, rect.Y + offset.Y, rect.Width, rect.Height);
     }
 
+    private static Rect ParseRect(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Rect.Empty;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            value,
+            @"^\((?<x>-?[0-9]+(?:\.[0-9]+)?),\s*(?<y>-?[0-9]+(?:\.[0-9]+)?)\)\s+(?<w>-?[0-9]+(?:\.[0-9]+)?)\s+x\s+(?<h>-?[0-9]+(?:\.[0-9]+)?)$");
+        if (!match.Success ||
+            !double.TryParse(match.Groups["x"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x) ||
+            !double.TryParse(match.Groups["y"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y) ||
+            !double.TryParse(match.Groups["w"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var width) ||
+            !double.TryParse(match.Groups["h"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var height))
+        {
+            return Rect.Empty;
+        }
+
+        return new Rect(x, y, width, height);
+    }
+
     private static string FormatRect(Rect rect)
     {
         return $"{FormatPoint(rect.Location)} {FormatSize(rect.Size)}";
@@ -276,11 +298,6 @@ public sealed class PrefabRenderer : IPrefabRenderer
     private static string FormatSize(Size size)
     {
         return $"{FormatDouble(size.Width)} x {FormatDouble(size.Height)}";
-    }
-
-    private static string FormatSizeOrUnknown(Size size)
-    {
-        return size.IsEmpty ? "-" : FormatSize(size);
     }
 
     private static string FormatThickness(Thickness thickness)

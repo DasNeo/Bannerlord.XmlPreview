@@ -2341,9 +2341,8 @@ public sealed class PrefabRenderContext
         IEnumerable<string?>? brushNames = null,
         bool isDisabled = false)
     {
-        var baseDebugText = BuildElementDebugText(nodeName, attributes, spriteNames, brushNames, isDisabled);
-        PreviewElementDebugProperties.SetDebugBaseText(element, baseDebugText);
-        PreviewElementDebugProperties.SetDebugText(element, baseDebugText);
+        var debugInfo = BuildElementDebugInfo(nodeName, attributes, spriteNames, brushNames, isDisabled);
+        PreviewElementDebugProperties.SetDebugInfo(element, debugInfo);
         PreviewElementDebugProperties.SetTreeLabel(element, BuildElementTreeLabel(nodeName, attributes));
     }
 
@@ -2355,24 +2354,13 @@ public sealed class PrefabRenderContext
         Point? position = null,
         Rect? alignmentBounds = null)
     {
-        var baseDebugText = PreviewElementDebugProperties.GetDebugBaseText(element);
-        if (string.IsNullOrWhiteSpace(baseDebugText))
+        var debugInfo = PreviewElementDebugProperties.GetDebugInfo(element);
+        if (debugInfo is null)
         {
             return;
         }
 
-        PreviewElementDebugProperties.SetLayoutParentSize(element, parentSize);
-        PreviewElementDebugProperties.SetLayoutMeasuredSize(element, measuredSize);
-        PreviewElementDebugProperties.SetLayoutAlignmentBounds(element, alignmentBounds ?? Rect.Empty);
-        PreviewElementDebugProperties.SetLayoutComputedPosition(
-            element,
-            position ?? new Point(double.NaN, double.NaN));
-
-        var layoutDebugText = BuildLayoutDebugText(element, attributes, parentSize, measuredSize, position, alignmentBounds);
-        PreviewElementDebugProperties.SetLayoutDebugText(element, layoutDebugText);
-        PreviewElementDebugProperties.SetDebugText(
-            element,
-            string.Concat(baseDebugText, Environment.NewLine, Environment.NewLine, layoutDebugText));
+        debugInfo.Layout = BuildLayoutDebugInfo(element, attributes, parentSize, measuredSize, position, alignmentBounds);
     }
 
     public bool BrushExists(string? brushName)
@@ -3468,19 +3456,17 @@ public sealed class PrefabRenderContext
             .Trim();
     }
 
-    private string BuildElementDebugText(
+    private ElementDebugInfo BuildElementDebugInfo(
         string nodeName,
         IReadOnlyDictionary<string, string> attributes,
         IEnumerable<string?>? spriteNames,
         IEnumerable<string?>? brushNames,
         bool isDisabled)
     {
-        var lines = new List<string> { $"Node: {nodeName}" };
+        var debugInfo = new ElementDebugInfo(nodeName);
 
         if (attributes.Count > 0)
         {
-            lines.Add(string.Empty);
-            lines.Add("Attributes");
             foreach (var attribute in attributes.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
             {
                 if (IsInternalDebugAttribute(attribute.Key))
@@ -3489,9 +3475,10 @@ public sealed class PrefabRenderContext
                 }
 
                 var resolvedValue = ResolveDebugValue(attributes, attribute.Key, attribute.Value);
-                lines.Add(string.Equals(resolvedValue, attribute.Value, StringComparison.Ordinal)
-                    ? $"{attribute.Key}: {attribute.Value}"
-                    : $"{attribute.Key}: {attribute.Value} -> {resolvedValue}");
+                debugInfo.Attributes.Add(new ElementDebugAttribute(
+                    attribute.Key,
+                    attribute.Value,
+                    string.Equals(resolvedValue, attribute.Value, StringComparison.Ordinal) ? null : resolvedValue));
             }
         }
 
@@ -3501,25 +3488,18 @@ public sealed class PrefabRenderContext
             var resolvedProperties = _propertyMap.GetProperties(widgetPath);
             if (resolvedProperties.Count > 0)
             {
-                lines.Add(string.Empty);
-                lines.Add("ResolvedProperties");
                 foreach (var property in resolvedProperties.Values.OrderBy(property => property.AttributeName, StringComparer.OrdinalIgnoreCase))
                 {
-                    lines.Add(
-                        $"{property.AttributeName}: {property.DeclaredTypeName} [{property.ValueKind}] = {property.GetDisplayValue()}");
+                    debugInfo.ResolvedProperties.Add(new ElementDebugResolvedProperty(property));
                 }
             }
 
             var resolvedReferences = _referenceMap.GetReferences(widgetPath);
             if (resolvedReferences.Count > 0)
             {
-                lines.Add(string.Empty);
-                lines.Add("WidgetReferences");
                 foreach (var reference in resolvedReferences.Values.OrderBy(reference => reference.AttributeName, StringComparer.OrdinalIgnoreCase))
                 {
-                    lines.Add(reference.IsResolved
-                        ? $"{reference.AttributeName}: {reference.RawValue} -> {reference.TargetWidgetPath}"
-                        : $"{reference.AttributeName}: {reference.RawValue} (unresolved: {reference.FailureReason})");
+                    debugInfo.WidgetReferences.Add(new ElementDebugWidgetReference(reference));
                 }
             }
         }
@@ -3544,28 +3524,24 @@ public sealed class PrefabRenderContext
 
         if (resolvedBrushes.Count > 0)
         {
-            lines.Add(string.Empty);
-            lines.Add("Brushes");
             foreach (var brushName in resolvedBrushes.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
             {
-                AppendBrushDebug(lines, brushName, isDisabled, resolvedSprites);
+                debugInfo.Brushes.Add(BuildBrushDebugInfo(brushName, isDisabled, resolvedSprites));
             }
         }
 
         if (resolvedSprites.Count > 0)
         {
-            lines.Add(string.Empty);
-            lines.Add("Sprites");
             foreach (var spriteName in resolvedSprites.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
             {
-                AppendSpriteDebug(lines, spriteName, "Direct");
+                debugInfo.Sprites.Add(BuildSpriteDebugInfo(spriteName, "Direct"));
             }
         }
 
-        return string.Join(Environment.NewLine, lines);
+        return debugInfo;
     }
 
-    private string BuildLayoutDebugText(
+    private ElementDebugSection BuildLayoutDebugInfo(
         FrameworkElement element,
         IReadOnlyDictionary<string, string> attributes,
         Size parentSize,
@@ -3573,65 +3549,67 @@ public sealed class PrefabRenderContext
         Point? position,
         Rect? alignmentBounds)
     {
-        var lines = new List<string>
-        {
-            "Layout",
-            $"ParentSize: {FormatSize(parentSize)}",
-            $"MeasuredSize: {FormatSize(measuredSize)}"
-        };
+        var layout = new ElementDebugSection("Layout");
+        layout.Fields.Add(new ElementDebugField("ParentSize", FormatSize(parentSize)));
+        layout.Fields.Add(new ElementDebugField("MeasuredSize", FormatSize(measuredSize)));
 
         attributes.TryGetValue("WidthSizePolicy", out var widthPolicy);
         attributes.TryGetValue("HeightSizePolicy", out var heightPolicy);
         if (!string.IsNullOrWhiteSpace(widthPolicy) || !string.IsNullOrWhiteSpace(heightPolicy))
         {
-            lines.Add(
-                $"SizePolicy: W={ResolveDebugValue(attributes, "WidthSizePolicy", widthPolicy ?? "-")} " +
-                $"H={ResolveDebugValue(attributes, "HeightSizePolicy", heightPolicy ?? "-")}");
+            layout.Fields.Add(new ElementDebugField(
+                "SizePolicy",
+                $"W={ResolveDebugValue(attributes, "WidthSizePolicy", widthPolicy ?? "-")} " +
+                $"H={ResolveDebugValue(attributes, "HeightSizePolicy", heightPolicy ?? "-")}"));
         }
 
         attributes.TryGetValue("SuggestedWidth", out var suggestedWidth);
         attributes.TryGetValue("SuggestedHeight", out var suggestedHeight);
         if (!string.IsNullOrWhiteSpace(suggestedWidth) || !string.IsNullOrWhiteSpace(suggestedHeight))
         {
-            lines.Add(
-                $"SuggestedSize: W={ResolveDebugValue(attributes, "SuggestedWidth", suggestedWidth ?? "-")} " +
-                $"H={ResolveDebugValue(attributes, "SuggestedHeight", suggestedHeight ?? "-")}");
+            layout.Fields.Add(new ElementDebugField(
+                "SuggestedSize",
+                $"W={ResolveDebugValue(attributes, "SuggestedWidth", suggestedWidth ?? "-")} " +
+                $"H={ResolveDebugValue(attributes, "SuggestedHeight", suggestedHeight ?? "-")}"));
         }
 
         attributes.TryGetValue("HorizontalAlignment", out var horizontalAlignment);
         attributes.TryGetValue("VerticalAlignment", out var verticalAlignment);
         if (!string.IsNullOrWhiteSpace(horizontalAlignment) || !string.IsNullOrWhiteSpace(verticalAlignment))
         {
-            lines.Add(
-                $"Alignment: H={ResolveDebugValue(attributes, "HorizontalAlignment", horizontalAlignment ?? "Left")} " +
-                $"V={ResolveDebugValue(attributes, "VerticalAlignment", verticalAlignment ?? "Top")}");
+            layout.Fields.Add(new ElementDebugField(
+                "Alignment",
+                $"H={ResolveDebugValue(attributes, "HorizontalAlignment", horizontalAlignment ?? "Left")} " +
+                $"V={ResolveDebugValue(attributes, "VerticalAlignment", verticalAlignment ?? "Top")}"));
         }
 
-        lines.Add($"Margin: {FormatThickness(element.Margin, attributes)}");
+        layout.Fields.Add(new ElementDebugField("Margin", FormatThickness(element.Margin, attributes)));
 
         attributes.TryGetValue("PositionXOffset", out var positionXOffset);
         attributes.TryGetValue("PositionYOffset", out var positionYOffset);
         if (!string.IsNullOrWhiteSpace(positionXOffset) || !string.IsNullOrWhiteSpace(positionYOffset))
         {
-            lines.Add(
-                $"Offsets: X={ResolveDebugValue(attributes, "PositionXOffset", positionXOffset ?? "0")} " +
-                $"Y={ResolveDebugValue(attributes, "PositionYOffset", positionYOffset ?? "0")}");
+            layout.Fields.Add(new ElementDebugField(
+                "Offsets",
+                $"X={ResolveDebugValue(attributes, "PositionXOffset", positionXOffset ?? "0")} " +
+                $"Y={ResolveDebugValue(attributes, "PositionYOffset", positionYOffset ?? "0")}"));
         }
 
-        lines.Add(
-            $"WpfSize: W={FormatOptionalDimension(double.IsNaN(element.Width) ? null : element.Width)} H={FormatOptionalDimension(double.IsNaN(element.Height) ? null : element.Height)}");
+        layout.Fields.Add(new ElementDebugField(
+            "WpfSize",
+            $"W={FormatOptionalDimension(double.IsNaN(element.Width) ? null : element.Width)} H={FormatOptionalDimension(double.IsNaN(element.Height) ? null : element.Height)}"));
 
         if (position.HasValue)
         {
-            lines.Add($"CanvasPosition: {FormatPoint(position.Value)}");
+            layout.Fields.Add(new ElementDebugField("CanvasPosition", FormatPoint(position.Value)));
         }
 
         if (alignmentBounds is { IsEmpty: false } bounds)
         {
-            lines.Add($"AlignmentBounds: {FormatRect(bounds)}");
+            layout.Fields.Add(new ElementDebugField("AlignmentBounds", FormatRect(bounds)));
         }
 
-        return string.Join(Environment.NewLine, lines);
+        return layout;
     }
 
     private string ResolveDebugValue(
@@ -3752,8 +3730,7 @@ public sealed class PrefabRenderContext
         return $"{value[..Math.Max(0, maxLength - 1)]}...";
     }
 
-    private void AppendBrushDebug(
-        ICollection<string> lines,
+    private ElementDebugBrush BuildBrushDebugInfo(
         string brushName,
         bool isDisabled,
         ISet<string> resolvedSprites)
@@ -3761,57 +3738,44 @@ public sealed class PrefabRenderContext
         var brushInfo = ResolveBrushDebugInfo(brushName, isDisabled);
         if (brushInfo.BrushDefinition is null)
         {
-            lines.Add(brushInfo.IsPreviewFallback
-                ? $"Brush: {brushName} (preview fallback)"
-                : $"Brush: {brushName} (missing)");
-            return;
+            return new ElementDebugBrush(brushName, null, true, brushInfo.IsPreviewFallback, []);
         }
 
-        lines.Add($"Brush: {brushInfo.RequestedName}");
-        lines.Add($"  Source: {brushInfo.BrushDefinition.SourcePath}");
-        lines.Add($"  LayerCount: {brushInfo.VisibleLayers.Count}");
+        var layers = new List<ElementDebugBrushLayer>();
 
         foreach (var layer in brushInfo.VisibleLayers)
         {
-            var layerBuilder = new StringBuilder($"  Layer {layer.Name}:");
             if (!string.IsNullOrWhiteSpace(layer.SpriteName))
             {
-                layerBuilder.Append($" Sprite={layer.SpriteName}");
                 resolvedSprites.Add(layer.SpriteName);
             }
 
             if (!string.IsNullOrWhiteSpace(layer.OverlaySpriteName))
             {
-                layerBuilder.Append($" Overlay={layer.OverlaySpriteName}");
                 resolvedSprites.Add(layer.OverlaySpriteName);
             }
 
-            if (!string.IsNullOrWhiteSpace(layer.OverlayMethod))
-            {
-                layerBuilder.Append($" OverlayMethod={layer.OverlayMethod}");
-            }
-
-            if (layer.AlphaFactor.HasValue)
-            {
-                layerBuilder.Append($" Alpha={layer.AlphaFactor.Value.ToString(CultureInfo.InvariantCulture)}");
-            }
-
-            if (layer.MaxExtend > 0)
-            {
-                layerBuilder.Append(
-                    $" Extend=({(layer.ExtendLeft ?? 0).ToString(CultureInfo.InvariantCulture)}," +
-                    $"{(layer.ExtendTop ?? 0).ToString(CultureInfo.InvariantCulture)}," +
-                    $"{(layer.ExtendRight ?? 0).ToString(CultureInfo.InvariantCulture)}," +
-                    $"{(layer.ExtendBottom ?? 0).ToString(CultureInfo.InvariantCulture)})");
-            }
-
-            if (layer.HorizontalFlip == true || layer.VerticalFlip == true)
-            {
-                layerBuilder.Append($" Flip=({(layer.HorizontalFlip == true ? "H" : "-")},{(layer.VerticalFlip == true ? "V" : "-")})");
-            }
-
-            lines.Add(layerBuilder.ToString());
+            layers.Add(new ElementDebugBrushLayer(
+                layer.Name,
+                layer.SpriteName,
+                layer.OverlaySpriteName,
+                layer.OverlayMethod,
+                layer.AlphaFactor,
+                layer.ExtendLeft,
+                layer.ExtendTop,
+                layer.ExtendRight,
+                layer.ExtendBottom,
+                layer.MaxExtend,
+                layer.HorizontalFlip == true,
+                layer.VerticalFlip == true));
         }
+
+        return new ElementDebugBrush(
+            brushInfo.RequestedName,
+            brushInfo.BrushDefinition.SourcePath,
+            false,
+            false,
+            layers);
     }
 
     public void ApplyFlowLayout(FrameworkElement element, IReadOnlyDictionary<string, string> attributes)
@@ -3901,34 +3865,17 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void AppendSpriteDebug(ICollection<string> lines, string spriteName, string usage)
+    private ElementDebugSprite BuildSpriteDebugInfo(string spriteName, string usage)
     {
         var spriteAsset = ResolveSpriteAsset(spriteName);
-        lines.Add($"Sprite: {spriteName} [{usage}]");
-        lines.Add($"  Status: {spriteAsset.Kind}");
-        if (!string.IsNullOrWhiteSpace(spriteAsset.MatchedKey))
-        {
-            lines.Add($"  ImageKey: {spriteAsset.MatchedKey}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(spriteAsset.ImagePath))
-        {
-            lines.Add($"  ImagePath: {spriteAsset.ImagePath}");
-        }
-
-        if (spriteAsset.SpriteDefinition is not null)
-        {
-            var definition = spriteAsset.SpriteDefinition;
-            lines.Add(
-                $"  Catalog: {definition.Name} ({definition.Kind}, {definition.Width}x{definition.Height}, {definition.CategoryName}, Sheet {definition.SheetId})");
-            lines.Add($"  SpritePart: {definition.SpritePartName}");
-            lines.Add($"  Source: {definition.SourcePath}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(spriteAsset.Note))
-        {
-            lines.Add($"  Note: {spriteAsset.Note}");
-        }
+        return new ElementDebugSprite(
+            spriteName,
+            usage,
+            spriteAsset.Kind,
+            spriteAsset.MatchedKey,
+            spriteAsset.ImagePath,
+            spriteAsset.SpriteDefinition,
+            spriteAsset.Note);
     }
 
     private sealed record RenderedWidgetRegistration(

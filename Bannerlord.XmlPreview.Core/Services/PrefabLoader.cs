@@ -46,28 +46,68 @@ public sealed class PrefabLoader : IPrefabLoader
 
     public PrefabDocument Load(string path, PreviewDiagnostics diagnostics)
     {
+        using var totalTiming = diagnostics.MeasurePhase("PrefabLoader.Load.Total");
+
         var fullPath = Path.GetFullPath(path);
-        var state = LoadPrefabState(fullPath, diagnostics, [fullPath], includeRootOnly: false);
-        var constants = ParseConstants(
-            state.ConstantsElement,
-            state.DefaultParameters,
-            diagnostics,
-            reportMissingConstants: true);
-        var expandedRoot = ExpandElement(
-            state.RootNodeElement,
-            state.DefaultParameters,
-            constants,
-            diagnostics,
-            state.ExpansionStack,
-            out _);
-        PrefabVisualTreeHelper.AssignCanonicalPaths(expandedRoot);
-        var referenceMap = _widgetReferenceResolver.Resolve(expandedRoot, diagnostics);
-        var propertyMap = _widgetPropertyResolver.Resolve(expandedRoot, referenceMap, diagnostics);
+        PrefabExpansionState state;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.RootState"))
+        {
+            state = LoadPrefabState(fullPath, diagnostics, [fullPath], includeRootOnly: false);
+        }
+
+        Dictionary<string, string> constants;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.ParseConstants"))
+        {
+            constants = ParseConstants(
+                state.ConstantsElement,
+                state.DefaultParameters,
+                diagnostics,
+                reportMissingConstants: true);
+        }
+
+        XElement expandedRoot;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.ExpandElement"))
+        {
+            expandedRoot = ExpandElement(
+                state.RootNodeElement,
+                state.DefaultParameters,
+                constants,
+                diagnostics,
+                state.ExpansionStack,
+                out _);
+        }
+
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.AssignCanonicalPaths"))
+        {
+            PrefabVisualTreeHelper.AssignCanonicalPaths(expandedRoot);
+        }
+
+        PrefabWidgetReferenceMap referenceMap;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.ResolveWidgetReferences"))
+        {
+            referenceMap = _widgetReferenceResolver.Resolve(expandedRoot, diagnostics);
+        }
+
+        PrefabWidgetPropertyMap propertyMap;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.ResolveWidgetProperties"))
+        {
+            propertyMap = _widgetPropertyResolver.Resolve(expandedRoot, referenceMap, diagnostics);
+        }
 
         var bindingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var rootNode = ParseNode(expandedRoot, bindingKeys);
+        PrefabNode rootNode;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.ParseNodeTree"))
+        {
+            rootNode = ParseNode(expandedRoot, bindingKeys);
+        }
+
         var nodeTypeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        var maxDepth = CollectNodeStatistics(rootNode, nodeTypeCounts, 1);
+        int maxDepth;
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.CollectNodeStatistics"))
+        {
+            maxDepth = CollectNodeStatistics(rootNode, nodeTypeCounts, 1);
+        }
+
         diagnostics.SetDocumentSummary(
             fullPath,
             rootNode.Name,
@@ -81,6 +121,7 @@ public sealed class PrefabLoader : IPrefabLoader
 
     private static XDocument LoadDocumentWithRetry(string path, PreviewDiagnostics diagnostics)
     {
+        using var timing = diagnostics.MeasurePhase("PrefabLoader.LoadDocumentWithRetry");
         Exception? lastException = null;
 
         for (var attempt = 1; attempt <= MaxLoadAttempts; attempt++)

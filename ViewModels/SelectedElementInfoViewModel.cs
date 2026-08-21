@@ -1,20 +1,10 @@
 using System.Text.RegularExpressions;
+using Bannerlord.XmlPreview.Models;
 
 namespace Bannerlord.XmlPreview.ViewModels;
 
 public sealed class SelectedElementInfoViewModel
 {
-    private static readonly string[] SectionHeadings =
-    [
-        "Attributes",
-        "ResolvedProperties",
-        "WidgetReferences",
-        "Brushes",
-        "Sprites",
-        "Layout",
-        "Actual Layout"
-    ];
-
     private SelectedElementInfoViewModel(
         bool hasContent,
         string title,
@@ -83,35 +73,23 @@ public sealed class SelectedElementInfoViewModel
             []);
     }
 
-    public static SelectedElementInfoViewModel FromDebugText(string? debugText)
+    public static SelectedElementInfoViewModel FromDebugInfo(ElementDebugInfo? debugInfo)
     {
-        if (string.IsNullOrWhiteSpace(debugText)) return Empty(null);
+        if (debugInfo is null) return Empty(null);
 
-        var normalizedText = debugText.Replace("\r\n", "\n");
-        var lines = normalizedText.Split('\n');
-        var titleLine = lines.FirstOrDefault(line => line.StartsWith("Node: ", StringComparison.Ordinal));
-        if (titleLine is null) return Empty(debugText);
-
-        var title = titleLine["Node: ".Length..].Trim();
-        if (string.IsNullOrWhiteSpace(title)) title = "Selected element";
-
-        var sections = ParseSections(lines);
-        var attributes = ParseKeyValueSection(GetSectionLines(sections, "Attributes"));
-        var layout = ParseKeyValueSection(GetSectionLines(sections, "Layout"));
-        var actualLayout = ParseKeyValueSection(GetSectionLines(sections, "Actual Layout"));
-        var brushes = ParseBrushes(GetSectionLines(sections, "Brushes"));
-        var sprites = ParseSprites(GetSectionLines(sections, "Sprites"));
-
+        var title = string.IsNullOrWhiteSpace(debugInfo.NodeName) ? "Selected element" : debugInfo.NodeName;
         var subtitle = FirstNonEmpty(
-            attributes.GetValueOrDefault("Id"),
-            attributes.GetValueOrDefault("Text"),
-            attributes.GetValueOrDefault("Brush"));
+            debugInfo.GetAttributeDisplayValue("Id"),
+            debugInfo.GetAttributeDisplayValue("Text"),
+            debugInfo.GetAttributeDisplayValue("Brush"));
 
-        var actualBounds = actualLayout.GetValueOrDefault("ActualBounds");
+        var actualBounds = debugInfo.ActualLayout?.GetValue("ActualBounds");
         var (actualPosition, actualSize) = SplitRectValue(actualBounds);
-        var summaryFields = BuildSummaryFields(attributes, actualSize, actualPosition);
-        var nodeFields = BuildNodeFields(attributes, layout, actualLayout);
-        var layoutFields = BuildLayoutFields(layout, actualLayout, actualSize, actualPosition);
+        var summaryFields = BuildSummaryFields(debugInfo, actualSize, actualPosition);
+        var nodeFields = BuildNodeFields(debugInfo);
+        var layoutFields = BuildLayoutFields(debugInfo, actualSize, actualPosition);
+        var brushes = BuildBrushes(debugInfo);
+        var sprites = BuildSprites(debugInfo);
 
         return new SelectedElementInfoViewModel(
             true,
@@ -125,178 +103,46 @@ public sealed class SelectedElementInfoViewModel
             sprites);
     }
 
-    private static Dictionary<string, List<string>> ParseSections(IEnumerable<string> lines)
-    {
-        var sections = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        string? currentSection = null;
-
-        foreach (var rawLine in lines)
-        {
-            var line = rawLine.TrimEnd();
-            var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-
-            if (trimmed.StartsWith("Node: ", StringComparison.Ordinal))
-            {
-                currentSection = null;
-                continue;
-            }
-
-            if (SectionHeadings.Contains(trimmed, StringComparer.Ordinal))
-            {
-                currentSection = trimmed;
-                sections[currentSection] = [];
-                continue;
-            }
-
-            if (currentSection is not null) sections[currentSection].Add(line);
-        }
-
-        return sections;
-    }
-
-    private static IReadOnlyList<string> GetSectionLines(
-        IReadOnlyDictionary<string, List<string>> sections,
-        string sectionName)
-    {
-        return sections.TryGetValue(sectionName, out var lines) ? lines : [];
-    }
-
-    private static Dictionary<string, string> ParseKeyValueSection(IEnumerable<string> lines)
-    {
-        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var rawLine in lines)
-        {
-            var line = rawLine.Trim();
-            if (TrySplitKeyValue(line, out var key, out var value)) values[key] = value;
-        }
-
-        return values;
-    }
-
-    private static IReadOnlyList<SelectedBrushInfoViewModel> ParseBrushes(IEnumerable<string> lines)
-    {
-        var items = new List<SelectedBrushInfoViewModel>();
-        SelectedBrushBuilder? current = null;
-
-        foreach (var rawLine in lines)
-        {
-            var line = rawLine.Trim();
-            if (line.StartsWith("Brush: ", StringComparison.Ordinal))
-            {
-                if (current is not null) items.Add(current.Build());
-
-                current = new SelectedBrushBuilder(line["Brush: ".Length..].Trim());
-                continue;
-            }
-
-            if (current is null || !TrySplitKeyValue(line, out var key, out var value)) continue;
-
-            if (string.Equals(key, "Source", StringComparison.OrdinalIgnoreCase))
-                current.SourcePath = value;
-            else if (string.Equals(key, "LayerCount", StringComparison.OrdinalIgnoreCase))
-                current.LayerCount = value;
-            else if (key.StartsWith("Layer ", StringComparison.OrdinalIgnoreCase))
-                current.Layers.Add($"{key["Layer ".Length..]}: {value}");
-        }
-
-        if (current is not null) items.Add(current.Build());
-
-        return items;
-    }
-
-    private static IReadOnlyList<SelectedSpriteInfoViewModel> ParseSprites(IEnumerable<string> lines)
-    {
-        var items = new List<SelectedSpriteInfoViewModel>();
-        SelectedSpriteBuilder? current = null;
-
-        foreach (var rawLine in lines)
-        {
-            var line = rawLine.Trim();
-            if (line.StartsWith("Sprite: ", StringComparison.Ordinal))
-            {
-                if (current is not null) items.Add(current.Build());
-
-                current = CreateSpriteBuilder(line["Sprite: ".Length..].Trim());
-                continue;
-            }
-
-            if (current is null || !TrySplitKeyValue(line, out var key, out var value)) continue;
-
-            switch (key)
-            {
-                case "Status":
-                    current.Status = value;
-                    break;
-                case "ImagePath":
-                    current.ImagePath = value;
-                    break;
-                case "Catalog":
-                    current.Catalog = value;
-                    break;
-                case "Source":
-                    current.SourcePath = value;
-                    break;
-            }
-        }
-
-        if (current is not null) items.Add(current.Build());
-
-        return items;
-    }
-
-    private static SelectedSpriteBuilder CreateSpriteBuilder(string descriptor)
-    {
-        var match = Regex.Match(descriptor, @"^(?<name>.+?)\s+\[(?<usage>[^\]]+)\]$");
-        return match.Success
-            ? new SelectedSpriteBuilder(match.Groups["name"].Value.Trim(), match.Groups["usage"].Value.Trim())
-            : new SelectedSpriteBuilder(descriptor, string.Empty);
-    }
-
     private static IReadOnlyList<SelectedInfoFieldViewModel> BuildSummaryFields(
-        IReadOnlyDictionary<string, string> attributes,
+        ElementDebugInfo debugInfo,
         string actualSize,
         string actualPosition)
     {
         var items = new List<SelectedInfoFieldViewModel>();
 
-        AddField(items, "Id", attributes.GetValueOrDefault("Id"));
-        AddField(items, "Brush", attributes.GetValueOrDefault("Brush"));
+        AddField(items, "Id", debugInfo.GetAttributeDisplayValue("Id"));
+        AddField(items, "Brush", debugInfo.GetAttributeDisplayValue("Brush"));
 
-        var inputState = attributes.TryGetValue("DoNotAcceptEvents", out var doNotAcceptEvents)
-                         && bool.TryParse(doNotAcceptEvents, out var isDisabled)
+        var inputValue = debugInfo.GetAttributeDisplayValue("DoNotAcceptEvents");
+        var inputState = bool.TryParse(inputValue, out var isDisabled)
             ? isDisabled ? "Disabled" : "Enabled"
             : null;
         AddField(items, "Input", inputState);
-        AddField(items, "Actual", actualSize);
+        AddField(items, "Size", actualSize);
         AddField(items, "Position", actualPosition);
 
         return items;
     }
 
-    private static IReadOnlyList<SelectedInfoFieldViewModel> BuildNodeFields(
-        IReadOnlyDictionary<string, string> attributes,
-        IReadOnlyDictionary<string, string> layout,
-        IReadOnlyDictionary<string, string> actualLayout)
+    private static IReadOnlyList<SelectedInfoFieldViewModel> BuildNodeFields(ElementDebugInfo debugInfo)
     {
         var items = new List<SelectedInfoFieldViewModel>();
 
-        AddField(items, "Id", attributes.GetValueOrDefault("Id"));
-        AddField(items, "Brush", attributes.GetValueOrDefault("Brush"));
+        AddField(items, "Id", debugInfo.GetAttributeDisplayValue("Id"));
+        AddField(items, "Brush", debugInfo.GetAttributeDisplayValue("Brush"));
 
-        var inputState = attributes.TryGetValue("DoNotAcceptEvents", out var doNotAcceptEvents)
-                         && bool.TryParse(doNotAcceptEvents, out var isDisabled)
+        var inputValue = debugInfo.GetAttributeDisplayValue("DoNotAcceptEvents");
+        var inputState = bool.TryParse(inputValue, out var isDisabled)
             ? isDisabled ? "Does not accept input" : "Accepts input"
             : null;
         AddField(items, "Input", inputState);
-        AddField(items, "Size policy", layout.GetValueOrDefault("SizePolicy"));
-        AddField(items, "Suggested size", layout.GetValueOrDefault("SuggestedSize"));
-        AddField(items, "Alignment", layout.GetValueOrDefault("Alignment"));
+        AddField(items, "Size policy", debugInfo.Layout?.GetValue("SizePolicy"));
+        AddField(items, "Suggested size", debugInfo.Layout?.GetValue("SuggestedSize"));
+        AddField(items, "Alignment", debugInfo.Layout?.GetValue("Alignment"));
 
         var marginValue = FirstNonEmpty(
-            actualLayout.GetValueOrDefault("Margin"),
-            layout.GetValueOrDefault("Margin"));
+            debugInfo.ActualLayout?.GetValue("Margin"),
+            debugInfo.Layout?.GetValue("Margin"));
         if (!string.Equals(marginValue, "L=0 T=0 R=0 B=0", StringComparison.Ordinal))
             AddField(items, "Margin", marginValue);
 
@@ -304,43 +150,65 @@ public sealed class SelectedElementInfoViewModel
     }
 
     private static IReadOnlyList<SelectedInfoFieldViewModel> BuildLayoutFields(
-        IReadOnlyDictionary<string, string> layout,
-        IReadOnlyDictionary<string, string> actualLayout,
+        ElementDebugInfo debugInfo,
         string actualSize,
         string actualPosition)
     {
         var items = new List<SelectedInfoFieldViewModel>();
 
         AddField(items, "Parent",
-            FirstNonEmpty(actualLayout.GetValueOrDefault("ParentSize"), layout.GetValueOrDefault("ParentSize")));
+            FirstNonEmpty(debugInfo.ActualLayout?.GetValue("ParentSize"), debugInfo.Layout?.GetValue("ParentSize")));
         AddField(items, "Actual size", actualSize);
         AddField(items, "Measured",
-            FirstNonEmpty(actualLayout.GetValueOrDefault("MeasuredSize"), layout.GetValueOrDefault("MeasuredSize")));
+            FirstNonEmpty(debugInfo.ActualLayout?.GetValue("MeasuredSize"),
+                debugInfo.Layout?.GetValue("MeasuredSize")));
         AddField(items, "Position", actualPosition);
-        AddField(items, "Selection", actualLayout.GetValueOrDefault("SelectionBoundsRoot"));
-        AddField(items, "Selection local", actualLayout.GetValueOrDefault("SelectionBoundsLocal"));
+        AddField(items, "Selection", debugInfo.ActualLayout?.GetValue("SelectionBoundsRoot"));
+        AddField(items, "Selection local", debugInfo.ActualLayout?.GetValue("SelectionBoundsLocal"));
 
         return items;
+    }
+
+    private static IReadOnlyList<SelectedBrushInfoViewModel> BuildBrushes(ElementDebugInfo debugInfo)
+    {
+        return debugInfo.Brushes
+            .Select(brush => new SelectedBrushInfoViewModel(
+                brush.IsMissing && brush.IsPreviewFallback ? $"{brush.RequestedName} (preview fallback)" :
+                brush.IsMissing ? $"{brush.RequestedName} (missing)" : brush.RequestedName,
+                brush.SourcePath ?? string.Empty,
+                CompactPath(brush.SourcePath, 4),
+                brush.IsMissing ? string.Empty : brush.Layers.Count.ToString(),
+                brush.Layers.Select(layer => layer.ToDisplayString().Trim()).ToArray()))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<SelectedSpriteInfoViewModel> BuildSprites(ElementDebugInfo debugInfo)
+    {
+        return debugInfo.Sprites
+            .Select(sprite =>
+            {
+                var spriteType = sprite.SpriteDefinition?.Kind.ToString() ?? string.Empty;
+                var spriteSize = sprite.SpriteDefinition is null
+                    ? string.Empty
+                    : $"{sprite.SpriteDefinition.Width}x{sprite.SpriteDefinition.Height}";
+
+                return new SelectedSpriteInfoViewModel(
+                    sprite.RequestedName,
+                    sprite.Usage,
+                    sprite.Status.ToString(),
+                    spriteType,
+                    spriteSize,
+                    sprite.ImagePath ?? string.Empty,
+                    CompactPath(sprite.ImagePath, 3),
+                    sprite.SpriteDefinition?.SourcePath ?? string.Empty,
+                    CompactPath(sprite.SpriteDefinition?.SourcePath, 4));
+            })
+            .ToArray();
     }
 
     private static void AddField(ICollection<SelectedInfoFieldViewModel> items, string label, string? value)
     {
         if (!string.IsNullOrWhiteSpace(value)) items.Add(new SelectedInfoFieldViewModel(label, value));
-    }
-
-    private static bool TrySplitKeyValue(string line, out string key, out string value)
-    {
-        var separatorIndex = line.IndexOf(':');
-        if (separatorIndex <= 0)
-        {
-            key = string.Empty;
-            value = string.Empty;
-            return false;
-        }
-
-        key = line[..separatorIndex].Trim();
-        value = line[(separatorIndex + 1)..].Trim();
-        return true;
     }
 
     private static (string Position, string Size) SplitRectValue(string? rectValue)
@@ -407,82 +275,5 @@ public sealed class SelectedElementInfoViewModel
         public bool HasImagePath => !string.IsNullOrWhiteSpace(ImagePath);
 
         public bool HasSource => !string.IsNullOrWhiteSpace(SourcePath);
-    }
-
-    private sealed class SelectedBrushBuilder
-    {
-        public SelectedBrushBuilder(string name)
-        {
-            Name = name;
-        }
-
-        public string Name { get; }
-
-        public string SourcePath { get; set; } = string.Empty;
-
-        public string LayerCount { get; set; } = string.Empty;
-
-        public List<string> Layers { get; } = [];
-
-        public SelectedBrushInfoViewModel Build()
-        {
-            return new SelectedBrushInfoViewModel(
-                Name,
-                SourcePath,
-                CompactPath(SourcePath, 4),
-                LayerCount,
-                Layers);
-        }
-    }
-
-    private sealed class SelectedSpriteBuilder
-    {
-        public SelectedSpriteBuilder(string name, string usage)
-        {
-            Name = name;
-            Usage = usage;
-        }
-
-        public string Name { get; }
-
-        public string Usage { get; }
-
-        public string Status { get; set; } = string.Empty;
-
-        public string Catalog { get; set; } = string.Empty;
-
-        public string ImagePath { get; set; } = string.Empty;
-
-        public string SourcePath { get; set; } = string.Empty;
-
-        public SelectedSpriteInfoViewModel Build()
-        {
-            ParseCatalog(Catalog, out var spriteType, out var spriteSize);
-
-            return new SelectedSpriteInfoViewModel(
-                Name,
-                Usage,
-                Status,
-                spriteType,
-                spriteSize,
-                ImagePath,
-                CompactPath(ImagePath, 3),
-                SourcePath,
-                CompactPath(SourcePath, 4));
-        }
-
-        private static void ParseCatalog(string catalog, out string spriteType, out string spriteSize)
-        {
-            spriteType = string.Empty;
-            spriteSize = string.Empty;
-
-            if (string.IsNullOrWhiteSpace(catalog)) return;
-
-            var match = Regex.Match(catalog, @"\((?<type>[^,]+),\s*(?<size>[0-9.]+x[0-9.]+)");
-            if (!match.Success) return;
-
-            spriteType = match.Groups["type"].Value.Trim();
-            spriteSize = match.Groups["size"].Value.Trim();
-        }
     }
 }

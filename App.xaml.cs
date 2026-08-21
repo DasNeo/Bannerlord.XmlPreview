@@ -81,6 +81,7 @@ public partial class App : Application
         services.AddSingleton<IAssetCatalog, BannerlordAssetCatalog>();
         services.AddSingleton<IBrushMetricsProvider, BannerlordBrushMetricsProvider>();
         services.AddSingleton<IBrushOverlayFeatureHandler, BannerlordBrushOverlayFeatureHandler>();
+        services.AddSingleton<IBannerlordWidgetReflectionService, BannerlordWidgetReflectionService>();
         services.AddSingleton<IPrefabReferenceResolver, BannerlordPrefabReferenceResolver>();
         services.AddSingleton<IWidgetPropertyResolver, BannerlordWidgetPropertyResolver>();
         services.AddSingleton<IWidgetReferenceResolver, WidgetReferenceResolver>();
@@ -142,6 +143,7 @@ public partial class App : Application
             }
 
             var diagnostics = new PreviewDiagnostics();
+            using var diagnosticsTimingScope = diagnostics.BeginTimingScope();
             var prefabLoader = _serviceProvider.GetRequiredService<IPrefabLoader>();
             var prefabRenderer = _serviceProvider.GetRequiredService<IPrefabRenderer>();
             var loadStopwatch = System.Diagnostics.Stopwatch.StartNew();

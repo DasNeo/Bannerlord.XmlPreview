@@ -4,7 +4,6 @@ using Bannerlord.XmlPreview.Models;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Xml.Linq;
 
 namespace Bannerlord.XmlPreview.Adapters.Bannerlord;
@@ -20,12 +19,16 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
     };
 
     private readonly IAppSettingsService _appSettingsService;
-    private readonly object _sync = new();
-    private WidgetReflectionSnapshot? _snapshot;
+    private readonly IBannerlordWidgetReflectionService _reflectionService;
+    private readonly Dictionary<WidgetPropertyCacheKey, WidgetPropertyMetadata?> _propertyMetadataCache = [];
+    private string? _cachedInstallRoot;
 
-    public BannerlordWidgetPropertyResolver(IAppSettingsService appSettingsService)
+    public BannerlordWidgetPropertyResolver(
+        IAppSettingsService appSettingsService,
+        IBannerlordWidgetReflectionService reflectionService)
     {
         _appSettingsService = appSettingsService;
+        _reflectionService = reflectionService;
     }
 
     public PrefabWidgetPropertyMap Resolve(
@@ -33,8 +36,10 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
         PrefabWidgetReferenceMap referenceMap,
         PreviewDiagnostics diagnostics)
     {
-        var snapshot = GetSnapshot();
-        if (snapshot is null)
+        using var timing = diagnostics.MeasurePhase("BannerlordWidgetPropertyResolver.Resolve.Total");
+        EnsureCacheMatchesInstallRoot();
+
+        if (!_reflectionService.TryGetWidgetBaseType(out var widgetBaseType))
         {
             return PrefabWidgetPropertyMap.Empty;
         }
@@ -42,7 +47,7 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
         var propertiesByWidgetPath = new Dictionary<string, IReadOnlyDictionary<string, ResolvedWidgetProperty>>(StringComparer.OrdinalIgnoreCase);
         foreach (var element in rootElement.DescendantsAndSelf())
         {
-            if (!snapshot.WidgetTypesByName.TryGetValue(element.Name.LocalName, out var widgetType))
+            if (!_reflectionService.TryGetWidgetType(element.Name.LocalName, out var widgetType))
             {
                 continue;
             }
@@ -53,7 +58,7 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
             foreach (var attribute in element.Attributes())
             {
                 if (ShouldSkipAttribute(attribute.Name.LocalName) ||
-                    !TryResolveProperty(widgetType, attribute.Name.LocalName, snapshot.WidgetBaseType, out var metadata))
+                    !TryResolveProperty(widgetType, attribute.Name.LocalName, widgetBaseType, out var metadata))
                 {
                     continue;
                 }
@@ -80,153 +85,37 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
             : new PrefabWidgetPropertyMap(propertiesByWidgetPath);
     }
 
-    private WidgetReflectionSnapshot? GetSnapshot()
+    private void EnsureCacheMatchesInstallRoot()
     {
         var installRoot = Path.GetFullPath(_appSettingsService.BannerlordInstallRoot);
-        lock (_sync)
+        if (PathComparer.Equals(_cachedInstallRoot, installRoot))
         {
-            if (_snapshot is not null &&
-                PathComparer.Equals(_snapshot.InstallRoot, installRoot))
-            {
-                return _snapshot;
-            }
-
-            _snapshot?.LoadContext.Unload();
-            _snapshot = BuildSnapshot(installRoot);
-            return _snapshot;
+            return;
         }
+
+        _propertyMetadataCache.Clear();
+        _cachedInstallRoot = installRoot;
     }
 
-    private static WidgetReflectionSnapshot? BuildSnapshot(string installRoot)
-    {
-        var assemblyPathsByName = CollectAssemblyPaths(installRoot);
-        if (assemblyPathsByName.Count == 0)
-        {
-            return null;
-        }
-
-        var loadContext = new WidgetReflectionLoadContext(assemblyPathsByName);
-        var loadedAssemblies = new List<Assembly>();
-        foreach (var assemblyPath in assemblyPathsByName.Values)
-        {
-            try
-            {
-                loadedAssemblies.Add(loadContext.LoadFromAssemblyPath(assemblyPath));
-            }
-            catch
-            {
-            }
-        }
-
-        var widgetBaseType = loadedAssemblies
-            .Select(assembly => assembly.GetType("TaleWorlds.GauntletUI.BaseTypes.Widget", throwOnError: false, ignoreCase: false))
-            .FirstOrDefault(type => type is not null);
-        if (widgetBaseType is null)
-        {
-            loadContext.Unload();
-            return null;
-        }
-
-        var widgetTypesByName = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
-        foreach (var assembly in loadedAssemblies)
-        {
-            foreach (var type in GetLoadableTypes(assembly))
-            {
-                if (!type.IsClass ||
-                    type.IsAbstract ||
-                    !widgetBaseType.IsAssignableFrom(type))
-                {
-                    continue;
-                }
-
-                widgetTypesByName.TryAdd(type.Name, type);
-            }
-        }
-
-        return widgetTypesByName.Count == 0
-            ? null
-            : new WidgetReflectionSnapshot(installRoot, loadContext, widgetBaseType, widgetTypesByName);
-    }
-
-    private static Dictionary<string, string> CollectAssemblyPaths(string installRoot)
-    {
-        var pathsByAssemblyName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var assemblyPath in EnumerateAssemblyPaths(installRoot))
-        {
-            try
-            {
-                var assemblyName = AssemblyName.GetAssemblyName(assemblyPath).Name;
-                if (!string.IsNullOrWhiteSpace(assemblyName))
-                {
-                    pathsByAssemblyName.TryAdd(assemblyName, assemblyPath);
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        return pathsByAssemblyName;
-    }
-
-    private static IEnumerable<string> EnumerateAssemblyPaths(string installRoot)
-    {
-        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var directory in GetAssemblyDirectories(installRoot))
-        {
-            if (!Directory.Exists(directory))
-            {
-                continue;
-            }
-
-            foreach (var path in Directory.EnumerateFiles(directory, "*.dll", SearchOption.TopDirectoryOnly))
-            {
-                if (seenPaths.Add(path))
-                {
-                    yield return Path.GetFullPath(path);
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<string> GetAssemblyDirectories(string installRoot)
-    {
-        yield return Path.Combine(installRoot, "bin", "Win64_Shipping_Client");
-
-        var modulesPath = Path.Combine(installRoot, "Modules");
-        if (!Directory.Exists(modulesPath))
-        {
-            yield break;
-        }
-
-        foreach (var modulePath in Directory.EnumerateDirectories(modulesPath))
-        {
-            yield return Path.Combine(modulePath, "bin", "Win64_Shipping_Client");
-        }
-    }
-
-    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
-    {
-        try
-        {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException ex)
-        {
-            return ex.Types.Where(type => type is not null).Cast<Type>();
-        }
-        catch
-        {
-            return Array.Empty<Type>();
-        }
-    }
-
-    private static bool TryResolveProperty(
+    private bool TryResolveProperty(
         Type widgetType,
         string attributeName,
         Type widgetBaseType,
         out WidgetPropertyMetadata metadata)
     {
+        var cacheKey = new WidgetPropertyCacheKey(widgetType, attributeName);
+        if (_propertyMetadataCache.TryGetValue(cacheKey, out var cachedMetadata))
+        {
+            if (cachedMetadata.HasValue)
+            {
+                metadata = cachedMetadata.Value;
+                return true;
+            }
+
+            metadata = default;
+            return false;
+        }
+
         metadata = default;
         var currentType = widgetType;
         PropertyInfo? property = null;
@@ -237,6 +126,7 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
             if (property is null)
             {
+                _propertyMetadataCache[cacheKey] = null;
                 return false;
             }
 
@@ -245,11 +135,13 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
 
         if (property is null)
         {
+            _propertyMetadataCache[cacheKey] = null;
             return false;
         }
 
         var kind = ClassifyPropertyKind(currentType, widgetBaseType);
         metadata = new WidgetPropertyMetadata(currentType, GetDeclaredTypeName(currentType), kind, kind != ResolvedWidgetPropertyValueKind.Unknown);
+        _propertyMetadataCache[cacheKey] = metadata;
         return true;
     }
 
@@ -421,36 +313,13 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
         };
     }
 
-    private sealed class WidgetReflectionLoadContext : AssemblyLoadContext
-    {
-        private readonly IReadOnlyDictionary<string, string> _assemblyPathsByName;
-
-        public WidgetReflectionLoadContext(IReadOnlyDictionary<string, string> assemblyPathsByName)
-            : base(isCollectible: true)
-        {
-            _assemblyPathsByName = assemblyPathsByName;
-        }
-
-        protected override Assembly? Load(AssemblyName assemblyName)
-        {
-            if (_assemblyPathsByName.TryGetValue(assemblyName.Name ?? string.Empty, out var assemblyPath))
-            {
-                return LoadFromAssemblyPath(assemblyPath);
-            }
-
-            return null;
-        }
-    }
-
-    private sealed record WidgetReflectionSnapshot(
-        string InstallRoot,
-        WidgetReflectionLoadContext LoadContext,
-        Type WidgetBaseType,
-        IReadOnlyDictionary<string, Type> WidgetTypesByName);
-
     private readonly record struct WidgetPropertyMetadata(
         Type Type,
         string DeclaredTypeName,
         ResolvedWidgetPropertyValueKind Kind,
         bool IsSupported);
+
+    private readonly record struct WidgetPropertyCacheKey(
+        Type WidgetType,
+        string AttributeName);
 }

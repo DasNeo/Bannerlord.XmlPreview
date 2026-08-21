@@ -53,7 +53,6 @@ public sealed class MainWindowViewModel : ViewModelBase
     private FrameworkElement? _previewContent;
     private string _previewHeight = string.Empty;
     private string _previewWidth = string.Empty;
-    private string _selectedElementDebugText = "Click an element in the preview to inspect its resolved assets.";
     private SelectedElementInfoViewModel _selectedElementInfo =
         SelectedElementInfoViewModel.Empty("Click an element in the preview to inspect its layout and assets.");
     private SelectionBorderAdorner? _selectedPreviewAdorner;
@@ -167,20 +166,6 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (value == _bindingsFilter) return;
             SetProperty(ref _bindingsFilter, value);
             BindingsView.Refresh();
-        }
-    }
-
-    public string SelectedElementDebugText
-    {
-        get => _selectedElementDebugText;
-        set
-        {
-            if (!SetProperty(ref _selectedElementDebugText, value))
-            {
-                return;
-            }
-
-            SelectedElementInfo = SelectedElementInfoViewModel.FromDebugText(value);
         }
     }
 
@@ -406,7 +391,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             DiagnosticsText = exception.ToString();
             Bindings.Clear();
             ClearPreviewTree();
-            SelectedElementDebugText = "No element selected because loading failed.";
+            SelectedElementInfo = SelectedElementInfoViewModel.Empty("No element selected because loading failed.");
             FilePath = path;
             _currentPrefabPath = path;
             Title = DefaultWindowTitle;
@@ -452,7 +437,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         while (current is not null)
         {
             if (current is FrameworkElement element &&
-                !string.IsNullOrWhiteSpace(PreviewElementDebugProperties.GetDebugText(element)))
+                PreviewElementDebugProperties.GetDebugInfo(element) is not null)
                 return element;
 
             current = current switch
@@ -487,7 +472,8 @@ public sealed class MainWindowViewModel : ViewModelBase
                 }
             }
 
-            SelectedElementDebugText = PreviewElementDebugProperties.GetDebugText(element);
+            SelectedElementInfo = SelectedElementInfoViewModel.FromDebugInfo(
+                PreviewElementDebugProperties.GetDebugInfo(element));
             SetSelectedPreviewTreeNode(_previewTreeLookup.GetValueOrDefault(element));
         }
         finally
@@ -573,7 +559,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         AttachPreviewInteractions(PreviewContent);
         RebuildPreviewTree(PreviewContent);
         DiagnosticsText = diagnostics.ToDisplayText();
-        SelectedElementDebugText = "Click an element in the preview to inspect its resolved assets.";
+        SelectedElementInfo = SelectedElementInfoViewModel.Empty(
+            "Click an element in the preview to inspect its layout and assets.");
     }
 
     public void SelectPreviewTreeNode(PreviewTreeNodeViewModel? node)
@@ -624,8 +611,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         if (current is not FrameworkElement element) return null;
 
-        var debugText = PreviewElementDebugProperties.GetDebugText(element);
-        if (string.IsNullOrWhiteSpace(debugText)) return null;
+        var debugInfo = PreviewElementDebugProperties.GetDebugInfo(element);
+        if (debugInfo is null) return null;
 
         var label = PreviewElementDebugProperties.GetTreeLabel(element);
         var node = new PreviewTreeNodeViewModel(
