@@ -53,10 +53,10 @@ public sealed class BannerlordBrushMetricsProvider : IBrushMetricsProvider
         var topIntrusion = Math.Max(0, request.SpriteTopHeight - request.ExtendTop);
         var bottomIntrusion = Math.Max(0, request.SpriteBottomHeight - request.ExtendBottom);
 
-        var left = Math.Clamp(Math.Max(request.ExtendLeft * 0.5, leftIntrusion + 8), 12, 36);
-        var top = Math.Clamp(Math.Max(request.ExtendTop * 0.2, topIntrusion + 2), 4, 10);
-        var right = Math.Clamp(Math.Max(request.ExtendRight * 0.5, rightIntrusion + 8), 12, 36);
-        var bottom = Math.Clamp(Math.Max(request.ExtendBottom * 0.2, bottomIntrusion + 2), 4, 10);
+        var left = Math.Clamp(Math.Max(request.ExtendLeft * 0.33, leftIntrusion + 4), 8, 20);
+        var top = Math.Clamp(Math.Max(request.ExtendTop * 0.1, topIntrusion + 1), 2, 6);
+        var right = Math.Clamp(Math.Max(request.ExtendRight * 0.33, rightIntrusion + 4), 8, 20);
+        var bottom = Math.Clamp(Math.Max(request.ExtendBottom * 0.1, bottomIntrusion + 1), 2, 6);
         return new Thickness(left, top, right, bottom);
     }
 

@@ -157,7 +157,7 @@ public sealed class PrefabRenderContext
     {
         var textSource = _widgetTextSourceProvider.GetTextSource(nodeName, attributes);
         var resolvedText = ResolveBinding(textSource);
-        return string.IsNullOrWhiteSpace(resolvedText) ? fallbackText : resolvedText;
+        return string.IsNullOrEmpty(resolvedText) ? fallbackText : resolvedText;
     }
 
     public IDisposable PushBindingScope(IReadOnlyDictionary<string, string> values)
@@ -1385,6 +1385,41 @@ public sealed class PrefabRenderContext
             renderedSize.Height * opaqueBounds.Value.Height / spriteImage.PixelHeight);
     }
 
+    public Rect ResolveBrushSelectionRect(string? brushName, bool isDisabled, Size renderedSize)
+    {
+        if (string.IsNullOrWhiteSpace(brushName) ||
+            renderedSize.Width <= 0 ||
+            renderedSize.Height <= 0)
+        {
+            return new Rect(new Point(0, 0), renderedSize);
+        }
+
+        var layer = ResolveVisibleBrushLayers(brushName, isDisabled)
+            .FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, "Default", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(candidate.SpriteName))
+            ?? ResolveVisibleBrushLayers(brushName, isDisabled)
+                .FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate.SpriteName));
+        if (layer is null)
+        {
+            return new Rect(new Point(0, 0), renderedSize);
+        }
+
+        var extendedWidth = Math.Max(1, renderedSize.Width + (layer.ExtendLeft ?? 0) + (layer.ExtendRight ?? 0));
+        var extendedHeight = Math.Max(1, renderedSize.Height + (layer.ExtendTop ?? 0) + (layer.ExtendBottom ?? 0));
+        var selectionBounds = ResolveSpriteSelectionRect(layer.SpriteName, new Size(extendedWidth, extendedHeight));
+        if (selectionBounds.IsEmpty)
+        {
+            return new Rect(new Point(0, 0), renderedSize);
+        }
+
+        return new Rect(
+            selectionBounds.X - (layer.ExtendLeft ?? 0),
+            selectionBounds.Y - (layer.ExtendTop ?? 0),
+            selectionBounds.Width,
+            selectionBounds.Height);
+    }
+
     private Int32Rect? ResolveSpriteOpaqueBounds(string? spriteName)
     {
         if (string.IsNullOrWhiteSpace(spriteName) ||
@@ -1540,7 +1575,7 @@ public sealed class PrefabRenderContext
                     var padding = ResolveBrushContentPadding(brushId, isDisabled);
                     element.MinWidth = Math.Max(
                         element.MinWidth,
-                        Math.Max(metricWidth ?? 0, padding.Left + padding.Right + 24));
+                        ResolveCoverChildrenButtonMinWidth(metricWidth, metricHeight, padding));
                 }
                 else
                 {
@@ -1564,6 +1599,27 @@ public sealed class PrefabRenderContext
         }
 
         EnsureMinimumButtonSize(element);
+    }
+
+    private static double ResolveCoverChildrenButtonMinWidth(
+        double? metricWidth,
+        double? metricHeight,
+        Thickness padding)
+    {
+        var paddingWidth = Math.Max(0, padding.Left) + Math.Max(0, padding.Right);
+
+        // CoverChildren buttons should grow from their label and chrome padding instead of
+        // inheriting the full fixed-button width baked into the brush metric.
+        var centerWidthFloor = metricHeight.HasValue
+            ? Math.Max(24, metricHeight.Value * 1.3)
+            : Math.Max(24, (metricWidth ?? 0) * 0.22);
+
+        if (metricWidth.HasValue)
+        {
+            centerWidthFloor = Math.Min(centerWidthFloor, metricWidth.Value);
+        }
+
+        return paddingWidth + centerWidthFloor;
     }
 
     public Thickness ResolveBrushContentPadding(string? brushId, bool isDisabled, Thickness? fallback = null)
@@ -1876,25 +1932,24 @@ public sealed class PrefabRenderContext
             measureInput.Height,
             desired.Height);
 
-        if ((width <= 0 && measureInput.Width > 0) ||
-            (height <= 0 && measureInput.Height > 0))
+        if (width.UsedFallback || height.UsedFallback)
         {
             _diagnostics.AddMeasureFallback(element.GetType().Name, measureInput.Width, measureInput.Height);
         }
 
         if (UsesStretchToParent(attributes, "WidthSizePolicy") &&
-            !DoubleUtil.AreClose(element.Width, width))
+            !DoubleUtil.AreClose(element.Width, width.Value))
         {
-            element.Width = width;
+            element.Width = width.Value;
         }
 
         if (UsesStretchToParent(attributes, "HeightSizePolicy") &&
-            !DoubleUtil.AreClose(element.Height, height))
+            !DoubleUtil.AreClose(element.Height, height.Value))
         {
-            element.Height = height;
+            element.Height = height.Value;
         }
 
-        return new Size(width, height);
+        return new Size(width.Value, height.Value);
     }
 
     public void AttachChildren(Panel host, IEnumerable<PrefabNode> children, Size parentSize)
@@ -2063,6 +2118,7 @@ public sealed class PrefabRenderContext
         if (contentBounds.IsEmpty)
         {
             canvas.Margin = new Thickness(0);
+            canvas.RenderTransform = Transform.Identity;
             canvas.Width = 0;
             canvas.Height = 0;
             return;
@@ -2091,7 +2147,10 @@ public sealed class PrefabRenderContext
             }
         }
 
-        canvas.Margin = new Thickness(offsetX, offsetY, 0, 0);
+        canvas.Margin = new Thickness(0);
+        canvas.RenderTransform = !DoubleUtil.AreClose(offsetX, 0) || !DoubleUtil.AreClose(offsetY, 0)
+            ? new TranslateTransform(offsetX, offsetY)
+            : Transform.Identity;
         canvas.Width = contentBounds.Width;
         canvas.Height = contentBounds.Height;
     }
@@ -2302,7 +2361,15 @@ public sealed class PrefabRenderContext
             return;
         }
 
+        PreviewElementDebugProperties.SetLayoutParentSize(element, parentSize);
+        PreviewElementDebugProperties.SetLayoutMeasuredSize(element, measuredSize);
+        PreviewElementDebugProperties.SetLayoutAlignmentBounds(element, alignmentBounds ?? Rect.Empty);
+        PreviewElementDebugProperties.SetLayoutComputedPosition(
+            element,
+            position ?? new Point(double.NaN, double.NaN));
+
         var layoutDebugText = BuildLayoutDebugText(element, attributes, parentSize, measuredSize, position, alignmentBounds);
+        PreviewElementDebugProperties.SetLayoutDebugText(element, layoutDebugText);
         PreviewElementDebugProperties.SetDebugText(
             element,
             string.Concat(baseDebugText, Environment.NewLine, Environment.NewLine, layoutDebugText));
@@ -2503,7 +2570,7 @@ public sealed class PrefabRenderContext
             Opacity = Math.Clamp(layer.AlphaFactor ?? 1.0, 0, 1)
         };
 
-        var mainVisual = CreateSpriteVisual(layer.SpriteName, extendedWidth, extendedHeight);
+        var mainVisual = CreateBrushLayerSpriteVisual(layer, extendedWidth, extendedHeight);
         if (mainVisual is not null)
         {
             layerVisual.Children.Add(mainVisual);
@@ -2531,6 +2598,37 @@ public sealed class PrefabRenderContext
         return layerVisual;
     }
 
+    private FrameworkElement? CreateBrushLayerSpriteVisual(BrushLayerDefinition layer, double width, double height)
+    {
+        var spriteDefinition = ResolveCatalogSprite(layer.SpriteName);
+        if (spriteDefinition?.IsNineRegion == true)
+        {
+            return CreateSpriteVisual(layer.SpriteName, width, height);
+        }
+
+        var syntheticNineSlice = ResolveSyntheticBrushNineSlice(layer, spriteDefinition);
+        return CreateSpriteVisual(layer.SpriteName, width, height, syntheticNineSlice);
+    }
+
+    private static Thickness? ResolveSyntheticBrushNineSlice(BrushLayerDefinition layer, SpriteDefinition? spriteDefinition)
+    {
+        if (spriteDefinition is null || spriteDefinition.IsNineRegion)
+        {
+            return null;
+        }
+
+        var left = Math.Max(0, layer.ExtendLeft ?? 0);
+        var top = Math.Max(0, layer.ExtendTop ?? 0);
+        var right = Math.Max(0, layer.ExtendRight ?? 0);
+        var bottom = Math.Max(0, layer.ExtendBottom ?? 0);
+        if (left <= 0 && top <= 0 && right <= 0 && bottom <= 0)
+        {
+            return null;
+        }
+
+        return new Thickness(left, top, right, bottom);
+    }
+
     private FrameworkElement? CreateOverlayVisual(
         BrushLayerDefinition layer,
         double width,
@@ -2549,7 +2647,7 @@ public sealed class PrefabRenderContext
                 width,
                 height,
                 mainVisual,
-                CreateSpriteVisual,
+                (spriteName, targetWidth, targetHeight) => CreateSpriteVisual(spriteName, targetWidth, targetHeight),
                 ResolveSpriteImage,
                 CreateVisualClone));
         if (featureVisual is not null)
@@ -2578,7 +2676,7 @@ public sealed class PrefabRenderContext
         };
     }
 
-    private FrameworkElement? CreateSpriteVisual(string? spriteName, double width, double height)
+    private FrameworkElement? CreateSpriteVisual(string? spriteName, double width, double height, Thickness? syntheticNineSlice = null)
     {
         if (string.IsNullOrWhiteSpace(spriteName))
         {
@@ -2607,6 +2705,18 @@ public sealed class PrefabRenderContext
         if (spriteDefinition?.IsNineRegion == true)
         {
             return CreateNineSliceVisual(bitmapSource, spriteDefinition, width, height);
+        }
+
+        if (syntheticNineSlice is not null)
+        {
+            return CreateNineSliceVisual(
+                bitmapSource,
+                (int)Math.Round(syntheticNineSlice.Value.Left),
+                (int)Math.Round(syntheticNineSlice.Value.Right),
+                (int)Math.Round(syntheticNineSlice.Value.Top),
+                (int)Math.Round(syntheticNineSlice.Value.Bottom),
+                width,
+                height);
         }
 
         return new Image
@@ -2759,8 +2869,21 @@ public sealed class PrefabRenderContext
     {
         textBlock.ClearValue(TextBlock.LineStackingStrategyProperty);
         textBlock.ClearValue(TextBlock.LineHeightProperty);
-        textBlock.RenderTransform = Transform.Identity;
-        return 0;
+        if (!ShouldApplyVisualTextCentering(textBlock))
+        {
+            textBlock.RenderTransform = Transform.Identity;
+            return 0;
+        }
+
+        var verticalOffset = ComputeVisualTextVerticalOffset(textBlock, availableWidth);
+        if (Math.Abs(verticalOffset) < 0.25d)
+        {
+            textBlock.RenderTransform = Transform.Identity;
+            return 0;
+        }
+
+        textBlock.RenderTransform = new TranslateTransform(0, verticalOffset);
+        return verticalOffset;
     }
 
     private FrameworkElement CreateNineSliceVisual(
@@ -2769,10 +2892,29 @@ public sealed class PrefabRenderContext
         double targetWidth,
         double targetHeight)
     {
-        var leftWidth = spriteDefinition.LeftWidth ?? 0;
-        var rightWidth = spriteDefinition.RightWidth ?? 0;
-        var topHeight = spriteDefinition.TopHeight ?? 0;
-        var bottomHeight = spriteDefinition.BottomHeight ?? 0;
+        return CreateNineSliceVisual(
+            bitmapSource,
+            spriteDefinition.LeftWidth ?? 0,
+            spriteDefinition.RightWidth ?? 0,
+            spriteDefinition.TopHeight ?? 0,
+            spriteDefinition.BottomHeight ?? 0,
+            targetWidth,
+            targetHeight);
+    }
+
+    private FrameworkElement CreateNineSliceVisual(
+        BitmapSource bitmapSource,
+        int leftWidth,
+        int rightWidth,
+        int topHeight,
+        int bottomHeight,
+        double targetWidth,
+        double targetHeight)
+    {
+        leftWidth = Math.Clamp(leftWidth, 0, bitmapSource.PixelWidth);
+        rightWidth = Math.Clamp(rightWidth, 0, Math.Max(0, bitmapSource.PixelWidth - leftWidth));
+        topHeight = Math.Clamp(topHeight, 0, bitmapSource.PixelHeight);
+        bottomHeight = Math.Clamp(bottomHeight, 0, Math.Max(0, bitmapSource.PixelHeight - topHeight));
 
         double actualLeft = leftWidth;
         double actualRight = rightWidth;
@@ -2910,6 +3052,66 @@ public sealed class PrefabRenderContext
         return !string.IsNullOrWhiteSpace(brush?.FontName)
             ? new FontFamily(brush.FontName)
             : new FontFamily("Segoe UI");
+    }
+
+    private static bool ShouldApplyVisualTextCentering(TextBlock textBlock)
+    {
+        return textBlock.VerticalAlignment == VerticalAlignment.Center ||
+               textBlock.HorizontalAlignment == HorizontalAlignment.Center ||
+               textBlock.TextAlignment == TextAlignment.Center;
+    }
+
+    private static double ComputeVisualTextVerticalOffset(TextBlock textBlock, double availableWidth)
+    {
+        if (string.IsNullOrWhiteSpace(textBlock.Text) || textBlock.FontSize <= 0)
+        {
+            return 0;
+        }
+
+        try
+        {
+            var pixelsPerDip = 1d;
+            var formattedText = new FormattedText(
+                textBlock.Text,
+                CultureInfo.CurrentUICulture,
+                FlowDirection.LeftToRight,
+                new Typeface(
+                    textBlock.FontFamily,
+                    textBlock.FontStyle,
+                    textBlock.FontWeight,
+                    textBlock.FontStretch),
+                textBlock.FontSize,
+                Brushes.Transparent,
+                pixelsPerDip)
+            {
+                TextAlignment = textBlock.TextAlignment,
+                Trimming = textBlock.TextTrimming
+            };
+
+            if (textBlock.TextWrapping != TextWrapping.NoWrap &&
+                !double.IsNaN(availableWidth) &&
+                !double.IsInfinity(availableWidth) &&
+                availableWidth > 0)
+            {
+                formattedText.MaxTextWidth = availableWidth;
+            }
+
+            var bounds = formattedText.BuildGeometry(new Point(0, 0)).Bounds;
+            if (bounds.IsEmpty || bounds.Height <= 0 || formattedText.Height <= 0)
+            {
+                return 0;
+            }
+
+            var layoutCenter = formattedText.Height / 2d;
+            var glyphCenter = bounds.Top + (bounds.Height / 2d);
+            var verticalOffset = layoutCenter - glyphCenter;
+            var maxReasonableOffset = Math.Max(2d, textBlock.FontSize * 0.18d);
+            return Math.Clamp(verticalOffset, -maxReasonableOffset, maxReasonableOffset);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private TextAlignment ResolveTextAlignment(string? brushName, string? rawOverride = null)
@@ -3119,7 +3321,7 @@ public sealed class PrefabRenderContext
         return CoerceAxisToBoundaries(attributes, minKey, maxKey, measureSize);
     }
 
-    private double ResolveMeasuredAxis(
+    private MeasuredAxisResult ResolveMeasuredAxis(
         FrameworkElement element,
         IReadOnlyDictionary<string, string> attributes,
         string policyKey,
@@ -3153,23 +3355,36 @@ public sealed class PrefabRenderContext
             _ => 0
         };
 
-        return CoerceAxisToBoundaries(attributes, minKey, maxKey, ResolveMeasuredLength(measured, fallback));
+        var resolved = ResolveMeasuredLength(measured, fallback, out var usedFallback);
+        return new MeasuredAxisResult(
+            CoerceAxisToBoundaries(attributes, minKey, maxKey, resolved),
+            usedFallback);
     }
 
     private double ResolveMeasuredLength(double preferred, double fallback)
     {
+        return ResolveMeasuredLength(preferred, fallback, out _);
+    }
+
+    private double ResolveMeasuredLength(double preferred, double fallback, out bool usedFallback)
+    {
         if (!double.IsNaN(preferred) && !double.IsInfinity(preferred) && preferred > 0)
         {
+            usedFallback = false;
             return preferred;
         }
 
         if (!double.IsNaN(fallback) && !double.IsInfinity(fallback) && fallback > 0)
         {
+            usedFallback = true;
             return fallback;
         }
 
+        usedFallback = false;
         return 0;
     }
+
+    private readonly record struct MeasuredAxisResult(double Value, bool UsedFallback);
 
     private double CoerceAxisToBoundaries(
         IReadOnlyDictionary<string, string> attributes,

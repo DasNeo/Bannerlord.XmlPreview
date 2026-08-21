@@ -17,6 +17,7 @@ public sealed class PreviewDiagnostics
     private readonly HashSet<string> _resolvedWidgetPropertySet = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _measureFallbackSamples = [];
     private readonly HashSet<string> _measureFallbackSet = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _elementLayoutSnapshots = [];
     private string? _sourcePath;
     private string? _rootNodeName;
     private int _bindingCount;
@@ -30,6 +31,7 @@ public sealed class PreviewDiagnostics
     private int _measureFallbackCount;
     private string? _requestedRootSize;
     private string? _measuredRootSize;
+    private string? _actualRootSize;
 
     public IReadOnlyList<string> Messages => _messages;
 
@@ -111,10 +113,30 @@ public sealed class PreviewDiagnostics
                 sections.Add($"RootMeasured: {_measuredRootSize}");
             }
 
+            if (!string.IsNullOrWhiteSpace(_actualRootSize))
+            {
+                sections.Add($"RootActual: {_actualRootSize}");
+            }
+
             sections.Add($"MeasureFallbacks: {_measureFallbackCount}");
             foreach (var sample in _measureFallbackSamples.Take(6))
             {
                 sections.Add(sample);
+            }
+        }
+
+        if (_elementLayoutSnapshots.Count > 0)
+        {
+            AddSectionSeparator(sections);
+            sections.Add("ElementLayout");
+            sections.Add($"Captured: {_elementLayoutSnapshots.Count}");
+            for (var index = 0; index < _elementLayoutSnapshots.Count; index++)
+            {
+                sections.Add(_elementLayoutSnapshots[index]);
+                if (index < _elementLayoutSnapshots.Count - 1)
+                {
+                    sections.Add(string.Empty);
+                }
             }
         }
 
@@ -155,10 +177,24 @@ public sealed class PreviewDiagnostics
         }
     }
 
-    public void SetRenderSummary(double requestedWidth, double requestedHeight, double measuredWidth, double measuredHeight)
+    public void SetRenderSummary(
+        double requestedWidth,
+        double requestedHeight,
+        double measuredWidth,
+        double measuredHeight,
+        double actualWidth,
+        double actualHeight)
     {
         _requestedRootSize = FormatSize(requestedWidth, requestedHeight);
         _measuredRootSize = FormatSize(measuredWidth, measuredHeight);
+        _actualRootSize = FormatSize(actualWidth, actualHeight);
+    }
+
+    public void SetElementLayoutSnapshots(IEnumerable<string> snapshots)
+    {
+        _elementLayoutSnapshots.Clear();
+        _elementLayoutSnapshots.AddRange(
+            snapshots.Where(snapshot => !string.IsNullOrWhiteSpace(snapshot)));
     }
 
     public void AddResolvedWidgetReference(string originPath, string attributeName, string rawValue, string targetPath)

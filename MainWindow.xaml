@@ -1,6 +1,7 @@
 <Window x:Class="Bannerlord.XmlPreview.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Bannerlord.XmlPreview.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:Bannerlord.XmlPreview.ViewModels"
@@ -12,7 +13,8 @@
         MinHeight="720"
         MinWidth="1100"
         Background="#16181D"
-        Style="{StaticResource MaterialDesignWindow}">
+        Style="{StaticResource MaterialDesignWindow}"
+        d:DataContext="{d:DesignInstance Type=viewModels:MainWindowViewModel, IsDesignTimeCreatable=True}">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -41,32 +43,32 @@
                     </Grid.ColumnDefinitions>
 
                     <Button Grid.Column="0"
-                        Padding="14,8"
-                        Margin="0,0,10,0"
-                        Command="{Binding OpenPrefabCommand}"
-                        Content="Open Prefab" />
+                            Padding="14,8"
+                            Margin="0,0,10,0"
+                            Command="{Binding OpenPrefabCommand}"
+                            Content="Open Prefab" />
 
                     <Button Grid.Column="1"
-                        Padding="14,8"
-                        Margin="0,0,16,0"
-                        Command="{Binding ReloadCommand}"
-                        Content="Reload" />
+                            Padding="14,8"
+                            Margin="0,0,16,0"
+                            Command="{Binding ReloadCommand}"
+                            Content="Reload" />
 
                     <TextBox Grid.Column="2"
-                         Text="{Binding FilePath}"
-                         VerticalContentAlignment="Center"
-                         IsReadOnly="True"
-                         BorderThickness="0"
-                         Background="#13161B"
-                         Foreground="#E7E1D1"
-                         Padding="10,8" />
+                             Text="{Binding FilePath}"
+                             VerticalContentAlignment="Center"
+                             IsReadOnly="True"
+                             BorderThickness="0"
+                             Background="#13161B"
+                             Foreground="#E7E1D1"
+                             Padding="10,8" />
 
                     <TextBlock Grid.Column="3"
-                           Text="{Binding StatusText}"
-                           Margin="16,0,0,0"
-                           VerticalAlignment="Center"
-                           Foreground="#C8D1DC"
-                           FontWeight="SemiBold" />
+                               Text="{Binding StatusText}"
+                               Margin="16,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="#C8D1DC"
+                               FontWeight="SemiBold" />
                 </Grid>
 
                 <Grid Grid.Row="1"
@@ -74,6 +76,10 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
@@ -101,8 +107,50 @@
 
                     <Button Grid.Column="3"
                             Padding="14,8"
+                            Margin="0,0,16,0"
                             Command="{Binding ApplyBannerlordInstallCommand}"
                             Content="Apply" />
+
+                    <TextBlock Grid.Column="4"
+                               Margin="0,0,12,0"
+                               VerticalAlignment="Center"
+                               Foreground="#E7E1D1"
+                               FontWeight="SemiBold"
+                               Text="Preview" />
+
+                    <TextBox Grid.Column="5"
+                             Width="88"
+                             Margin="0,0,8,0"
+                             Text="{Binding PreviewWidth, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"
+                             BorderThickness="0"
+                             Background="#13161B"
+                             Foreground="#E7E1D1"
+                             Padding="10,8"
+                             ToolTip="Preview width" />
+
+                    <TextBlock Grid.Column="6"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               Foreground="#C8D1DC"
+                               Text="x" />
+
+                    <StackPanel Grid.Column="7"
+                                Orientation="Horizontal">
+                        <TextBox Width="88"
+                                 Margin="0,0,10,0"
+                                 Text="{Binding PreviewHeight, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"
+                                 BorderThickness="0"
+                                 Background="#13161B"
+                                 Foreground="#E7E1D1"
+                                 Padding="10,8"
+                                 ToolTip="Preview height" />
+
+                        <Button Padding="14,8"
+                                Command="{Binding ApplyPreviewSizeCommand}"
+                                Content="Apply Size" />
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Border>
@@ -110,11 +158,12 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="7" />
                 <ColumnDefinition Width="380" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
-                    Margin="0,0,12,0"
+                    Margin="0,0,5,0"
                     Background="#0D1015"
                     BorderBrush="#39414F"
                     BorderThickness="1"
@@ -122,53 +171,64 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="300" />
-                        <ColumnDefinition Width="1" />
+                        <ColumnDefinition Width="7" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Grid Grid.Column="0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
+                    <Border Grid.Column="0"
+                            Background="#22262E"
+                            BorderBrush="#39414F"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12"
+                            Margin="0,0,5,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0"
-                                   Margin="12,12,12,10"
-                                   Foreground="#E7E1D1"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   Text="Node Tree" />
+                            <TextBlock Grid.Row="0"
+                                       Foreground="#E7E1D1"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Text="Node Tree" />
 
-                        <TreeView Grid.Row="1"
-                                  Margin="8,0,8,8"
-                                  Padding="4"
-                                  Background="#13161B"
-                                  BorderThickness="0"
-                                  Foreground="#D7E0EA"
-                                  ItemsSource="{Binding PreviewTree}"
-                                  SelectedItemChanged="PreviewTreeOnSelectedItemChanged">
-                            <TreeView.Resources>
-                                <HierarchicalDataTemplate DataType="{x:Type viewModels:PreviewTreeNodeViewModel}"
-                                                          ItemsSource="{Binding Children}">
-                                    <TextBlock Text="{Binding Label}"
-                                               TextWrapping="Wrap" />
-                                </HierarchicalDataTemplate>
-                            </TreeView.Resources>
-                            <TreeView.ItemContainerStyle>
-                                <Style TargetType="TreeViewItem">
-                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                                    <Setter Property="Foreground" Value="#D7E0EA" />
-                                    <Setter Property="Background" Value="Transparent" />
-                                </Style>
-                            </TreeView.ItemContainerStyle>
-                        </TreeView>
-                    </Grid>
+                            <TreeView Grid.Row="1"
+                                      Padding="4"
+                                      Background="#13161B"
+                                      BorderThickness="0"
+                                      Foreground="#D7E0EA"
+                                      Margin="0, 12,0,0"
+                                      ItemsSource="{Binding PreviewTree}"
+                                      SelectedItemChanged="PreviewTreeOnSelectedItemChanged">
+                                <TreeView.Resources>
+                                    <HierarchicalDataTemplate DataType="{x:Type viewModels:PreviewTreeNodeViewModel}"
+                                                              ItemsSource="{Binding Children}">
+                                        <TextBlock Text="{Binding Label}"
+                                                   TextWrapping="Wrap" />
+                                    </HierarchicalDataTemplate>
+                                </TreeView.Resources>
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                        <Setter Property="Foreground" Value="#D7E0EA" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                            </TreeView>
+                        </Grid>
+                    </Border>
 
-                    <Border Grid.Column="1"
-                            Background="#39414F" />
+                    <GridSplitter Grid.Column="1"
+                                  VerticalAlignment="Stretch"
+                                  HorizontalAlignment="Stretch"
+                                  Style="{StaticResource MaterialDesignGridSplitter}" />
 
                     <ScrollViewer Grid.Column="2"
+                                  Margin="5,0,0,0"
+                                  Background="#13161B"
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
                                   Padding="12">
@@ -176,103 +236,81 @@
                     </ScrollViewer>
                 </Grid>
             </Border>
-
-            <Border Grid.Column="1"
+            <GridSplitter Grid.Column="1"
+                          VerticalAlignment="Stretch"
+                          HorizontalAlignment="Stretch"
+                          Style="{StaticResource MaterialDesignGridSplitter}" />
+            <Border Grid.Column="2"
                     Background="#22262E"
                     BorderBrush="#39414F"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="12">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Margin="0,0,0,12"
-                               Foreground="#E7E1D1"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Text="Selected Element" />
-
-                    <TextBox Grid.Row="1"
-                             Margin="0,0,0,16"
-                             Text="{Binding SelectedElementDebugText}"
-                             IsReadOnly="True"
-                             BorderThickness="0"
-                             Background="#13161B"
-                             Foreground="#D7E0EA"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             VerticalScrollBarVisibility="Auto"
-                             HorizontalScrollBarVisibility="Auto"
-                             FontFamily="Consolas" />
-
-                    <TextBlock Grid.Row="2"
-                               Margin="0,0,0,12"
-                               Foreground="#E7E1D1"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Text="Diagnostics" />
-
-                    <TextBox Grid.Row="3"
-                             Margin="0,0,0,16"
-                             Text="{Binding DiagnosticsText}"
-                             IsReadOnly="True"
-                             BorderThickness="0"
-                             Background="#13161B"
-                             Foreground="#D7E0EA"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             VerticalScrollBarVisibility="Auto"
-                             HorizontalScrollBarVisibility="Disabled" />
-
-                    <Grid Grid.Row="4"
-                          Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock 
-                            Foreground="#E7E1D1"
-                            FontSize="16"
-                            FontWeight="SemiBold"
-                            Text="Bindings" />
-                        <TextBox Grid.Column="1" 
-                                 VerticalAlignment="Stretch"
-                                 HorizontalAlignment="Stretch"
-                                 materialDesign:HintAssist.Hint="Search Bindings"
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                    </Grid>
-
-
-                    <ScrollViewer Grid.Row="5"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  Background="#13161B"
-                                  Padding="0,16,0,0">
-                        <ItemsControl ItemsSource="{Binding Bindings}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="4,0,4,8">
-                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
-                                                 BorderThickness="0"
-                                                 Background="#0D1015"
-                                                 Foreground="#D7E0EA"
-                                                 VerticalContentAlignment="Stretch"
-                                                 materialDesign:HintAssist.Hint="{Binding DisplayKey}"
-                                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
+                    Padding="12"
+                    Margin="5,0,0,0">
+                <controls:Accordion>
+                    <Expander
+                        Header="Selected Element Debug Info"
+                        IsExpanded="True"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        Style="{StaticResource MaterialDesignExpander}">
+                        <controls:SelectedInfoView DataContext="{Binding SelectedElementInfo}" />
+                    </Expander>
+                    <Expander
+                        Header="Diagnostics"
+                        VirtualizingPanel.IsVirtualizing="True"
+                        Style="{StaticResource MaterialDesignExpander}">
+                        <TextBox Text="{Binding DiagnosticsText}"
+                                 IsReadOnly="True"
+                                 BorderThickness="0"
+                                 Background="#13161B"
+                                 Foreground="#D7E0EA"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Disabled" />
+                    </Expander>
+                    <Expander Header="Bindings"
+                              IsExpanded="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              Style="{StaticResource MaterialDesignExpander}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBox Grid.Row="0"
+                                     Margin="12,0"
+                                     VerticalAlignment="Stretch"
+                                     HorizontalAlignment="Stretch"
+                                     Text="{Binding BindingsFilter, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Filter Bindings"
+                                     Style="{StaticResource MaterialDesignFilledTextBox}" />
+                            <ScrollViewer Grid.Row="1"
+                                          Grid.Column="0"
+                                          Margin="0,12,0,0"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Background="#13161B">
+                                <ItemsControl ItemsSource="{Binding BindingsView}"
+                                              Margin="12,8,12,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="4,0,4,8">
+                                                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
+                                                         BorderThickness="0"
+                                                         Background="#0D1015"
+                                                         Foreground="#D7E0EA"
+                                                         VerticalContentAlignment="Stretch"
+                                                         materialDesign:HintAssist.Hint="{Binding DisplayKey}"
+                                                         Style="{StaticResource MaterialDesignFloatingHintTextBox}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Expander>
+                </controls:Accordion>
             </Border>
         </Grid>
     </Grid>

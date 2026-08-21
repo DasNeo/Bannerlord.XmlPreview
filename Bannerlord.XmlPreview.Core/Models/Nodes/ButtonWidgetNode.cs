@@ -74,7 +74,7 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
     {
         var textNode = GetTextNode();
         var childText = context.ResolveBinding(textNode?.Attributes.TryGetValue("Text", out var value) == true ? value : null);
-        if (!string.IsNullOrWhiteSpace(childText))
+        if (!string.IsNullOrEmpty(childText))
         {
             return childText;
         }

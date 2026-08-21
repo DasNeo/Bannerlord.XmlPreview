@@ -51,7 +51,11 @@ public abstract class ContainerPrefabNode : PrefabNode
         if (!string.IsNullOrWhiteSpace(spriteId) && sprite is not null)
             layout.Children.Add(sprite);
 
-        var childCanvas = new Canvas();
+        var childCanvas = new Canvas
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top
+        };
         layout.Children.Add(childCanvas);
 
         border.Child = layout;
@@ -74,12 +78,16 @@ public abstract class ContainerPrefabNode : PrefabNode
             childCanvas.Children.Clear();
 
             var baseContainerSize = overrideContainerSize ?? context.ResolveElementRenderSize(border, measureInput);
-            childLayoutRect = !string.IsNullOrWhiteSpace(spriteId)
-                ? context.ResolveSpriteContentLayoutRect(spriteId, baseContainerSize)
-                : new Rect(new Point(0, 0), baseContainerSize);
             selectionRect = !string.IsNullOrWhiteSpace(spriteId)
                 ? context.ResolveSpriteSelectionRect(spriteId, baseContainerSize)
-                : childLayoutRect;
+                : _frameBrush && !string.IsNullOrWhiteSpace(brushId)
+                    ? context.ResolveBrushSelectionRect(brushId, isDisabled, baseContainerSize)
+                    : new Rect(new Point(0, 0), baseContainerSize);
+
+            var childOrigin = _frameBrush && string.IsNullOrWhiteSpace(spriteId) && !selectionRect.IsEmpty
+                ? new Point(0, -Math.Max(0, selectionRect.Y))
+                : new Point(0, 0);
+            childLayoutRect = new Rect(childOrigin, baseContainerSize);
             context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
 
             var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
@@ -107,6 +115,38 @@ public abstract class ContainerPrefabNode : PrefabNode
             context.AddBrushOverlay(layout, brushId, isDisabled, overlayWidth, overlayHeight, 0);
         }
 
-        return new RenderedPrefabNode(border, childCanvas, selectionRect);
+        var alignmentBounds = !_frameBrush && !string.IsNullOrWhiteSpace(spriteId)
+            ? CreateSpriteAlignmentBounds(selectionRect, containerSize)
+            : (Rect?)null;
+
+        return new RenderedPrefabNode(border, childCanvas, alignmentBounds);
+    }
+
+    private Rect? CreateSpriteAlignmentBounds(Rect selectionRect, Size containerSize)
+    {
+        if (selectionRect.IsEmpty || containerSize.Width <= 0 || containerSize.Height <= 0)
+        {
+            return null;
+        }
+
+        var horizontalAlignment = GetAttribute("HorizontalAlignment");
+        var verticalAlignment = GetAttribute("VerticalAlignment");
+        var useSelectionHorizontal =
+            string.Equals(horizontalAlignment, "Center", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(horizontalAlignment, "Right", StringComparison.OrdinalIgnoreCase);
+        var useSelectionVertical =
+            string.Equals(verticalAlignment, "Center", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(verticalAlignment, "Bottom", StringComparison.OrdinalIgnoreCase);
+
+        if (!useSelectionHorizontal && !useSelectionVertical)
+        {
+            return null;
+        }
+
+        return new Rect(
+            useSelectionHorizontal ? selectionRect.X : 0,
+            useSelectionVertical ? selectionRect.Y : 0,
+            useSelectionHorizontal ? selectionRect.Width : containerSize.Width,
+            useSelectionVertical ? selectionRect.Height : containerSize.Height);
     }
 }

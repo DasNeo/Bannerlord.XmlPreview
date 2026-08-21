@@ -122,7 +122,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         var spriteParts = new Dictionary<string, SpritePartDefinition>(StringComparer.OrdinalIgnoreCase);
         var sprites = new Dictionary<string, SpriteDefinition>(StringComparer.OrdinalIgnoreCase);
         var brushes = new Dictionary<string, BrushDefinition>(StringComparer.OrdinalIgnoreCase);
-        var spriteImages = LoadSpriteImages();
+        var spriteImages = LoadSpriteImages(installRoot);
 
         var modulesPath = Path.Combine(installRoot, "Modules");
         if (!Directory.Exists(modulesPath))
@@ -179,7 +179,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         return bitmap;
     }
 
-    private static SpriteImageIndex LoadSpriteImages()
+    private static SpriteImageIndex LoadSpriteImages(string installRoot)
     {
         var exactMatches = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var baseNameCandidates = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
@@ -189,6 +189,8 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
             IndexManifest(root, exactMatches, baseNameCandidates);
             IndexPngFiles(root, exactMatches, baseNameCandidates);
         }
+
+        IndexModulePngFiles(installRoot, exactMatches, baseNameCandidates);
 
         var uniqueBaseNameMatches = baseNameCandidates
             .Where(entry => entry.Value.Count == 1)
@@ -278,6 +280,30 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         }
     }
 
+    private static void IndexModulePngFiles(
+        string installRoot,
+        Dictionary<string, string> exactMatches,
+        Dictionary<string, HashSet<string>> baseNameCandidates)
+    {
+        var modulesPath = Path.Combine(installRoot, "Modules");
+        if (!Directory.Exists(modulesPath))
+        {
+            return;
+        }
+
+        foreach (var modulePath in Directory.EnumerateDirectories(modulesPath))
+        {
+            foreach (var filePath in Directory.EnumerateFiles(modulePath, "*.png", SearchOption.AllDirectories))
+            {
+                foreach (var key in GetModuleSpriteKeys(modulePath, modulesPath, filePath))
+                {
+                    AddExactMatch(exactMatches, key, filePath);
+                    RegisterBaseNameCandidate(baseNameCandidates, key, filePath);
+                }
+            }
+        }
+    }
+
     private static void AddExactMatch(Dictionary<string, string> exactMatches, string key, string imagePath)
     {
         if (string.IsNullOrWhiteSpace(key) || !File.Exists(imagePath) || exactMatches.ContainsKey(key))
@@ -293,6 +319,11 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         string key,
         string imagePath)
     {
+        if (string.IsNullOrWhiteSpace(key) || !File.Exists(imagePath))
+        {
+            return;
+        }
+
         var baseName = Path.GetFileName(key);
         if (string.IsNullOrWhiteSpace(baseName))
         {
@@ -306,6 +337,88 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         }
 
         paths.Add(imagePath);
+    }
+
+    private static IEnumerable<string> GetModuleSpriteKeys(string modulePath, string modulesPath, string filePath)
+    {
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var key in EnumerateModuleSpriteKeys(modulePath, modulesPath, filePath, seenKeys))
+        {
+            yield return key;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateModuleSpriteKeys(
+        string modulePath,
+        string modulesPath,
+        string filePath,
+        HashSet<string> seenKeys)
+    {
+        if (TryNormalizeRelativeSpriteKey(modulePath, filePath, out var moduleRelativeKey) &&
+            seenKeys.Add(moduleRelativeKey))
+        {
+            yield return moduleRelativeKey;
+        }
+
+        if (TryNormalizeRelativeSpriteKey(modulesPath, filePath, out var modulesRelativeKey) &&
+            seenKeys.Add(modulesRelativeKey))
+        {
+            yield return modulesRelativeKey;
+        }
+
+        var guiIndex = filePath.IndexOf(
+            $"{Path.DirectorySeparatorChar}GUI{Path.DirectorySeparatorChar}",
+            StringComparison.OrdinalIgnoreCase);
+        if (guiIndex >= 0)
+        {
+            var guiRoot = filePath[..(guiIndex + 1)];
+            if (TryNormalizeRelativeSpriteKey(guiRoot, filePath, out var guiRelativeKey) &&
+                seenKeys.Add(guiRelativeKey))
+            {
+                yield return guiRelativeKey;
+            }
+        }
+
+        var spritePartsMarker = $"{Path.DirectorySeparatorChar}GUI{Path.DirectorySeparatorChar}SpriteParts{Path.DirectorySeparatorChar}";
+        var spritePartsIndex = filePath.IndexOf(spritePartsMarker, StringComparison.OrdinalIgnoreCase);
+        if (spritePartsIndex >= 0)
+        {
+            var spritePartsRoot = filePath[..(spritePartsIndex + spritePartsMarker.Length)];
+            if (TryNormalizeRelativeSpriteKey(spritePartsRoot, filePath, out var spritePartsRelativeKey) &&
+                seenKeys.Add(spritePartsRelativeKey))
+            {
+                yield return spritePartsRelativeKey;
+            }
+        }
+    }
+
+    private static bool TryNormalizeRelativeSpriteKey(string rootPath, string filePath, out string key)
+    {
+        key = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        string relativePath;
+        try
+        {
+            relativePath = Path.GetRelativePath(rootPath, filePath);
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (relativePath.StartsWith("..", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        key = NormalizeSpriteName(Path.ChangeExtension(relativePath, null));
+        return !string.IsNullOrWhiteSpace(key);
     }
 
     private static IEnumerable<ImageLookupCandidate> BuildImageLookupCandidates(
@@ -340,7 +453,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         }
 
         var baseName = Path.GetFileName(normalizedName);
-        if (!string.Equals(baseName, normalizedName, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(baseName))
         {
             yield return new ImageLookupCandidate(
                 baseName,

@@ -1,0 +1,329 @@
+<UserControl x:Class="Bannerlord.XmlPreview.Controls.SelectedInfoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewModels="clr-namespace:Bannerlord.XmlPreview.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="800"
+             d:DesignWidth="340"
+             d:DataContext="{d:DesignInstance Type=viewModels:SelectedElementInfoViewModel, IsDesignTimeCreatable=False}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <Style x:Key="SectionCardStyle" TargetType="{x:Type materialDesign:Card}">
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Background" Value="#1B2028" />
+            <Setter Property="Foreground" Value="#EAF0F7" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#F4EBD8" />
+        </Style>
+
+        <Style x:Key="FieldLabelStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground" Value="#8FA2B8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+        </Style>
+
+        <Style x:Key="FieldValueStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground" Value="#E7EDF5" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="ChipBorderStyle" TargetType="{x:Type Border}">
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="#243142" />
+            <Setter Property="BorderBrush" Value="#314255" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.Resources>
+            <Style x:Key="VisibleWhenEmptyStyle" TargetType="{x:Type FrameworkElement}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasContent}" Value="False">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="VisibleWhenContentStyle" TargetType="{x:Type FrameworkElement}">
+                <Setter Property="Visibility" Value="Visible" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasContent}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Resources>
+
+        <Border Style="{StaticResource VisibleWhenEmptyStyle}"
+                Padding="24"
+                CornerRadius="12"
+                Background="#151A21"
+                BorderBrush="#2F3A48"
+                BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="Selected Element"
+                           Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Margin="0,10,0,0"
+                           Text="{Binding PlaceholderMessage}"
+                           Foreground="#AAB9C8"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Style="{StaticResource VisibleWhenContentStyle}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <materialDesign:Card Style="{StaticResource SectionCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Title}"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="#FFF4E0"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Text="{Binding Subtitle}"
+                                   Foreground="#A8B7C7"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding HasSubtitle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <ItemsControl Margin="0,16,0,0"
+                                      ItemsSource="{Binding SummaryFields}"
+                                      Visibility="{Binding HasSummaryFields, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ChipBorderStyle}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Label}"
+                                                       Style="{StaticResource FieldLabelStyle}" />
+                                            <TextBlock Margin="0,2,0,0"
+                                                       Text="{Binding Value}"
+                                                       Style="{StaticResource FieldValueStyle}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource SectionCardStyle}"
+                                     Visibility="{Binding HasNodeFields, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Node"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <ItemsControl Margin="0,12,0,0"
+                                      ItemsSource="{Binding NodeFields}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="108" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Margin="0,0,12,0"
+                                                   Text="{Binding Label}"
+                                                   Style="{StaticResource FieldLabelStyle}" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Value}"
+                                                   Style="{StaticResource FieldValueStyle}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource SectionCardStyle}"
+                                     Visibility="{Binding HasLayoutFields, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Layout"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <ItemsControl Margin="0,12,0,0"
+                                      ItemsSource="{Binding LayoutFields}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="108" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Margin="0,0,12,0"
+                                                   Text="{Binding Label}"
+                                                   Style="{StaticResource FieldLabelStyle}" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Value}"
+                                                   Style="{StaticResource FieldValueStyle}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource SectionCardStyle}"
+                                     Visibility="{Binding HasBrushes, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left"
+                                       Text="Brushes"
+                                       Style="{StaticResource SectionTitleStyle}" />
+                            <Border DockPanel.Dock="Right"
+                                    Padding="8,2"
+                                    CornerRadius="10"
+                                    Background="#243142">
+                                <TextBlock Text="{Binding Brushes.Count}"
+                                           Foreground="#DCE8F5"
+                                           FontWeight="SemiBold" />
+                            </Border>
+                        </DockPanel>
+
+                        <ItemsControl Margin="0,12,0,0"
+                                      ItemsSource="{Binding Brushes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10"
+                                            Padding="12"
+                                            CornerRadius="10"
+                                            Background="#131920"
+                                            BorderBrush="#2C3744"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#F5ECD8"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="{Binding SourceDisplayPath}"
+                                                       Foreground="#9DB0C2"
+                                                       TextWrapping="Wrap"
+                                                       ToolTip="{Binding SourcePath}"
+                                                       Visibility="{Binding HasSource, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Margin="0,10,0,0"
+                                                       Text="{Binding LayerCount, StringFormat=Layers: {0}}"
+                                                       Foreground="#D8E4F0"
+                                                       Visibility="{Binding HasLayerCount, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <ItemsControl Margin="0,10,0,0"
+                                                          ItemsSource="{Binding Layers}"
+                                                          Visibility="{Binding HasLayers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Margin="0,0,0,6"
+                                                                   Foreground="#D7E2ED"
+                                                                   Text="{Binding StringFormat=• {0}}"
+                                                                   TextWrapping="Wrap" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <materialDesign:Card Style="{StaticResource SectionCardStyle}"
+                                     Visibility="{Binding HasSprites, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left"
+                                       Text="Sprites"
+                                       Style="{StaticResource SectionTitleStyle}" />
+                            <Border DockPanel.Dock="Right"
+                                    Padding="8,2"
+                                    CornerRadius="10"
+                                    Background="#243142">
+                                <TextBlock Text="{Binding Sprites.Count}"
+                                           Foreground="#DCE8F5"
+                                           FontWeight="SemiBold" />
+                            </Border>
+                        </DockPanel>
+
+                        <ItemsControl Margin="0,12,0,0"
+                                      ItemsSource="{Binding Sprites}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10"
+                                            Padding="12"
+                                            CornerRadius="10"
+                                            Background="#131920"
+                                            BorderBrush="#2C3744"
+                                            BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#F5ECD8"
+                                                       TextWrapping="Wrap" />
+
+                                            <WrapPanel Margin="0,10,0,2">
+                                                <Border Style="{StaticResource ChipBorderStyle}"
+                                                        Visibility="{Binding HasUsage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding Usage}"
+                                                               Foreground="#DDE7F1" />
+                                                </Border>
+                                                <Border Style="{StaticResource ChipBorderStyle}"
+                                                        Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding Status}"
+                                                               Foreground="#DDE7F1" />
+                                                </Border>
+                                                <Border Style="{StaticResource ChipBorderStyle}"
+                                                        Visibility="{Binding HasSpriteType, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding SpriteType}"
+                                                               Foreground="#DDE7F1" />
+                                                </Border>
+                                                <Border Style="{StaticResource ChipBorderStyle}"
+                                                        Visibility="{Binding HasSpriteSize, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding SpriteSize}"
+                                                               Foreground="#DDE7F1" />
+                                                </Border>
+                                            </WrapPanel>
+
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="{Binding ImageDisplayPath}"
+                                                       Foreground="#D7E2ED"
+                                                       TextWrapping="Wrap"
+                                                       ToolTip="{Binding ImagePath}"
+                                                       Visibility="{Binding HasImagePath, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="{Binding SourceDisplayPath}"
+                                                       Foreground="#93A7BA"
+                                                       TextWrapping="Wrap"
+                                                       ToolTip="{Binding SourcePath}"
+                                                       Visibility="{Binding HasSource, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </materialDesign:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

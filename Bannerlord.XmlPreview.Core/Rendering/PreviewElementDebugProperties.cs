@@ -32,6 +32,41 @@ public static class PreviewElementDebugProperties
             typeof(PreviewElementDebugProperties),
             new PropertyMetadata(Rect.Empty));
 
+    public static readonly DependencyProperty LayoutParentSizeProperty =
+        DependencyProperty.RegisterAttached(
+            "LayoutParentSize",
+            typeof(Size),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(Size.Empty));
+
+    public static readonly DependencyProperty LayoutMeasuredSizeProperty =
+        DependencyProperty.RegisterAttached(
+            "LayoutMeasuredSize",
+            typeof(Size),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(Size.Empty));
+
+    public static readonly DependencyProperty LayoutAlignmentBoundsProperty =
+        DependencyProperty.RegisterAttached(
+            "LayoutAlignmentBounds",
+            typeof(Rect),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(Rect.Empty));
+
+    public static readonly DependencyProperty LayoutComputedPositionProperty =
+        DependencyProperty.RegisterAttached(
+            "LayoutComputedPosition",
+            typeof(Point),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(new Point(double.NaN, double.NaN)));
+
+    public static readonly DependencyProperty LayoutDebugTextProperty =
+        DependencyProperty.RegisterAttached(
+            "LayoutDebugText",
+            typeof(string),
+            typeof(PreviewElementDebugProperties),
+            new PropertyMetadata(string.Empty));
+
     public static readonly DependencyProperty PreviewStateProperty =
         DependencyProperty.RegisterAttached(
             "PreviewState",
@@ -84,6 +119,56 @@ public static class PreviewElementDebugProperties
     public static void SetSelectionBounds(DependencyObject element, Rect value)
     {
         element.SetValue(SelectionBoundsProperty, value);
+    }
+
+    public static Size GetLayoutParentSize(DependencyObject element)
+    {
+        return (Size)element.GetValue(LayoutParentSizeProperty);
+    }
+
+    public static void SetLayoutParentSize(DependencyObject element, Size value)
+    {
+        element.SetValue(LayoutParentSizeProperty, value);
+    }
+
+    public static Size GetLayoutMeasuredSize(DependencyObject element)
+    {
+        return (Size)element.GetValue(LayoutMeasuredSizeProperty);
+    }
+
+    public static void SetLayoutMeasuredSize(DependencyObject element, Size value)
+    {
+        element.SetValue(LayoutMeasuredSizeProperty, value);
+    }
+
+    public static Rect GetLayoutAlignmentBounds(DependencyObject element)
+    {
+        return (Rect)element.GetValue(LayoutAlignmentBoundsProperty);
+    }
+
+    public static void SetLayoutAlignmentBounds(DependencyObject element, Rect value)
+    {
+        element.SetValue(LayoutAlignmentBoundsProperty, value);
+    }
+
+    public static Point GetLayoutComputedPosition(DependencyObject element)
+    {
+        return (Point)element.GetValue(LayoutComputedPositionProperty);
+    }
+
+    public static void SetLayoutComputedPosition(DependencyObject element, Point value)
+    {
+        element.SetValue(LayoutComputedPositionProperty, value);
+    }
+
+    public static string GetLayoutDebugText(DependencyObject element)
+    {
+        return (string)element.GetValue(LayoutDebugTextProperty);
+    }
+
+    public static void SetLayoutDebugText(DependencyObject element, string value)
+    {
+        element.SetValue(LayoutDebugTextProperty, value);
     }
 
     public static string GetPreviewState(DependencyObject element)
