@@ -53,10 +53,22 @@ public abstract class TextWidgetNodeBase : PrefabNode
 
         context.ApplyTextStyle(text, brushId, Attributes, FallbackFontSize);
         var visualOffset = context.ApplyVisualTextCentering(text, parentSize.Width);
-        text.Measure(parentSize);
+        var textMeasureInput = context.ResolveChildMeasureSize(Attributes, parentSize);
+        var widthCoversContent = context.UsesCoverChildren(Attributes, "WidthSizePolicy");
+        var heightCoversContent = context.UsesCoverChildren(Attributes, "HeightSizePolicy");
+        var maxWidth = context.ResolveDouble(Attributes, "MaxWidth", 0d);
+        var maxHeight = context.ResolveDouble(Attributes, "MaxHeight", 0d);
+        text.Measure(new Size(
+            widthCoversContent && maxWidth <= 0d
+                ? double.PositiveInfinity
+                : textMeasureInput.Width,
+            heightCoversContent && maxHeight <= 0d
+                ? double.PositiveInfinity
+                : textMeasureInput.Height));
         var textSize = text.DesiredSize;
 
         context.ApplySizing(host, Attributes, parentSize);
+        context.ApplyCoverChildrenSize(host, Attributes, textSize);
 
         context.ApplyOpacity(host, Attributes);
         context.ApplyVisibility(host, Attributes);

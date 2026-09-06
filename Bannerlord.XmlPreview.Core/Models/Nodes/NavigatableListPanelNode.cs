@@ -15,7 +15,7 @@ public sealed class NavigatableListPanelNode : PrefabNode
     {
         var panel = new GauntletStackLayoutPanel
         {
-            LayoutMethod = GauntletStackLayoutPanel.Parse(context.ResolveAttributeLiteral(Attributes, "StackLayout.LayoutMethod"))
+            LayoutMethod = GauntletStackLayoutPanel.Parse(context.ResolveStackLayoutMethod(Attributes))
         };
 
         context.ApplySizing(panel, Attributes, parentSize);

@@ -27,12 +27,50 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
             [brushId, textBrushId]);
     }
 
-    protected override void PopulateContent(
+    protected override Panel? PopulateContent(
         Grid layout,
         PrefabRenderContext context,
         Size chromeSize,
+        Size measureInput,
         BrushChromeRenderInfo chrome)
     {
+        var contentPadding = context.ResolveBrushContentPadding(chrome.PrimaryBrushId, chrome.IsDisabled);
+        var contentHost = new Grid
+        {
+            Margin = contentPadding,
+            ClipToBounds = false,
+            IsHitTestVisible = false
+        };
+        layout.Children.Add(contentHost);
+
+        if (Children.Count > 0)
+        {
+            var childCanvas = new Canvas
+            {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                ClipToBounds = false,
+                IsHitTestVisible = false
+            };
+            contentHost.Children.Add(childCanvas);
+
+            var childMeasureSize = new Size(
+                ResolveChildMeasureAxis(
+                    context.UsesCoverChildren(Attributes, "WidthSizePolicy"),
+                    measureInput.Width,
+                    chromeSize.Width,
+                    contentPadding.Left + contentPadding.Right),
+                ResolveChildMeasureAxis(
+                    context.UsesCoverChildren(Attributes, "HeightSizePolicy"),
+                    measureInput.Height,
+                    chromeSize.Height,
+                    contentPadding.Top + contentPadding.Bottom));
+            context.AttachChildren(childCanvas, Children, childMeasureSize);
+            var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
+            context.ApplyCanvasLayout(childCanvas, contentBounds);
+            return childCanvas;
+        }
+
         var textNode = GetTextNode();
         var textBrushId = textNode?.Attributes.TryGetValue("Brush", out var childBrush) == true
             ? context.ResolveBinding(childBrush)
@@ -59,15 +97,40 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
         };
         context.ApplyTextStyle(textBlock, textBrushId, textAttributes, 20);
         context.ApplyVisualTextCentering(textBlock, chromeSize.Width);
-
-        var contentHost = new Grid
-        {
-            Margin = context.ResolveBrushContentPadding(chrome.PrimaryBrushId, chrome.IsDisabled),
-            ClipToBounds = false,
-            IsHitTestVisible = false
-        };
         contentHost.Children.Add(textBlock);
-        layout.Children.Add(contentHost);
+        return null;
+    }
+
+    protected override void FinalizeContent(
+        PrefabRenderContext context,
+        Panel? childHost,
+        Size chromeSize,
+        BrushChromeRenderInfo chrome)
+    {
+        if (childHost is not Canvas childCanvas || Children.Count == 0)
+        {
+            return;
+        }
+
+        var contentPadding = context.ResolveBrushContentPadding(chrome.PrimaryBrushId, chrome.IsDisabled);
+        var innerSize = new Size(
+            Math.Max(0d, chromeSize.Width - contentPadding.Left - contentPadding.Right),
+            Math.Max(0d, chromeSize.Height - contentPadding.Top - contentPadding.Bottom));
+        context.RelayoutCanvasChildren(childCanvas, Children, innerSize);
+    }
+
+    private static double ResolveChildMeasureAxis(
+        bool parentCoversChildren,
+        double availableSize,
+        double chromeSize,
+        double padding)
+    {
+        var measureSize = parentCoversChildren &&
+                          double.IsFinite(availableSize) &&
+                          availableSize > 0
+            ? availableSize
+            : chromeSize;
+        return Math.Max(0d, measureSize - Math.Max(0d, padding));
     }
 
     private string ResolveButtonText(PrefabRenderContext context)

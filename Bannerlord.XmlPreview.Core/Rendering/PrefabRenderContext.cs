@@ -20,9 +20,11 @@ public sealed class PrefabRenderContext
     private const byte SignificantAlphaThreshold = 64;
     private const byte ContentCoreAlphaThreshold = 192;
     private const int MaxRenderedNodeCount = 5000;
+    private const string WidgetPathSeparator = " > ";
     private readonly Dictionary<string, Int32Rect?> _spriteOpaqueBoundsCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (int Top, int Bottom)?> _spriteCoreVerticalBoundsCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SpriteDefinition?> _spriteDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<FrameworkElement, Rect?> _alignmentBoundsByElement = [];
     private readonly Dictionary<string, BrushDefinition?> _brushDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SpriteAssetResolution> _spriteAssetResolutionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RenderedWidgetRegistration> _renderedWidgetsByPath = new(StringComparer.OrdinalIgnoreCase);
@@ -397,13 +399,501 @@ public sealed class PrefabRenderContext
 
     private static string? TryGetParentWidgetPath(string widgetPath)
     {
-        var separatorIndex = widgetPath.LastIndexOf('\\');
+        var separatorIndex = widgetPath.LastIndexOf(WidgetPathSeparator, StringComparison.Ordinal);
         return separatorIndex > 0 ? widgetPath[..separatorIndex] : null;
     }
 
     private static bool IsInternalDebugAttribute(string attributeName)
     {
         return attributeName.StartsWith("Debug.", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWidgetKind(RenderedWidgetRegistration widget, string widgetName)
+    {
+        return string.Equals(widget.NodeName, widgetName, StringComparison.OrdinalIgnoreCase) ||
+               widget.NodeName.EndsWith(widgetName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolveStringAttribute(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        string fallback = "")
+    {
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
+            property.ParsedValue is not null)
+        {
+            return property.ParsedValue.ToString() ?? fallback;
+        }
+
+        return attributes.TryGetValue(attributeName, out var rawValue)
+            ? ResolveDebugValue(rawValue)
+            : fallback;
+    }
+
+    private double? ResolveOptionalWidgetNumber(
+        IReadOnlyDictionary<string, string> attributes,
+        string primaryAttributeName,
+        string fallbackAttributeName)
+    {
+        return ResolveOptionalPreviewDouble(attributes, primaryAttributeName, unresolvedBindingFallback: 0d) ??
+               ResolveOptionalPreviewDouble(attributes, fallbackAttributeName, unresolvedBindingFallback: 0d);
+    }
+
+    private void ApplyValueBasedVisibilityBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "ValueBasedVisibilityWidget"))
+        {
+            return;
+        }
+
+        var indexToWatch = ResolveOptionalWidgetNumber(widget.Attributes, "IndexToWatchFloat", "IndexToWatch");
+        var indexToBeVisible = ResolveOptionalWidgetNumber(widget.Attributes, "IndexToBeVisibleFloat", "IndexToBeVisible");
+        if (!indexToWatch.HasValue || !indexToBeVisible.HasValue)
+        {
+            return;
+        }
+
+        var watchType = ResolveStringAttribute(widget.Attributes, "WatchType", "Equal");
+        var isVisible = watchType.Trim() switch
+        {
+            "Equal" => DoubleUtil.AreClose(indexToWatch.Value, indexToBeVisible.Value),
+            "BiggerThan" => indexToWatch.Value > indexToBeVisible.Value,
+            "BiggerThanEqual" => indexToWatch.Value >= indexToBeVisible.Value,
+            "LessThan" => indexToWatch.Value < indexToBeVisible.Value,
+            "LessThanEqual" => indexToWatch.Value <= indexToBeVisible.Value,
+            "NotEqual" => !DoubleUtil.AreClose(indexToWatch.Value, indexToBeVisible.Value),
+            _ => IsVisible(widget.Attributes)
+        };
+
+        widget.Element.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void ApplyStringBasedVisibilityBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "StringBasedVisibilityWidget"))
+        {
+            return;
+        }
+
+        var first = ResolveStringAttribute(widget.Attributes, "FirstString");
+        var second = ResolveStringAttribute(widget.Attributes, "SecondString");
+        var watchType = ResolveStringAttribute(widget.Attributes, "WatchType", "Equal");
+        var isVisible = watchType.Trim() switch
+        {
+            "Equal" => string.Equals(first, second, StringComparison.OrdinalIgnoreCase),
+            "NotEqual" => !string.Equals(first, second, StringComparison.OrdinalIgnoreCase),
+            _ => IsVisible(widget.Attributes)
+        };
+
+        widget.Element.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void ApplyDimensionSyncWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "DimensionSyncWidget") ||
+            !TryResolveReferencedWidget(widget.Attributes, "WidgetToCopyHeightFrom", out var sourceWidget))
+        {
+            return;
+        }
+
+        var dimensionToSync = ResolveStringAttribute(widget.Attributes, "DimensionToSync", "None").Trim();
+        if (string.Equals(dimensionToSync, "None", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var sourceParentSize = ResolveRegisteredParentSize(sourceWidget);
+        var sourceSize = Measure(sourceWidget.Element, sourceWidget.Attributes, sourceParentSize);
+        var paddingAmount = ResolveOptionalDouble(widget.Attributes, "PaddingAmount") ?? 0d;
+
+        if (dimensionToSync is "Horizontal" or "HorizontalAndVertical")
+        {
+            widget.Element.Width = Math.Max(0d, sourceSize.Width + paddingAmount);
+        }
+
+        if (dimensionToSync is "Vertical" or "HorizontalAndVertical")
+        {
+            widget.Element.Height = Math.Max(0d, sourceSize.Height + paddingAmount);
+        }
+    }
+
+    private void ApplyTabToggleWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "TabToggleWidget"))
+        {
+            return;
+        }
+
+        var includeChildren = ResolveBoolean(widget.Attributes, "UpdateChildrenStates");
+        var tabName = ResolveStringAttribute(widget.Attributes, "TabName").Trim();
+        var hasTabControl = TryResolveReferencedWidget(widget.Attributes, "TabControlWidget", out var tabControlWidget);
+        var isDisabled = !hasTabControl || string.IsNullOrWhiteSpace(tabName);
+        var isSelected = !isDisabled &&
+                         widget.Element.Visibility == Visibility.Visible &&
+                         IsRenderedTabSelected(tabControlWidget!, tabName);
+
+        widget.Element.IsEnabled = !isDisabled;
+        ApplyPreviewState(
+            widget,
+            isDisabled ? "Disabled" : isSelected ? "Selected" : GetPreviewBaseState(widget),
+            includeChildren);
+    }
+
+    private bool IsRenderedTabSelected(RenderedWidgetRegistration tabControlWidget, string tabName)
+    {
+        var prefix = tabControlWidget.WidgetPath + WidgetPathSeparator;
+        foreach (var candidate in _renderedWidgetsByPath.Values)
+        {
+            if (!candidate.WidgetPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var directChildSegment = TryGetDirectChildSegment(candidate.WidgetPath, tabControlWidget.WidgetPath);
+            if (!string.IsNullOrWhiteSpace(directChildSegment) &&
+                directChildSegment.Contains($"[Id={tabName}]", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string? TryGetDirectChildSegment(string widgetPath, string ancestorWidgetPath)
+    {
+        if (!widgetPath.StartsWith(ancestorWidgetPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (widgetPath.Length == ancestorWidgetPath.Length)
+        {
+            return null;
+        }
+
+        var childPathStart = ancestorWidgetPath.Length + WidgetPathSeparator.Length;
+        if (widgetPath.Length <= childPathStart ||
+            !widgetPath.StartsWith(ancestorWidgetPath + WidgetPathSeparator, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var childPath = widgetPath[childPathStart..];
+        var nextSeparatorIndex = childPath.IndexOf(WidgetPathSeparator, StringComparison.Ordinal);
+        return nextSeparatorIndex >= 0 ? childPath[..nextSeparatorIndex] : childPath;
+    }
+
+    private void ApplyAnimatedDropdownWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "AnimatedDropdownWidget"))
+        {
+            return;
+        }
+
+        var widgetParentSize = ResolveRegisteredParentSize(widget);
+        var widgetSize = Measure(widget.Element, widget.Attributes, widgetParentSize);
+
+        var directItemWidgets = TryResolveReferencedWidget(widget.Attributes, "ListPanel", out var listPanelWidget)
+            ? EnumerateDirectChildWidgets(listPanelWidget).ToArray()
+            : [];
+        var selectedIndex = directItemWidgets.Length == 0
+            ? -1
+            : Math.Clamp(
+                (int)Math.Round(ResolveDouble(widget.Attributes, "CurrentSelectedIndex", 0d)),
+                0,
+                directItemWidgets.Length - 1);
+        var isOpen = ResolveBoolean(widget.Attributes, "IsOpen") ||
+                     ResolveWidgetPreviewState(widget).Contains("open", StringComparison.OrdinalIgnoreCase);
+
+        if (TryResolveReferencedWidget(widget.Attributes, "TextWidget", out var textWidget) &&
+            selectedIndex >= 0 &&
+            selectedIndex < directItemWidgets.Length &&
+            TryExtractTextFromElement(directItemWidgets[selectedIndex].Element, out var selectedText))
+        {
+            SetTextOnWidget(textWidget.Element, selectedText);
+        }
+
+        for (var index = 0; index < directItemWidgets.Length; index++)
+        {
+            var itemWidget = directItemWidgets[index];
+            var includeChildren = ResolveBoolean(itemWidget.Attributes, "UpdateChildrenStates");
+            CapturePreviewBaseState(itemWidget);
+            ApplyPreviewState(
+                itemWidget,
+                index == selectedIndex ? "Selected" : GetPreviewBaseState(itemWidget),
+                includeChildren);
+        }
+
+        if (TryResolveReferencedWidget(widget.Attributes, "Button", out var buttonWidget))
+        {
+            CapturePreviewBaseState(buttonWidget);
+            ApplyPreviewState(
+                buttonWidget,
+                isOpen ? "Open" : GetPreviewBaseState(buttonWidget),
+                includeChildren: ResolveBoolean(buttonWidget.Attributes, "UpdateChildrenStates"));
+        }
+
+        var buttonContainerWidget = EnumerateDirectChildWidgets(widget)
+            .FirstOrDefault(candidate =>
+                candidate.Attributes.TryGetValue("Id", out var id) &&
+                string.Equals(id, "DropdownButtonContainer", StringComparison.OrdinalIgnoreCase));
+        var initialButtonContainerSize = buttonContainerWidget is null
+            ? new Size(0, 0)
+            : Measure(buttonContainerWidget.Element, buttonContainerWidget.Attributes, widgetSize);
+
+        Size dropdownContainerSize = new(0, 0);
+        if (TryResolveReferencedWidget(widget.Attributes, "DropdownContainerWidget", out var dropdownContainerWidget))
+        {
+            dropdownContainerWidget.Element.Visibility = directItemWidgets.Length > 0 && isOpen
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            dropdownContainerSize = Measure(dropdownContainerWidget.Element, dropdownContainerWidget.Attributes, widgetSize);
+        }
+
+        var dropdownHeight = isOpen ? Math.Max(0d, dropdownContainerSize.Height) : 0d;
+        var resolvedRootSize = new Size(
+            Math.Max(0d, widgetSize.Width),
+            initialButtonContainerSize.Height > 0
+                ? initialButtonContainerSize.Height + dropdownHeight
+                : Math.Max(0d, widgetSize.Height));
+        if (resolvedRootSize.Width > 0)
+        {
+            widget.Element.Width = resolvedRootSize.Width;
+        }
+
+        if (resolvedRootSize.Height > 0)
+        {
+            widget.Element.Height = resolvedRootSize.Height;
+        }
+
+        PreviewElementDebugProperties.SetSelectionBounds(
+            widget.Element,
+            new Rect(new Point(0, 0), resolvedRootSize));
+        AttachElementLayoutDebugMetadata(widget.Element, widget.Attributes, widgetParentSize, resolvedRootSize);
+
+        var buttonContainerSize = buttonContainerWidget is null
+            ? new Size(0, 0)
+            : Measure(buttonContainerWidget.Element, buttonContainerWidget.Attributes, resolvedRootSize);
+        if (buttonContainerWidget is not null)
+        {
+            Canvas.SetLeft(buttonContainerWidget.Element, 0d);
+            Canvas.SetTop(buttonContainerWidget.Element, 0d);
+            PreviewElementDebugProperties.SetSelectionBounds(
+                buttonContainerWidget.Element,
+                new Rect(new Point(0, 0), buttonContainerSize));
+            AttachElementLayoutDebugMetadata(
+                buttonContainerWidget.Element,
+                buttonContainerWidget.Attributes,
+                resolvedRootSize,
+                buttonContainerSize,
+                new Point(0, 0));
+        }
+
+        if (TryResolveReferencedWidget(widget.Attributes, "DropdownClipWidget", out var dropdownClipWidget))
+        {
+            var clipWidth = Math.Max(buttonContainerSize.Width, dropdownContainerSize.Width);
+            var clipHeight = isOpen
+                ? Math.Max(0d, dropdownContainerSize.Height)
+                : 0d;
+            var clipPosition = new Point(
+                Math.Max(0d, (buttonContainerSize.Width - clipWidth) / 2d),
+                Math.Max(0d, buttonContainerSize.Height));
+
+            dropdownClipWidget.Element.Visibility = isOpen ? Visibility.Visible : Visibility.Collapsed;
+            dropdownClipWidget.Element.IsEnabled = isOpen;
+            if (clipWidth > 0)
+            {
+                dropdownClipWidget.Element.Width = clipWidth;
+            }
+
+            Canvas.SetLeft(dropdownClipWidget.Element, clipPosition.X);
+            Canvas.SetTop(dropdownClipWidget.Element, clipPosition.Y);
+            dropdownClipWidget.Element.Height = clipHeight;
+            PreviewElementDebugProperties.SetSelectionBounds(
+                dropdownClipWidget.Element,
+                new Rect(new Point(0, 0), new Size(clipWidth, clipHeight)));
+            AttachElementLayoutDebugMetadata(
+                dropdownClipWidget.Element,
+                dropdownClipWidget.Attributes,
+                resolvedRootSize,
+                new Size(clipWidth, clipHeight),
+                clipPosition);
+
+            if (TryResolveReferencedWidget(widget.Attributes, "DropdownContainerWidget", out var referencedDropdownContainerWidget))
+            {
+                Canvas.SetLeft(referencedDropdownContainerWidget.Element, 0d);
+                Canvas.SetTop(referencedDropdownContainerWidget.Element, 0d);
+                PreviewElementDebugProperties.SetSelectionBounds(
+                    referencedDropdownContainerWidget.Element,
+                    new Rect(new Point(0, 0), dropdownContainerSize));
+                AttachElementLayoutDebugMetadata(
+                    referencedDropdownContainerWidget.Element,
+                    referencedDropdownContainerWidget.Attributes,
+                    new Size(clipWidth, clipHeight),
+                    dropdownContainerSize,
+                    new Point(0, 0));
+            }
+        }
+
+        if (TryResolveReferencedWidget(widget.Attributes, "ScrollbarWidget", out var scrollbarWidget) &&
+            !isOpen)
+        {
+            scrollbarWidget.Element.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void ApplyNavigationAutoScrollWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "NavigationAutoScrollWidget"))
+        {
+            return;
+        }
+
+        CollapseNavigationHelperWidget(widget);
+    }
+
+    private void ApplyNavigationTargetSwitcherBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "NavigationTargetSwitcher"))
+        {
+            return;
+        }
+
+        CollapseNavigationHelperWidget(widget);
+    }
+
+    private void ApplyNavigationForcedScopeCollectionTargeterBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "NavigationForcedScopeCollectionTargeter"))
+        {
+            return;
+        }
+
+        CollapseNavigationHelperWidget(widget);
+    }
+
+    private void ApplyCircleLoadingAnimWidgetBehavior(RenderedWidgetRegistration widget)
+    {
+        if (!IsWidgetKind(widget, "CircleLoadingAnimWidget") ||
+            widget.ChildHost is not Canvas childCanvas)
+        {
+            return;
+        }
+
+        var directChildWidgets = EnumerateDirectChildWidgets(widget).ToArray();
+        if (directChildWidgets.Length == 0)
+        {
+            return;
+        }
+
+        var parentSize = ResolveRegisteredParentSize(widget);
+        var hostSize = Measure(widget.Element, widget.Attributes, parentSize);
+        if (hostSize.Width <= 0 || hostSize.Height <= 0)
+        {
+            hostSize = new Size(
+                ResolveDouble(widget.Attributes, "SuggestedWidth", 0d),
+                ResolveDouble(widget.Attributes, "SuggestedHeight", 0d));
+        }
+
+        var radius = ResolveOptionalDouble(widget.Attributes, "CircleRadius") ??
+                     Math.Max(0d, Math.Min(hostSize.Width, hostSize.Height) / 2d - 8d);
+        if (radius <= 0)
+        {
+            return;
+        }
+
+        var centerX = hostSize.Width / 2d;
+        var centerY = hostSize.Height / 2d;
+        var angleStep = Math.PI * 2d / directChildWidgets.Length;
+
+        for (var index = 0; index < directChildWidgets.Length; index++)
+        {
+            var childWidget = directChildWidgets[index];
+            var childSize = Measure(childWidget.Element, childWidget.Attributes, hostSize);
+            var angle = -Math.PI / 2d + angleStep * index;
+            var childCenterX = centerX + Math.Cos(angle) * radius;
+            var childCenterY = centerY + Math.Sin(angle) * radius;
+
+            Canvas.SetLeft(childWidget.Element, childCenterX - childSize.Width / 2d);
+            Canvas.SetTop(childWidget.Element, childCenterY - childSize.Height / 2d);
+            childWidget.Element.Opacity = Math.Clamp(0.35d + ((double)(index + 1) / directChildWidgets.Length) * 0.65d, 0d, 1d);
+        }
+    }
+
+    private static void CollapseNavigationHelperWidget(RenderedWidgetRegistration widget)
+    {
+        widget.Element.Visibility = Visibility.Collapsed;
+        widget.Element.Width = 0d;
+        widget.Element.Height = 0d;
+        widget.Element.IsEnabled = false;
+    }
+
+    private IEnumerable<RenderedWidgetRegistration> EnumerateDirectChildWidgets(RenderedWidgetRegistration widget)
+    {
+        if (widget.ChildHost is null)
+        {
+            yield break;
+        }
+
+        foreach (var childElement in widget.ChildHost.Children.OfType<FrameworkElement>())
+        {
+            if (TryGetRenderedWidgetByElement(childElement, out var childWidget))
+            {
+                yield return childWidget;
+            }
+        }
+    }
+
+    private bool TryGetRenderedWidgetByElement(FrameworkElement element, out RenderedWidgetRegistration widget)
+    {
+        foreach (var candidate in _renderedWidgetsByPath.Values)
+        {
+            if (ReferenceEquals(candidate.Element, element))
+            {
+                widget = candidate;
+                return true;
+            }
+        }
+
+        widget = null!;
+        return false;
+    }
+
+    private static bool TryExtractTextFromElement(DependencyObject element, out string text)
+    {
+        if (element is TextBlock textBlock)
+        {
+            text = textBlock.Text;
+            return !string.IsNullOrWhiteSpace(text);
+        }
+
+        var childCount = VisualTreeHelper.GetChildrenCount(element);
+        for (var index = 0; index < childCount; index++)
+        {
+            if (TryExtractTextFromElement(VisualTreeHelper.GetChild(element, index), out text))
+            {
+                return true;
+            }
+        }
+
+        text = string.Empty;
+        return false;
+    }
+
+    private static void SetTextOnWidget(DependencyObject element, string text)
+    {
+        if (element is TextBlock textBlock)
+        {
+            textBlock.Text = string.IsNullOrWhiteSpace(text) ? " " : text;
+            return;
+        }
+
+        var childCount = VisualTreeHelper.GetChildrenCount(element);
+        for (var index = 0; index < childCount; index++)
+        {
+            SetTextOnWidget(VisualTreeHelper.GetChild(element, index), text);
+        }
     }
 
     private void ApplyFillWidgetReferenceBehavior(RenderedWidgetRegistration widget)
@@ -1050,7 +1540,7 @@ public sealed class PrefabRenderContext
             yield break;
         }
 
-        var prefix = widget.WidgetPath + "\\";
+        var prefix = widget.WidgetPath + WidgetPathSeparator;
         foreach (var candidate in _renderedWidgetsByPath.Values)
         {
             if (candidate.WidgetPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -1225,6 +1715,15 @@ public sealed class PrefabRenderContext
     {
         foreach (var widget in _renderedWidgetsByPath.Values.ToArray())
         {
+            ApplyValueBasedVisibilityBehavior(widget);
+            ApplyStringBasedVisibilityBehavior(widget);
+            ApplyDimensionSyncWidgetBehavior(widget);
+            ApplyTabToggleWidgetBehavior(widget);
+            ApplyAnimatedDropdownWidgetBehavior(widget);
+            ApplyNavigationAutoScrollWidgetBehavior(widget);
+            ApplyNavigationTargetSwitcherBehavior(widget);
+            ApplyNavigationForcedScopeCollectionTargeterBehavior(widget);
+            ApplyCircleLoadingAnimWidgetBehavior(widget);
             ApplyClipContentsBehavior(widget);
             ApplyScrollablePanelReferenceBehavior(widget);
             ApplyScrollbarWidgetReferenceBehavior(widget);
@@ -1959,7 +2458,14 @@ public sealed class PrefabRenderContext
 
     public void AttachChildren(Panel host, IEnumerable<PrefabNode> children, Size parentSize, Point origin)
     {
-        foreach (var child in children)
+        var childNodes = children as IReadOnlyList<PrefabNode> ?? children.ToArray();
+        if (host is GauntletStackLayoutPanel gauntletStackHost)
+        {
+            AttachGauntletStackChildren(gauntletStackHost, childNodes, parentSize);
+            return;
+        }
+
+        foreach (var child in childNodes)
         {
             if (!TryAllowAdditionalNodeRendering())
             {
@@ -1985,25 +2491,6 @@ public sealed class PrefabRenderContext
                 continue;
             }
 
-            if (host is GauntletStackLayoutPanel gauntletStackPanel)
-            {
-                if (rendered.AutoWidthInFlowLayout)
-                {
-                    rendered.Element.Width = double.NaN;
-                }
-
-                if (rendered.AutoHeightInFlowLayout)
-                {
-                    rendered.Element.Height = double.NaN;
-                }
-
-                ApplyFlowLayout(rendered.Element, child.Attributes);
-                PrepareGauntletStackLayoutChild(rendered.Element, child.Attributes, gauntletStackPanel.LayoutMethod);
-                AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, parentSize, Measure(rendered.Element, child.Attributes, parentSize));
-                gauntletStackPanel.Children.Add(rendered.Element);
-                continue;
-            }
-
             if (host is GauntletGridLayoutPanel gauntletGridPanel)
             {
                 if (rendered.AutoWidthInFlowLayout)
@@ -2023,6 +2510,7 @@ public sealed class PrefabRenderContext
                 continue;
             }
 
+            _alignmentBoundsByElement[rendered.Element] = rendered.AlignmentBounds;
             var elementSize = Measure(rendered.Element, child.Attributes, parentSize);
             var position = ComputePosition(child.Attributes, parentSize, elementSize, rendered.AlignmentBounds);
             host.Children.Add(rendered.Element);
@@ -2215,6 +2703,24 @@ public sealed class PrefabRenderContext
     public bool UsesStretchToParent(IReadOnlyDictionary<string, string> attributes, string policyKey)
     {
         return string.Equals(ResolveSizePolicy(attributes, policyKey), "StretchToParent", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public string? ResolveStackLayoutMethod(IReadOnlyDictionary<string, string> attributes)
+    {
+        if (attributes.TryGetValue("StackLayout.LayoutMethod", out var stackLayoutMethod) &&
+            Enum.TryParse<GauntletStackLayoutMethod>(stackLayoutMethod, true, out var parsedStackLayoutMethod))
+        {
+            return parsedStackLayoutMethod.ToString();
+        }
+
+        if (attributes.TryGetValue("LayoutImp.LayoutMethod", out var layoutImpMethod) &&
+            Enum.TryParse<GauntletStackLayoutMethod>(layoutImpMethod, true, out var parsedLayoutImpMethod))
+        {
+            return parsedLayoutImpMethod.ToString();
+        }
+
+        return ResolveAttributeLiteral(attributes, "StackLayout.LayoutMethod") ??
+               ResolveAttributeLiteral(attributes, "LayoutImp.LayoutMethod");
     }
 
     public Size ResolveChildMeasureSize(
@@ -3413,6 +3919,34 @@ public sealed class PrefabRenderContext
         return double.IsNaN(resolvedValue) ? null : resolvedValue;
     }
 
+    private double? ResolveOptionalPreviewDouble(
+        IReadOnlyDictionary<string, string> attributes,
+        string attributeName,
+        double? unresolvedBindingFallback = null)
+    {
+        if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
+            property.TryGetDouble(out var typedValue))
+        {
+            return typedValue;
+        }
+
+        if (!attributes.TryGetValue(attributeName, out var rawValue))
+        {
+            return null;
+        }
+
+        var resolvedValue = ResolveDouble(rawValue, double.NaN);
+        if (!double.IsNaN(resolvedValue))
+        {
+            return resolvedValue;
+        }
+
+        return unresolvedBindingFallback.HasValue &&
+               rawValue.StartsWith("@", StringComparison.Ordinal)
+            ? unresolvedBindingFallback.Value
+            : null;
+    }
+
     private static Brush CreateGradientBrush(string fill, string stroke)
     {
         return new LinearGradientBrush(
@@ -3865,6 +4399,211 @@ public sealed class PrefabRenderContext
         }
     }
 
+    public void RelayoutCanvasChildren(Canvas host, IReadOnlyList<PrefabNode> children, Size parentSize)
+    {
+        host.RenderTransform = Transform.Identity;
+        host.Margin = new Thickness(0);
+        host.Width = double.NaN;
+        host.Height = double.NaN;
+
+        var elements = host.Children.OfType<FrameworkElement>().ToArray();
+        var childCount = Math.Min(children.Count, elements.Length);
+        for (var index = 0; index < childCount; index++)
+        {
+            var child = children[index];
+            var element = elements[index];
+            var elementSize = Measure(element, child.Attributes, parentSize);
+            _alignmentBoundsByElement.TryGetValue(element, out var alignmentBounds);
+            var position = ComputePosition(child.Attributes, parentSize, elementSize, alignmentBounds);
+            Canvas.SetLeft(element, position.X);
+            Canvas.SetTop(element, position.Y);
+            AttachElementLayoutDebugMetadata(
+                element,
+                child.Attributes,
+                parentSize,
+                elementSize,
+                position,
+                alignmentBounds);
+        }
+
+        var contentBounds = MeasureCanvasChildrenBounds(host);
+        ApplyCanvasLayout(host, contentBounds);
+    }
+
+    private void AttachGauntletStackChildren(
+        GauntletStackLayoutPanel host,
+        IReadOnlyList<PrefabNode> children,
+        Size parentSize)
+    {
+        var preparedChildren = new PreparedStackChild?[children.Count];
+        var occupiedFixedPrimary = 0d;
+
+        for (var index = 0; index < children.Count; index++)
+        {
+            var child = children[index];
+            if (IsVisible(child.Attributes) &&
+                ResolveStackPrimaryStretchRatio(host.LayoutMethod, child.Attributes) > 0d)
+            {
+                continue;
+            }
+
+            if (!TryPrepareGauntletStackChild(host, child, parentSize, out var prepared))
+            {
+                return;
+            }
+
+            preparedChildren[index] = prepared;
+            if (prepared.Rendered.Element.Visibility != Visibility.Collapsed)
+            {
+                occupiedFixedPrimary += GetStackLayoutOccupiedPrimary(
+                    host.LayoutMethod,
+                    prepared.MeasuredSize,
+                    prepared.Rendered.Element.Margin);
+            }
+        }
+
+        var remainingPrimary = GetStackPrimarySize(host.LayoutMethod, parentSize);
+        if (!double.IsInfinity(remainingPrimary))
+        {
+            remainingPrimary = Math.Max(0d, remainingPrimary - occupiedFixedPrimary);
+        }
+
+        var remainingStretchRatio = children
+            .Where(child => IsVisible(child.Attributes))
+            .Sum(child => ResolveStackPrimaryStretchRatio(host.LayoutMethod, child.Attributes));
+
+        for (var index = 0; index < children.Count; index++)
+        {
+            if (preparedChildren[index] is not null)
+            {
+                continue;
+            }
+
+            var child = children[index];
+            var stretchRatio = ResolveStackPrimaryStretchRatio(host.LayoutMethod, child.Attributes);
+            var allocatedPrimary = double.IsInfinity(remainingPrimary)
+                ? double.PositiveInfinity
+                : remainingStretchRatio > stretchRatio
+                    ? remainingPrimary * stretchRatio / remainingStretchRatio
+                    : remainingPrimary;
+            var renderParentSize = WithStackPrimarySize(host.LayoutMethod, parentSize, allocatedPrimary);
+            if (!TryPrepareGauntletStackChild(host, child, renderParentSize, out var prepared))
+            {
+                return;
+            }
+
+            preparedChildren[index] = prepared;
+            if (prepared.Rendered.Element.Visibility != Visibility.Collapsed && !double.IsInfinity(remainingPrimary))
+            {
+                remainingPrimary = Math.Max(
+                    0d,
+                    remainingPrimary - GetStackLayoutOccupiedPrimary(
+                        host.LayoutMethod,
+                        prepared.MeasuredSize,
+                        prepared.Rendered.Element.Margin));
+            }
+
+            remainingStretchRatio = Math.Max(0d, remainingStretchRatio - stretchRatio);
+        }
+
+        foreach (var prepared in preparedChildren)
+        {
+            if (prepared is not null)
+            {
+                host.Children.Add(prepared.Rendered.Element);
+            }
+        }
+    }
+
+    private bool TryPrepareGauntletStackChild(
+        GauntletStackLayoutPanel host,
+        PrefabNode child,
+        Size renderParentSize,
+        out PreparedStackChild prepared)
+    {
+        if (!TryAllowAdditionalNodeRendering())
+        {
+            prepared = null!;
+            return false;
+        }
+
+        var rendered = RegisterRenderedNode(
+            child.Name,
+            child.Attributes,
+            renderParentSize,
+            child.Render(this, renderParentSize));
+        if (rendered.AutoWidthInFlowLayout)
+        {
+            rendered.Element.Width = double.NaN;
+        }
+
+        if (rendered.AutoHeightInFlowLayout)
+        {
+            rendered.Element.Height = double.NaN;
+        }
+
+        ApplyFlowLayout(rendered.Element, child.Attributes);
+        PrepareGauntletStackLayoutChild(rendered.Element, child.Attributes, host.LayoutMethod);
+        var measuredSize = Measure(rendered.Element, child.Attributes, renderParentSize);
+        AttachElementLayoutDebugMetadata(rendered.Element, child.Attributes, renderParentSize, measuredSize);
+        prepared = new PreparedStackChild(rendered, measuredSize);
+        return true;
+    }
+
+    private double ResolveStackPrimaryStretchRatio(
+        GauntletStackLayoutMethod layoutMethod,
+        IReadOnlyDictionary<string, string> attributes)
+    {
+        var primaryPolicy = IsHorizontalStackLayout(layoutMethod)
+            ? "WidthSizePolicy"
+            : "HeightSizePolicy";
+        if (!UsesStretchToParent(attributes, primaryPolicy))
+        {
+            return 0d;
+        }
+
+        var ratioAttribute = IsHorizontalStackLayout(layoutMethod)
+            ? "WidthStretchRatio"
+            : "HeightStretchRatio";
+        var ratio = ResolveOptionalDouble(attributes, ratioAttribute) ??
+                    ResolveOptionalDouble(attributes, "StretchRatio") ??
+                    1d;
+        return ratio > 0d ? ratio : 1d;
+    }
+
+    private static Size WithStackPrimarySize(
+        GauntletStackLayoutMethod layoutMethod,
+        Size size,
+        double primarySize)
+    {
+        return IsHorizontalStackLayout(layoutMethod)
+            ? new Size(primarySize, size.Height)
+            : new Size(size.Width, primarySize);
+    }
+
+    private static bool IsHorizontalStackLayout(GauntletStackLayoutMethod layoutMethod)
+    {
+        return layoutMethod is GauntletStackLayoutMethod.HorizontalLeftToRight
+            or GauntletStackLayoutMethod.HorizontalRightToLeft
+            or GauntletStackLayoutMethod.HorizontalCentered
+            or GauntletStackLayoutMethod.HorizontalSpaced;
+    }
+
+    private static double GetStackPrimarySize(GauntletStackLayoutMethod layoutMethod, Size size)
+    {
+        return IsHorizontalStackLayout(layoutMethod) ? size.Width : size.Height;
+    }
+
+    private static double GetStackLayoutOccupiedPrimary(
+        GauntletStackLayoutMethod layoutMethod,
+        Size measuredSize,
+        Thickness margin)
+    {
+        return IsHorizontalStackLayout(layoutMethod)
+            ? measuredSize.Width + margin.Left + margin.Right
+            : measuredSize.Height + margin.Top + margin.Bottom;
+    }
+
     private ElementDebugSprite BuildSpriteDebugInfo(string spriteName, string usage)
     {
         var spriteAsset = ResolveSpriteAsset(spriteName);
@@ -3885,4 +4624,6 @@ public sealed class PrefabRenderContext
         Size ParentSize,
         FrameworkElement Element,
         Panel? ChildHost);
+
+    private sealed record PreparedStackChild(RenderedPrefabNode Rendered, Size MeasuredSize);
 }

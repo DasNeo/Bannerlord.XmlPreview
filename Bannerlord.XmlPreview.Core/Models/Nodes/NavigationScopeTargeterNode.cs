@@ -7,8 +7,13 @@ namespace Bannerlord.XmlPreview.Models.Nodes;
 
 public sealed class NavigationScopeTargeterNode : PrefabNode
 {
+    public NavigationScopeTargeterNode(string name, IReadOnlyDictionary<string, string> attributes, IReadOnlyList<PrefabNode> children)
+        : base(name, attributes, children)
+    {
+    }
+
     public NavigationScopeTargeterNode(IReadOnlyDictionary<string, string> attributes, IReadOnlyList<PrefabNode> children)
-        : base("NavigationScopeTargeter", attributes, children)
+        : this("NavigationScopeTargeter", attributes, children)
     {
     }
 

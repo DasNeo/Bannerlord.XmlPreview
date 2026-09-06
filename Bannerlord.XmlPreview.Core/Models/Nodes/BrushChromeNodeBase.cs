@@ -41,23 +41,33 @@ public abstract class BrushChromeNodeBase : PrefabNode
         var contentHostSize = new Size(
             initialChromeSize.Width > 0 ? initialChromeSize.Width : measureInput.Width,
             initialChromeSize.Height > 0 ? initialChromeSize.Height : measureInput.Height);
-        PopulateContent(layout, context, contentHostSize, chrome);
+        var childHost = PopulateContent(layout, context, contentHostSize, measureInput, chrome);
 
         var contentSize = context.Measure(layout, measureInput);
         initialChromeSize = context.FinalizeCoverChildrenSize(border, Attributes, contentSize);
+        FinalizeContent(context, childHost, initialChromeSize, chrome);
 
         context.AddBrushOverlay(layout, chrome.PrimaryBrushId, chrome.IsDisabled, initialChromeSize.Width, initialChromeSize.Height, 0);
 
-        return new RenderedPrefabNode(border, null);
+        return new RenderedPrefabNode(border, childHost);
     }
 
     protected abstract BrushChromeRenderInfo ResolveChrome(PrefabRenderContext context);
 
-    protected abstract void PopulateContent(
+    protected abstract Panel? PopulateContent(
         Grid layout,
         PrefabRenderContext context,
         Size chromeSize,
+        Size measureInput,
         BrushChromeRenderInfo chrome);
+
+    protected virtual void FinalizeContent(
+        PrefabRenderContext context,
+        Panel? childHost,
+        Size chromeSize,
+        BrushChromeRenderInfo chrome)
+    {
+    }
 
     protected sealed record BrushChromeRenderInfo(
         string? PrimaryBrushId,

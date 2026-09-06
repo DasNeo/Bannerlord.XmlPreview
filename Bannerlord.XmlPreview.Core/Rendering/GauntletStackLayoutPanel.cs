@@ -11,7 +11,7 @@ public sealed class GauntletStackLayoutPanel : Panel
             typeof(GauntletStackLayoutMethod),
             typeof(GauntletStackLayoutPanel),
             new FrameworkPropertyMetadata(
-                GauntletStackLayoutMethod.VerticalTopToBottom,
+                GauntletStackLayoutMethod.HorizontalLeftToRight,
                 FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
 
     public GauntletStackLayoutMethod LayoutMethod
@@ -154,17 +154,9 @@ public sealed class GauntletStackLayoutPanel : Panel
 
     public static GauntletStackLayoutMethod Parse(string? rawValue)
     {
-        return rawValue switch
-        {
-            nameof(GauntletStackLayoutMethod.HorizontalLeftToRight) => GauntletStackLayoutMethod.HorizontalLeftToRight,
-            nameof(GauntletStackLayoutMethod.HorizontalRightToLeft) => GauntletStackLayoutMethod.HorizontalRightToLeft,
-            nameof(GauntletStackLayoutMethod.HorizontalCentered) => GauntletStackLayoutMethod.HorizontalCentered,
-            nameof(GauntletStackLayoutMethod.HorizontalSpaced) => GauntletStackLayoutMethod.HorizontalSpaced,
-            nameof(GauntletStackLayoutMethod.VerticalBottomToTop) => GauntletStackLayoutMethod.VerticalBottomToTop,
-            nameof(GauntletStackLayoutMethod.VerticalCentered) => GauntletStackLayoutMethod.VerticalCentered,
-            nameof(GauntletStackLayoutMethod.VerticalSpaced) => GauntletStackLayoutMethod.VerticalSpaced,
-            _ => GauntletStackLayoutMethod.VerticalTopToBottom
-        };
+        return Enum.TryParse<GauntletStackLayoutMethod>(rawValue, true, out var layoutMethod)
+            ? layoutMethod
+            : GauntletStackLayoutMethod.HorizontalLeftToRight;
     }
 
     private static Orientation GetOrientation(GauntletStackLayoutMethod layoutMethod)

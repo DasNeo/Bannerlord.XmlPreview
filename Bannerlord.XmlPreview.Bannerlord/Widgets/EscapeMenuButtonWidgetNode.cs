@@ -28,10 +28,11 @@ public sealed class EscapeMenuButtonWidgetNode : BrushChromeNodeBase
             [defaultBrushId, positiveBrushId]);
     }
 
-    protected override void PopulateContent(
+    protected override Panel? PopulateContent(
         Grid layout,
         PrefabRenderContext context,
         Size chromeSize,
+        Size measureInput,
         BrushChromeRenderInfo chrome)
     {
         var childCanvas = new Canvas();
@@ -40,10 +41,11 @@ public sealed class EscapeMenuButtonWidgetNode : BrushChromeNodeBase
         if (Children.Count > 0)
         {
             context.AttachChildren(childCanvas, Children, chromeSize);
-            return;
+            return childCanvas;
         }
 
         childCanvas.Children.Add(CreateFallbackLabel(context, chrome.PrimaryBrushId, chromeSize));
+        return childCanvas;
     }
 
     private FrameworkElement CreateFallbackLabel(PrefabRenderContext context, string? brushId, Size buttonSize)

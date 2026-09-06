@@ -787,7 +787,15 @@ public sealed class PrefabLoader : IPrefabLoader
             return GetVisualChildElements(element);
         }
 
-        return element.Element("Children")?.Elements() ?? [];
+        if (string.Equals(element.Name.LocalName, "ItemTemplate", StringComparison.OrdinalIgnoreCase))
+        {
+            return element.Elements();
+        }
+
+        var visualChildren = element.Element("Children")?.Elements() ?? [];
+        var itemTemplates = element.Elements()
+            .Where(child => string.Equals(child.Name.LocalName, "ItemTemplate", StringComparison.OrdinalIgnoreCase));
+        return visualChildren.Concat(itemTemplates);
     }
 
     private static IEnumerable<XElement> GetVisualChildElements(XElement element)

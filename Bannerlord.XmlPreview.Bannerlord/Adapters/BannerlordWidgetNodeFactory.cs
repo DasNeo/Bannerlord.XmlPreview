@@ -69,11 +69,11 @@ public sealed class BannerlordWidgetNodeFactory : IWidgetNodeFactory
         var renderKind = ResolveRenderKind(name);
         return renderKind switch
         {
-            BannerlordWidgetRenderKind.Widget => new WidgetNode(attributes, children),
-            BannerlordWidgetRenderKind.BrushWidget => new BrushWidgetNode(attributes, children),
+            BannerlordWidgetRenderKind.Widget => new WidgetNode(name, attributes, children),
+            BannerlordWidgetRenderKind.BrushWidget => new BrushWidgetNode(name, attributes, children),
             BannerlordWidgetRenderKind.ButtonWidget => new ButtonWidgetNode(name, attributes, children),
-            BannerlordWidgetRenderKind.ListPanel => new ListPanelNode(attributes, children),
-            BannerlordWidgetRenderKind.NavigationScopeTargeter => new NavigationScopeTargeterNode(attributes, children),
+            BannerlordWidgetRenderKind.ListPanel => new ListPanelNode(name, attributes, children),
+            BannerlordWidgetRenderKind.NavigationScopeTargeter => new NavigationScopeTargeterNode(name, attributes, children),
             BannerlordWidgetRenderKind.GridWidget => new GridWidgetNode(name, attributes, children),
             BannerlordWidgetRenderKind.ScrollablePanel => new ScrollablePanelNode(name, attributes, children),
             BannerlordWidgetRenderKind.ScrollbarWidget => new ScrollbarWidgetNode(name, attributes, children),

@@ -6,8 +6,13 @@ namespace Bannerlord.XmlPreview.Models.Nodes;
 
 public sealed class ListPanelNode : PrefabNode
 {
+    public ListPanelNode(string name, IReadOnlyDictionary<string, string> attributes, IReadOnlyList<PrefabNode> children)
+        : base(name, attributes, children)
+    {
+    }
+
     public ListPanelNode(IReadOnlyDictionary<string, string> attributes, IReadOnlyList<PrefabNode> children)
-        : base("ListPanel", attributes, children)
+        : this("ListPanel", attributes, children)
     {
     }
 
@@ -15,7 +20,7 @@ public sealed class ListPanelNode : PrefabNode
     {
         var panel = new GauntletStackLayoutPanel
         {
-            LayoutMethod = GauntletStackLayoutPanel.Parse(context.ResolveAttributeLiteral(Attributes, "StackLayout.LayoutMethod"))
+            LayoutMethod = GauntletStackLayoutPanel.Parse(context.ResolveStackLayoutMethod(Attributes))
         };
 
         context.ApplySizing(panel, Attributes, parentSize);

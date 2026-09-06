@@ -26,27 +26,25 @@ def main() -> int:
     manifest_path = args.manifest.resolve()
     res_root = args.res_root.resolve()
     bannerlord_root = args.bannerlord_root.resolve()
-    png_by_relative_name, png_by_base_name = index_png_files(res_root)
+    png_by_relative_name = index_png_files(res_root)
 
     rows = list(csv.DictReader(manifest_path.open("r", encoding="utf-8", newline="")))
     normalized_rows: list[dict[str, str]] = []
+    corrected_png_paths = 0
+    missing_png_paths = 0
 
     for row in rows:
-        name = row["name"].replace("\\", "/")
-        local_png = png_by_relative_name.get(name, res_root / f"{name}.png")
+        expected_png = expected_png_path(res_root, row["name"])
+        normalized_name = expected_png.relative_to(res_root).with_suffix("").as_posix()
+        local_png = png_by_relative_name.get(normalized_name, expected_png)
+        original_png = resolve_optional_path(row.get("png_path", ""), manifest_path.parent)
+        if original_png is not None and original_png.exists() and local_png != original_png:
+            corrected_png_paths += 1
         if not local_png.exists():
-            base_name = Path(name).name
-            matches = png_by_base_name.get(base_name, [])
-            if len(matches) == 1:
-                local_png = matches[0]
+            missing_png_paths += 1
 
-        dds_path = Path(row["dds_path"])
-        if not dds_path.is_absolute():
-            dds_path = (manifest_path.parent / dds_path).resolve()
-
-        source_xml = Path(row["source_xml"])
-        if not source_xml.is_absolute():
-            source_xml = (manifest_path.parent / source_xml).resolve()
+        dds_path = resolve_path(row["dds_path"], manifest_path.parent)
+        source_xml = resolve_source_xml_path(row["source_xml"], bannerlord_root, manifest_path.parent)
 
         row["dds_path"] = to_relative(dds_path, manifest_path.parent)
         row["png_path"] = to_relative(local_png, manifest_path.parent)
@@ -62,19 +60,68 @@ def main() -> int:
         writer.writerows(normalized_rows)
 
     print(f"Normalized {len(normalized_rows)} rows in {manifest_path}")
+    print(f"Corrected PNG path mismatches: {corrected_png_paths}")
+    print(f"Rows whose expected PNG is still missing: {missing_png_paths}")
     return 0
 
 
-def index_png_files(res_root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]]:
+def index_png_files(res_root: Path) -> dict[str, Path]:
     png_by_relative_name: dict[str, Path] = {}
-    png_by_base_name: dict[str, list[Path]] = {}
 
     for png_path in res_root.rglob("*.png"):
         relative_name = png_path.relative_to(res_root).with_suffix("").as_posix()
         png_by_relative_name[relative_name] = png_path
-        png_by_base_name.setdefault(png_path.stem, []).append(png_path)
 
-    return png_by_relative_name, png_by_base_name
+    return png_by_relative_name
+
+
+def expected_png_path(res_root: Path, sprite_name: str) -> Path:
+    normalized_name = sprite_name.replace("\\", "/").strip("/")
+    segments = [segment for segment in normalized_name.split("/") if segment]
+    if not segments:
+        return res_root / "_.png"
+
+    directory_segments = segments[:-1]
+    file_name = f"{segments[-1]}.png"
+    return res_root.joinpath(*directory_segments, file_name)
+
+
+def resolve_optional_path(raw_path: str, base_path: Path) -> Path | None:
+    if not raw_path:
+        return None
+
+    return resolve_path(raw_path, base_path)
+
+
+def resolve_path(raw_path: str, base_path: Path) -> Path:
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        return candidate.resolve()
+
+    return (base_path / candidate).resolve()
+
+
+def resolve_source_xml_path(raw_path: str, bannerlord_root: Path, manifest_root: Path) -> Path:
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        return candidate.resolve()
+
+    bannerlord_candidate = (bannerlord_root / candidate).resolve()
+    if bannerlord_candidate.exists():
+        return bannerlord_candidate
+
+    manifest_candidate = (manifest_root / candidate).resolve()
+    if manifest_candidate.exists():
+        return manifest_candidate
+
+    normalized = raw_path.replace("\\", "/")
+    modules_marker = "Modules/"
+    marker_index = normalized.lower().find(modules_marker.lower())
+    if marker_index >= 0:
+        modules_relative = normalized[marker_index:]
+        return (bannerlord_root / Path(*modules_relative.split("/"))).resolve()
+
+    return bannerlord_candidate
 
 
 def to_relative(path: Path, base_path: Path) -> str:
