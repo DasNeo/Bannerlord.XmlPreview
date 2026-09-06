@@ -16,6 +16,7 @@ using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Models;
 using Bannerlord.XmlPreview.Models.Nodes;
 using Bannerlord.XmlPreview.Rendering;
+using Bannerlord.XmlPreview.ViewModels.Mocks;
 
 namespace Bannerlord.XmlPreview.ViewModels;
 

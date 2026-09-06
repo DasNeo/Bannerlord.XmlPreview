@@ -3,13 +3,13 @@ using System.Windows.Input;
 using Bannerlord.XmlPreview.Infrastructure;
 using Bannerlord.XmlPreview.Models.Nodes;
 
-namespace Bannerlord.XmlPreview.ViewModels;
+namespace Bannerlord.XmlPreview.ViewModels.Mocks;
 
 public sealed class EditableListMockViewModel : ViewModelBase
 {
     private readonly Action<EditableListMockViewModel> _changed;
-    private readonly IReadOnlyList<string> _fieldKeys;
     private readonly Func<string, string> _defaultValue;
+    private readonly IReadOnlyList<string> _fieldKeys;
 
     public EditableListMockViewModel(
         string targetKey,
@@ -30,10 +30,7 @@ public sealed class EditableListMockViewModel : ViewModelBase
         _changed = changed;
         AddItemCommand = new RelayCommand(AddItem);
 
-        foreach (var item in items)
-        {
-            Items.Add(CreateItem(item));
-        }
+        foreach (var item in items) Items.Add(CreateItem(item));
     }
 
     public string TargetKey { get; }
@@ -88,10 +85,7 @@ public sealed class EditableListMockViewModel : ViewModelBase
 
     private void RemoveItem(EditableListMockItemViewModel item)
     {
-        if (!Items.Remove(item))
-        {
-            return;
-        }
+        if (!Items.Remove(item)) return;
 
         RefreshItemNumbers();
         _changed(this);
@@ -99,79 +93,6 @@ public sealed class EditableListMockViewModel : ViewModelBase
 
     private void RefreshItemNumbers()
     {
-        for (var index = 0; index < Items.Count; index++)
-        {
-            Items[index].Number = index + 1;
-        }
-    }
-}
-
-public sealed class EditableListMockItemViewModel : ViewModelBase
-{
-    private int _number;
-
-    public EditableListMockItemViewModel(
-        int number,
-        IReadOnlyList<string> keys,
-        IReadOnlyDictionary<string, string> values,
-        Action changed,
-        Action<EditableListMockItemViewModel> remove)
-    {
-        _number = number;
-        Fields = keys
-            .Select(key => new EditableListMockFieldViewModel(
-                key,
-                values.TryGetValue(key, out var value) ? value : string.Empty,
-                changed))
-            .ToArray();
-        RemoveCommand = new RelayCommand(() => remove(this));
-    }
-
-    public int Number
-    {
-        get => _number;
-        set => SetProperty(ref _number, value);
-    }
-
-    public IReadOnlyList<EditableListMockFieldViewModel> Fields { get; }
-
-    public ICommand RemoveCommand { get; }
-
-    public IReadOnlyDictionary<string, string> CreateSnapshot()
-    {
-        return Fields.ToDictionary(
-            static field => field.Key,
-            static field => field.Value,
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-}
-
-public sealed class EditableListMockFieldViewModel : ViewModelBase
-{
-    private readonly Action _changed;
-    private string _value;
-
-    public EditableListMockFieldViewModel(string key, string value, Action changed)
-    {
-        Key = key;
-        _value = value;
-        _changed = changed;
-    }
-
-    public string Key { get; }
-
-    public string DisplayKey => $"@{Key}";
-
-    public string Value
-    {
-        get => _value;
-        set
-        {
-            if (SetProperty(ref _value, value))
-            {
-                _changed();
-            }
-        }
+        for (var index = 0; index < Items.Count; index++) Items[index].Number = index + 1;
     }
 }
