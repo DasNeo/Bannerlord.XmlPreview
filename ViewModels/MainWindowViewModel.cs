@@ -14,6 +14,7 @@ using Bannerlord.XmlPreview.Core.Abstractions;
 using Bannerlord.XmlPreview.Infrastructure;
 using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Models;
+using Bannerlord.XmlPreview.Models.Nodes;
 using Bannerlord.XmlPreview.Rendering;
 
 namespace Bannerlord.XmlPreview.ViewModels;
@@ -38,6 +39,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private readonly IPrefabLoader _prefabLoader;
     private readonly IPrefabRenderer _prefabRenderer;
+    private readonly IPreviewDataSourceProvider _previewDataSourceProvider;
     private readonly Dictionary<FrameworkElement, PreviewTreeNodeViewModel> _previewTreeLookup = [];
     private readonly RelayCommand _reloadCommand;
     private readonly IRootLayoutHints _rootLayoutHints;
@@ -50,6 +52,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private FrameworkElement? _interactivePreviewRoot;
     private bool _isPopulatingBindings;
     private bool _isSynchronizingSelection;
+    private string? _mockDocumentSourcePath;
     private FrameworkElement? _previewContent;
     private string _previewHeight = string.Empty;
     private string _previewWidth = string.Empty;
@@ -68,7 +71,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         IFileDialogService fileDialogService,
         IFileWatcherService fileWatcherService,
         IAppSettingsService appSettingsService,
-        IRootLayoutHints rootLayoutHints)
+        IRootLayoutHints rootLayoutHints,
+        IPreviewDataSourceProvider previewDataSourceProvider)
     {
         _prefabLoader = prefabLoader;
         _prefabRenderer = prefabRenderer;
@@ -76,6 +80,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         _fileWatcherService = fileWatcherService;
         _appSettingsService = appSettingsService;
         _rootLayoutHints = rootLayoutHints;
+        _previewDataSourceProvider = previewDataSourceProvider;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         _bannerlordInstallPath = _appSettingsService.BannerlordInstallRoot;
         _previewWidth = FormatDimension(_rootLayoutHints.PreviewSize.Width);
@@ -176,6 +181,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public ObservableCollection<EditableBindingViewModel> Bindings { get; } = [];
+
+    public ObservableCollection<EditableListMockViewModel> Mocks { get; } = [];
 
     public ICollectionView BindingsView { get; }
 
@@ -376,6 +383,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             var document = _prefabLoader.Load(path, diagnostics);
             _currentDocument = document;
             PopulateBindings(document);
+            PopulateMocks(document);
             RenderPreview(document, diagnostics);
             FilePath = path;
             _currentPrefabPath = path;
@@ -390,6 +398,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             AttachPreviewInteractions(null);
             DiagnosticsText = exception.ToString();
             Bindings.Clear();
+            Mocks.Clear();
             ClearPreviewTree();
             SelectedElementInfo = SelectedElementInfoViewModel.Empty("No element selected because loading failed.");
             FilePath = path;
@@ -510,6 +519,132 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             _isPopulatingBindings = false;
         }
+    }
+
+    private void PopulateMocks(PrefabDocument document)
+    {
+        var previousItems = string.Equals(
+            _mockDocumentSourcePath,
+            document.SourcePath,
+            StringComparison.OrdinalIgnoreCase)
+            ? Mocks.ToDictionary(
+                static mock => mock.TargetKey,
+                static mock => mock.CreateSnapshot(),
+                StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>(
+                StringComparer.OrdinalIgnoreCase);
+
+        Mocks.Clear();
+        _mockDocumentSourcePath = document.SourcePath;
+        foreach (var target in FindTemplateMockTargets(document.RootNode))
+        {
+            IReadOnlyList<IReadOnlyDictionary<string, string>> items;
+            if (previousItems.TryGetValue(target.TargetKey, out var preservedItems))
+            {
+                items = preservedItems;
+            }
+            else if (_previewDataSourceProvider.TryGetTemplateItemBindings(target.Node, out var providedItems))
+            {
+                items = providedItems;
+            }
+            else
+            {
+                items =
+                [
+                    target.FieldKeys.ToDictionary(
+                        static key => key,
+                        static key => PrefabRenderContext.ResolveMockBindingValue(key),
+                        StringComparer.OrdinalIgnoreCase)
+                ];
+            }
+
+            var mock = new EditableListMockViewModel(
+                target.TargetKey,
+                target.DisplayName,
+                target.Description,
+                target.Node,
+                target.FieldKeys,
+                items,
+                PrefabRenderContext.ResolveMockBindingValue,
+                OnMockChanged);
+            Mocks.Add(mock);
+            ApplyMock(mock);
+        }
+    }
+
+    private static IEnumerable<TemplateMockTarget> FindTemplateMockTargets(PrefabNode root)
+    {
+        return FindTemplateMockTargets(root, "0");
+    }
+
+    private static IEnumerable<TemplateMockTarget> FindTemplateMockTargets(PrefabNode node, string path)
+    {
+        var template = node.Children.OfType<ItemTemplateNode>().FirstOrDefault();
+        if (template is not null && IsTemplateMockNode(node))
+        {
+            node.Attributes.TryGetValue("Id", out var id);
+            node.Attributes.TryGetValue("DataSource", out var dataSource);
+            var displayName = !string.IsNullOrWhiteSpace(id)
+                ? id
+                : !string.IsNullOrWhiteSpace(dataSource)
+                    ? dataSource
+                    : node.Name;
+            var descriptionParts = new[] { node.Name, dataSource }
+                .Where(static part => !string.IsNullOrWhiteSpace(part));
+            yield return new TemplateMockTarget(
+                path,
+                displayName,
+                string.Join(" · ", descriptionParts),
+                node,
+                FindTemplateBindingKeys(template));
+        }
+
+        for (var index = 0; index < node.Children.Count; index++)
+        {
+            foreach (var target in FindTemplateMockTargets(node.Children[index], $"{path}.{index}"))
+            {
+                yield return target;
+            }
+        }
+    }
+
+    private static bool IsTemplateMockNode(PrefabNode node)
+    {
+        return node is ListPanelNode or NavigatableListPanelNode or GridWidgetNode;
+    }
+
+    private static IReadOnlyList<string> FindTemplateBindingKeys(PrefabNode template)
+    {
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectTemplateBindingKeys(template, keys);
+        return keys.OrderBy(static key => key, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static void CollectTemplateBindingKeys(PrefabNode node, ISet<string> keys)
+    {
+        foreach (var value in node.Attributes.Values)
+        {
+            if (value.Length > 1 && value[0] == '@')
+            {
+                keys.Add(value[1..]);
+            }
+        }
+
+        foreach (var child in node.Children)
+        {
+            CollectTemplateBindingKeys(child, keys);
+        }
+    }
+
+    private void OnMockChanged(EditableListMockViewModel mock)
+    {
+        ApplyMock(mock);
+        ReRenderCurrentDocument();
+    }
+
+    private void ApplyMock(EditableListMockViewModel mock)
+    {
+        _previewDataSourceProvider.SetTemplateItemBindings(mock.TargetNode, mock.CreateSnapshot());
     }
 
     private void OnBindingValueChanged(EditableBindingViewModel binding)
@@ -669,6 +804,13 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         return value.ToString("0.##", CultureInfo.InvariantCulture);
     }
+
+    private sealed record TemplateMockTarget(
+        string TargetKey,
+        string DisplayName,
+        string Description,
+        PrefabNode Node,
+        IReadOnlyList<string> FieldKeys);
 
     #endregion
 }

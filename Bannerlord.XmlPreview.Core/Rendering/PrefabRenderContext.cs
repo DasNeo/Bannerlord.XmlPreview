@@ -145,11 +145,11 @@ public sealed class PrefabRenderContext
         MockBindings[key] = value;
     }
 
-    public IReadOnlyList<IReadOnlyDictionary<string, string>> GetTemplateItemBindings(
-        string nodeName,
-        IReadOnlyDictionary<string, string> attributes)
+    public bool TryGetTemplateItemBindings(
+        PrefabNode node,
+        out IReadOnlyList<IReadOnlyDictionary<string, string>> itemBindings)
     {
-        return _previewDataSourceProvider.GetTemplateItemBindings(nodeName, attributes);
+        return _previewDataSourceProvider.TryGetTemplateItemBindings(node, out itemBindings);
     }
 
     public string ResolveWidgetText(

@@ -1,8 +1,14 @@
+using Bannerlord.XmlPreview.Models.Nodes;
+
 namespace Bannerlord.XmlPreview.Core.Abstractions;
 
 public interface IPreviewDataSourceProvider
 {
-    IReadOnlyList<IReadOnlyDictionary<string, string>> GetTemplateItemBindings(
-        string nodeName,
-        IReadOnlyDictionary<string, string> attributes);
+    bool TryGetTemplateItemBindings(
+        PrefabNode node,
+        out IReadOnlyList<IReadOnlyDictionary<string, string>> itemBindings);
+
+    void SetTemplateItemBindings(
+        PrefabNode node,
+        IReadOnlyList<IReadOnlyDictionary<string, string>> itemBindings);
 }

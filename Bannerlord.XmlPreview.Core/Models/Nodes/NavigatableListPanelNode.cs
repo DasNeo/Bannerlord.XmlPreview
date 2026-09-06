@@ -28,11 +28,7 @@ public sealed class NavigatableListPanelNode : PrefabNode
         var templateNode = Children.OfType<ItemTemplateNode>().FirstOrDefault();
         context.AttachChildren(panel, contentNodes, context.ResolveChildMeasureSize(panel, Attributes, parentSize));
 
-        var templateItemBindings = templateNode is null
-            ? Array.Empty<IReadOnlyDictionary<string, string>>()
-            : context.GetTemplateItemBindings(Name, Attributes);
-
-        if (templateNode is not null && templateItemBindings.Count > 0)
+        if (templateNode is not null && context.TryGetTemplateItemBindings(this, out var templateItemBindings))
         {
             RenderTemplateItems(panel, templateNode, context, parentSize, templateItemBindings);
         }

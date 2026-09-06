@@ -24,9 +24,11 @@ public class GridWidgetNode : PrefabNode
         return new RenderedPrefabNode(panel, panel);
     }
 
-    protected virtual IReadOnlyList<IReadOnlyDictionary<string, string>> GetTemplateItemBindings(PrefabRenderContext context)
+    protected virtual bool TryGetTemplateItemBindings(
+        PrefabRenderContext context,
+        out IReadOnlyList<IReadOnlyDictionary<string, string>> itemBindings)
     {
-        return Array.Empty<IReadOnlyDictionary<string, string>>();
+        return context.TryGetTemplateItemBindings(this, out itemBindings);
     }
 
     protected void AttachGridChildren(
@@ -40,14 +42,11 @@ public class GridWidgetNode : PrefabNode
 
         context.AttachChildren(panel, contentNodes, childMeasureSize);
 
-        var templateItemBindings = templateNode is null
-            ? Array.Empty<IReadOnlyDictionary<string, string>>()
-            : GetTemplateItemBindings(context);
         var templateMeasureSize = new Size(
             panel.DefaultCellWidth > 0 ? panel.DefaultCellWidth : childMeasureSize.Width,
             panel.DefaultCellHeight > 0 ? panel.DefaultCellHeight : childMeasureSize.Height);
 
-        if (templateNode is not null && templateItemBindings.Count > 0)
+        if (templateNode is not null && TryGetTemplateItemBindings(context, out var templateItemBindings))
         {
             RenderTemplateItems(panel, templateNode, context, templateMeasureSize, templateItemBindings);
         }

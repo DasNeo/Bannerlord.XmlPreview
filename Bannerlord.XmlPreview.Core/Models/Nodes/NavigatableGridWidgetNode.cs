@@ -10,8 +10,10 @@ public sealed class NavigatableGridWidgetNode : GridWidgetNode
     {
     }
 
-    protected override IReadOnlyList<IReadOnlyDictionary<string, string>> GetTemplateItemBindings(PrefabRenderContext context)
+    protected override bool TryGetTemplateItemBindings(
+        PrefabRenderContext context,
+        out IReadOnlyList<IReadOnlyDictionary<string, string>> itemBindings)
     {
-        return context.GetTemplateItemBindings(Name, Attributes);
+        return context.TryGetTemplateItemBindings(this, out itemBindings);
     }
 }
