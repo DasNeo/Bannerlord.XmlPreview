@@ -22,6 +22,7 @@ public sealed class PreviewDiagnostics
     private readonly HashSet<string> _measureFallbackSet = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ElementLayoutSnapshot> _elementLayoutSnapshots = [];
     private readonly Dictionary<string, TimingAggregate> _timings = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _truncationReasons = [];
     private string? _sourcePath;
     private string? _rootNodeName;
     private int _bindingCount;
@@ -36,6 +37,10 @@ public sealed class PreviewDiagnostics
     private string? _requestedRootSize;
     private string? _measuredRootSize;
     private string? _actualRootSize;
+
+    public RenderCompletionStatus CompletionStatus { get; private set; } = RenderCompletionStatus.Complete;
+
+    public IReadOnlyList<string> TruncationReasons => _truncationReasons;
 
     public IReadOnlyList<string> Messages => _messages;
 
@@ -64,7 +69,14 @@ public sealed class PreviewDiagnostics
 
     public string ToDisplayText()
     {
-        var sections = new List<string>();
+        var sections = new List<string>
+        {
+            "Completion",
+            $"CompletionStatus: {CompletionStatus}",
+            $"TruncationReason: {(_truncationReasons.Count == 0 ? "None" : string.Join(" | ", _truncationReasons))}"
+        };
+
+        AddSectionSeparator(sections);
 
         if (!string.IsNullOrWhiteSpace(_sourcePath))
         {
@@ -185,6 +197,24 @@ public sealed class PreviewDiagnostics
         }
 
         return string.Join(Environment.NewLine, sections);
+    }
+
+    public void MarkTruncated(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("A truncation reason is required.", nameof(reason));
+
+        if (CompletionStatus != RenderCompletionStatus.Failed)
+            CompletionStatus = RenderCompletionStatus.Partial;
+
+        if (!_truncationReasons.Contains(reason, StringComparer.Ordinal))
+            _truncationReasons.Add(reason);
+    }
+
+    public void MarkFailed(string reason)
+    {
+        CompletionStatus = RenderCompletionStatus.Failed;
+        AddOnce(reason);
     }
 
     public void SetDocumentSummary(

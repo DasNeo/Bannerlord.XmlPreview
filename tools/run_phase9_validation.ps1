@@ -135,17 +135,26 @@ $summaryLines = [System.Collections.ArrayList]@(
     "",
     "## Fixtures"
 )
+$hasFailures = $false
 
 foreach ($fixtureId in $Fixture) {
     if (-not $fixtures.Contains($fixtureId)) {
-        Write-Error "Unknown fixture '$fixtureId'."
-        exit 1
+        $hasFailures = $true
+        [void]$summaryLines.Add("- $fixtureId")
+        [void]$summaryLines.Add("  Status: UnknownFixture")
+        [void]$summaryLines.Add("  Diagnostics: not created")
+        continue
     }
 
     $fixtureConfig = $fixtures[$fixtureId]
     if (-not (Test-Path -LiteralPath $fixtureConfig.Path)) {
-        Write-Error "The fixture prefab was not found at '$($fixtureConfig.Path)'."
-        exit 1
+        $hasFailures = $true
+        [void]$summaryLines.Add("- $fixtureId")
+        [void]$summaryLines.Add("  Path: $($fixtureConfig.Path)")
+        [void]$summaryLines.Add("  Focus: $($fixtureConfig.Focus)")
+        [void]$summaryLines.Add("  Status: MissingFixture")
+        [void]$summaryLines.Add("  Diagnostics: not created")
+        continue
     }
 
     $diagnosticsPath = Join-Path $resolvedOutputRoot "$fixtureId.diagnostics.txt"
@@ -155,13 +164,13 @@ foreach ($fixtureId in $Fixture) {
         "--diagnostics-out `"$diagnosticsPath`"",
         "--exit-after-load"
     )
-
     $startedAt = Get-Date
     $process = Start-Process -FilePath $executablePath -ArgumentList $arguments -WindowStyle Hidden -PassThru
     $completed = $process.WaitForExit($PerFixtureTimeoutSeconds * 1000)
     $durationSeconds = [math]::Round(((Get-Date) - $startedAt).TotalSeconds, 2)
 
     if (-not $completed) {
+        $hasFailures = $true
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         [void]$summaryLines.Add("- $fixtureId")
         [void]$summaryLines.Add("  Path: $($fixtureConfig.Path)")
@@ -180,6 +189,7 @@ foreach ($fixtureId in $Fixture) {
     }
 
     if ($process.ExitCode -ne 0) {
+        $hasFailures = $true
         [void]$summaryLines.Add("- $fixtureId")
         [void]$summaryLines.Add("  Path: $($fixtureConfig.Path)")
         [void]$summaryLines.Add("  Focus: $($fixtureConfig.Focus)")
@@ -198,6 +208,7 @@ foreach ($fixtureId in $Fixture) {
     }
 
     if (-not (Test-Path -LiteralPath $diagnosticsPath)) {
+        $hasFailures = $true
         [void]$summaryLines.Add("- $fixtureId")
         [void]$summaryLines.Add("  Path: $($fixtureConfig.Path)")
         [void]$summaryLines.Add("  Focus: $($fixtureConfig.Focus)")
@@ -208,10 +219,28 @@ foreach ($fixtureId in $Fixture) {
     }
 
     $content = Get-Content -Path $diagnosticsPath -Raw
+    $completionStatus = Get-LineValue -Content $content -Label "CompletionStatus"
+    $reportedStatus = switch ($completionStatus) {
+        "Complete" { "Completed" }
+        "Partial" {
+            $hasFailures = $true
+            "Partial"
+        }
+        "Failed" {
+            $hasFailures = $true
+            "Failed"
+        }
+        default {
+            $hasFailures = $true
+            "InvalidCompletionStatus"
+        }
+    }
     [void]$summaryLines.Add("- $fixtureId")
     [void]$summaryLines.Add("  Path: $($fixtureConfig.Path)")
     [void]$summaryLines.Add("  Focus: $($fixtureConfig.Focus)")
-    [void]$summaryLines.Add("  Status: Completed")
+    [void]$summaryLines.Add("  Status: $reportedStatus")
+    [void]$summaryLines.Add("  CompletionStatus: $(Get-LineValueOrDefault -Content $content -Label "CompletionStatus" -DefaultValue "Missing")")
+    [void]$summaryLines.Add("  TruncationReason: $(Get-LineValueOrDefault -Content $content -Label "TruncationReason" -DefaultValue "None")")
     [void]$summaryLines.Add("  DurationSeconds: $durationSeconds")
     Add-ProgressSummaryLines -SummaryLines $summaryLines -Content $content
     [void]$summaryLines.Add("  RootNode: $(Get-LineValue -Content $content -Label "RootNode")")
@@ -234,3 +263,7 @@ Write-Host "Phase 9 validation output written to:"
 Write-Host "  $resolvedOutputRoot"
 Write-Host "Summary:"
 Write-Host "  $summaryPath"
+
+if ($hasFailures) {
+    exit 1
+}

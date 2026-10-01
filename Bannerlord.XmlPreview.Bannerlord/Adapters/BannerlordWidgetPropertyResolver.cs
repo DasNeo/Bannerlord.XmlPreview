@@ -47,6 +47,11 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
         var propertiesByWidgetPath = new Dictionary<string, IReadOnlyDictionary<string, ResolvedWidgetProperty>>(StringComparer.OrdinalIgnoreCase);
         foreach (var element in rootElement.DescendantsAndSelf())
         {
+            if (IsStructuralElement(element.Name.LocalName))
+            {
+                continue;
+            }
+
             if (!_reflectionService.TryGetWidgetType(element.Name.LocalName, out var widgetType))
             {
                 continue;
@@ -252,6 +257,11 @@ public sealed class BannerlordWidgetPropertyResolver : IWidgetPropertyResolver
         }
 
         return false;
+    }
+
+    private static bool IsStructuralElement(string elementName)
+    {
+        return elementName is "Window" or "Children" or "ItemTemplate" or "LogicalChildrenLocation";
     }
 
     private static string GetDeclaredTypeName(Type type)

@@ -44,17 +44,27 @@ public sealed class PrefabLoader : IPrefabLoader
         _widgetNodeFactory = widgetNodeFactory;
     }
 
-    public PrefabDocument Load(string path, PreviewDiagnostics diagnostics)
+    public PrefabDocument Load(
+        string path,
+        PreviewDiagnostics diagnostics,
+        CancellationToken cancellationToken = default)
     {
         using var totalTiming = diagnostics.MeasurePhase("PrefabLoader.Load.Total");
 
+        cancellationToken.ThrowIfCancellationRequested();
         var fullPath = Path.GetFullPath(path);
         PrefabExpansionState state;
         using (diagnostics.MeasurePhase("PrefabLoader.Load.RootState"))
         {
-            state = LoadPrefabState(fullPath, diagnostics, [fullPath], includeRootOnly: false);
+            state = LoadPrefabState(
+                fullPath,
+                diagnostics,
+                [fullPath],
+                includeRootOnly: false,
+                cancellationToken);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         Dictionary<string, string> constants;
         using (diagnostics.MeasurePhase("PrefabLoader.Load.ParseConstants"))
         {
@@ -74,8 +84,13 @@ public sealed class PrefabLoader : IPrefabLoader
                 constants,
                 diagnostics,
                 state.ExpansionStack,
+                cancellationToken,
                 out _);
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var (brushNames, spriteNames) = CollectReferencedAssets(expandedRoot);
+        var assetWarmupTask = _assetCatalog.WarmUpAssetsAsync(brushNames, spriteNames, cancellationToken);
 
         using (diagnostics.MeasurePhase("PrefabLoader.Load.AssignCanonicalPaths"))
         {
@@ -85,19 +100,27 @@ public sealed class PrefabLoader : IPrefabLoader
         PrefabWidgetReferenceMap referenceMap;
         using (diagnostics.MeasurePhase("PrefabLoader.Load.ResolveWidgetReferences"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             referenceMap = _widgetReferenceResolver.Resolve(expandedRoot, diagnostics);
         }
 
         PrefabWidgetPropertyMap propertyMap;
         using (diagnostics.MeasurePhase("PrefabLoader.Load.ResolveWidgetProperties"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             propertyMap = _widgetPropertyResolver.Resolve(expandedRoot, referenceMap, diagnostics);
+        }
+
+        using (diagnostics.MeasurePhase("PrefabLoader.Load.AwaitAssetWarmup"))
+        {
+            assetWarmupTask.GetAwaiter().GetResult();
         }
 
         var bindingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         PrefabNode rootNode;
         using (diagnostics.MeasurePhase("PrefabLoader.Load.ParseNodeTree"))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             rootNode = ParseNode(expandedRoot, bindingKeys);
         }
 
@@ -119,13 +142,53 @@ public sealed class PrefabLoader : IPrefabLoader
         return new PrefabDocument(fullPath, rootNode, constants, bindingKeys, propertyMap, referenceMap);
     }
 
-    private static XDocument LoadDocumentWithRetry(string path, PreviewDiagnostics diagnostics)
+    private static (IReadOnlyCollection<string> BrushNames, IReadOnlyCollection<string> SpriteNames)
+        CollectReferencedAssets(XElement root)
+    {
+        var brushNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var spriteNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var attribute in root.DescendantsAndSelf().Attributes())
+        {
+            var value = attribute.Value.Trim();
+            if (value.Length == 0 || value[0] is '@' or '!' or '*') continue;
+
+            var name = attribute.Name.LocalName;
+            if (IsBrushAssetAttribute(name))
+                brushNames.Add(value);
+            else if (IsSpriteAssetAttribute(name))
+                spriteNames.Add(value);
+        }
+
+        return (brushNames, spriteNames);
+    }
+
+    private static bool IsBrushAssetAttribute(string attributeName)
+    {
+        return string.Equals(attributeName, "Brush", StringComparison.OrdinalIgnoreCase) ||
+               attributeName.EndsWith("Brush", StringComparison.OrdinalIgnoreCase) ||
+               attributeName.Contains("BrushName", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(attributeName, "BrushId", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSpriteAssetAttribute(string attributeName)
+    {
+        return string.Equals(attributeName, "Sprite", StringComparison.OrdinalIgnoreCase) ||
+               attributeName.EndsWith("Sprite", StringComparison.OrdinalIgnoreCase) ||
+               attributeName.Contains("SpriteName", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static XDocument LoadDocumentWithRetry(
+        string path,
+        PreviewDiagnostics diagnostics,
+        CancellationToken cancellationToken)
     {
         using var timing = diagnostics.MeasurePhase("PrefabLoader.LoadDocumentWithRetry");
         Exception? lastException = null;
 
         for (var attempt = 1; attempt <= MaxLoadAttempts; attempt++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 using var stream = new FileStream(
@@ -139,7 +202,7 @@ public sealed class PrefabLoader : IPrefabLoader
             catch (Exception exception) when (IsTransientLoadException(exception) && attempt < MaxLoadAttempts)
             {
                 lastException = exception;
-                Thread.Sleep(RetryDelay);
+                Task.Delay(RetryDelay, cancellationToken).GetAwaiter().GetResult();
             }
             catch (Exception exception) when (IsTransientLoadException(exception))
             {
@@ -165,9 +228,11 @@ public sealed class PrefabLoader : IPrefabLoader
         string path,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
-        bool includeRootOnly)
+        bool includeRootOnly,
+        CancellationToken cancellationToken)
     {
-        var document = LoadDocumentWithRetry(path, diagnostics);
+        cancellationToken.ThrowIfCancellationRequested();
+        var document = LoadDocumentWithRetry(path, diagnostics, cancellationToken);
         var root = document.Root ?? throw new InvalidOperationException("The prefab XML is missing a root element.");
         var rootWindow = root.Element("Window") ?? root;
         var rootNodeElement = includeRootOnly
@@ -480,14 +545,17 @@ public sealed class PrefabLoader : IPrefabLoader
         IReadOnlyDictionary<string, string> constants,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
+        CancellationToken cancellationToken,
         out bool logicalChildrenConsumed)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var expandedReference = TryExpandPrefabReference(
             element,
             parameters,
             constants,
             diagnostics,
             expansionStack,
+            cancellationToken,
             out logicalChildrenConsumed);
         if (expandedReference is not null)
         {
@@ -521,6 +589,7 @@ public sealed class PrefabLoader : IPrefabLoader
                 constants,
                 diagnostics,
                 expansionStack,
+                cancellationToken,
                 out var childConsumed);
             logicalChildrenConsumed |= childConsumed;
             clone.Add(expandedChild);
@@ -535,6 +604,7 @@ public sealed class PrefabLoader : IPrefabLoader
         IReadOnlyDictionary<string, string> constants,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
+        CancellationToken cancellationToken,
         out bool logicalChildrenConsumed)
     {
         logicalChildrenConsumed = false;
@@ -569,7 +639,8 @@ public sealed class PrefabLoader : IPrefabLoader
             resolution.ResolvedPath!,
             diagnostics,
             nextStack,
-            includeRootOnly: true);
+            includeRootOnly: true,
+            cancellationToken);
         var includeParameters = new Dictionary<string, string>(includeState.DefaultParameters, StringComparer.OrdinalIgnoreCase);
         foreach (var attribute in element.Attributes())
         {
@@ -592,13 +663,15 @@ public sealed class PrefabLoader : IPrefabLoader
             parameters,
             constants,
             diagnostics,
-            expansionStack);
+            expansionStack,
+            cancellationToken);
         var expandedRoot = ExpandElement(
             includeState.RootNodeElement,
             includeParameters,
             includeConstants,
             diagnostics,
             nextStack,
+            cancellationToken,
             out logicalChildrenConsumed);
 
         if (callerChildren.Count > 0)
@@ -698,7 +771,8 @@ public sealed class PrefabLoader : IPrefabLoader
         IReadOnlyDictionary<string, string> parameters,
         IReadOnlyDictionary<string, string> constants,
         PreviewDiagnostics diagnostics,
-        IReadOnlyCollection<string> expansionStack)
+        IReadOnlyCollection<string> expansionStack,
+        CancellationToken cancellationToken)
     {
         var callerChildren = new List<XElement>();
         var childrenElement = callerElement.Element("Children");
@@ -707,7 +781,14 @@ public sealed class PrefabLoader : IPrefabLoader
             foreach (var child in childrenElement.Elements())
             {
                 callerChildren.Add(
-                    ExpandElement(child, parameters, constants, diagnostics, expansionStack, out _));
+                    ExpandElement(
+                        child,
+                        parameters,
+                        constants,
+                        diagnostics,
+                        expansionStack,
+                        cancellationToken,
+                        out _));
             }
         }
 

@@ -3,10 +3,13 @@ using Bannerlord.XmlPreview.Interfaces;
 
 namespace Bannerlord.XmlPreview.Services;
 
-public class FileWatcherService : IFileWatcherService
+public sealed class FileWatcherService : IFileWatcherService, IDisposable
 {
-    private readonly List<FileSystemWatcher> _watchers = new List<FileSystemWatcher>();
-    private readonly Dictionary<FileSystemWatcher, string> _watchedFiles = new();
+    private static readonly TimeSpan DebounceDelay = TimeSpan.FromMilliseconds(200);
+    private readonly object _sync = new();
+    private readonly Dictionary<FileSystemWatcher, WatchRegistration> _registrations = [];
+    private int _nextRegistrationId;
+    private bool _disposed;
     
     public event EventHandler<FileInfo>? FileChanged;
 
@@ -17,43 +20,148 @@ public class FileWatcherService : IFileWatcherService
             throw new InvalidOperationException("The watched file must have a directory.");
         }
 
-        if (_watchedFiles.Values.Any(path => string.Equals(path, file.FullName, StringComparison.OrdinalIgnoreCase)))
-            return -1;
-        
-        var watcher = new FileSystemWatcher(file.DirectoryName);
-        watcher.EnableRaisingEvents = true;
-        watcher.NotifyFilter = NotifyFilters.LastWrite;
-        watcher.Filter = file.Name;
-        watcher.Changed += WatcherOnChanged;
-        _watchers.Add(watcher);
-        _watchedFiles[watcher] = file.FullName;
-        return _watchers.IndexOf(watcher);
+        var fullPath = Path.GetFullPath(file.FullName);
+        lock (_sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_registrations.Values.Any(registration =>
+                    string.Equals(registration.FilePath, fullPath, StringComparison.OrdinalIgnoreCase)))
+                return -1;
+
+            var watcher = new FileSystemWatcher(file.DirectoryName, file.Name)
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName
+            };
+            watcher.Changed += WatcherOnChanged;
+            watcher.Renamed += WatcherOnRenamed;
+            var registration = new WatchRegistration(++_nextRegistrationId, fullPath);
+            _registrations[watcher] = registration;
+            watcher.EnableRaisingEvents = true;
+            return registration.Id;
+        }
     }
 
     public void Stop(FileInfo file)
     {
-        var watcher = _watchedFiles
-            .FirstOrDefault(entry => string.Equals(entry.Value, file.FullName, StringComparison.OrdinalIgnoreCase))
-            .Key;
-
-        if (watcher is null)
+        FileSystemWatcher? watcher;
+        WatchRegistration? registration;
+        var fullPath = Path.GetFullPath(file.FullName);
+        lock (_sync)
         {
-            return;
+            watcher = _registrations
+                .FirstOrDefault(entry =>
+                    string.Equals(entry.Value.FilePath, fullPath, StringComparison.OrdinalIgnoreCase))
+                .Key;
+            if (watcher is null || !_registrations.Remove(watcher, out registration))
+                return;
         }
 
-        watcher.EnableRaisingEvents = false;
+        DisposeRegistration(watcher, registration);
     }
-    
+
     private void WatcherOnChanged(object sender, FileSystemEventArgs e)
     {
-        if (sender is not FileSystemWatcher watcher)
+        if (sender is FileSystemWatcher watcher) ScheduleNotification(watcher);
+    }
+
+    private void WatcherOnRenamed(object sender, RenamedEventArgs e)
+    {
+        if (sender is FileSystemWatcher watcher) ScheduleNotification(watcher);
+    }
+
+    private void ScheduleNotification(FileSystemWatcher watcher)
+    {
+        CancellationTokenSource cancellation;
+        CancellationToken token;
+        string filePath;
+        lock (_sync)
         {
-            return;
+            if (_disposed || !_registrations.TryGetValue(watcher, out var registration))
+                return;
+
+            TryCancel(registration.PendingNotification);
+            cancellation = new CancellationTokenSource();
+            token = cancellation.Token;
+            registration.PendingNotification = cancellation;
+            filePath = registration.FilePath;
         }
 
-        if (_watchedFiles.TryGetValue(watcher, out var watchedFile))
+        _ = RaiseNotificationAfterDebounceAsync(watcher, filePath, cancellation, token);
+    }
+
+    private async Task RaiseNotificationAfterDebounceAsync(
+        FileSystemWatcher watcher,
+        string filePath,
+        CancellationTokenSource cancellation,
+        CancellationToken token)
+    {
+        try
         {
-            FileChanged?.Invoke(this, new FileInfo(watchedFile));
+            await Task.Delay(DebounceDelay, token).ConfigureAwait(false);
+            lock (_sync)
+            {
+                if (_disposed ||
+                    !_registrations.TryGetValue(watcher, out var registration) ||
+                    !ReferenceEquals(registration.PendingNotification, cancellation))
+                    return;
+
+                registration.PendingNotification = null;
+            }
+
+            FileChanged?.Invoke(this, new FileInfo(filePath));
         }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            cancellation.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        KeyValuePair<FileSystemWatcher, WatchRegistration>[] registrations;
+        lock (_sync)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            registrations = _registrations.ToArray();
+            _registrations.Clear();
+        }
+
+        foreach (var (watcher, registration) in registrations)
+            DisposeRegistration(watcher, registration);
+    }
+
+    private void DisposeRegistration(
+        FileSystemWatcher watcher,
+        WatchRegistration registration)
+    {
+        TryCancel(registration.PendingNotification);
+        watcher.EnableRaisingEvents = false;
+        watcher.Changed -= WatcherOnChanged;
+        watcher.Renamed -= WatcherOnRenamed;
+        watcher.Dispose();
+    }
+
+    private static void TryCancel(CancellationTokenSource? cancellation)
+    {
+        if (cancellation is null) return;
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The debounce task completed concurrently.
+        }
+    }
+
+    private sealed class WatchRegistration(int id, string filePath)
+    {
+        public int Id { get; } = id;
+        public string FilePath { get; } = filePath;
+        public CancellationTokenSource? PendingNotification { get; set; }
     }
 }

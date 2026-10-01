@@ -1,67 +1,63 @@
-Projektüberblick
-Bannerlord.XmlPreview ist ein WPF-Tool zum Rendern von Bannerlord-Gauntlet-UI-Prefabs aus XML in eine Preview-Oberfläche. Ziel der laufenden Refaktorierung war, den generischen Renderer-Core von Bannerlord-spezifischem Wissen zu trennen.
-Solution-Struktur
-Es gibt aktuell 4 Projekte:
-- App: [Bannerlord.XmlPreview.csproj](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord.XmlPreview.csproj)
-- Core: [Bannerlord.XmlPreview.Core.csproj](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord.XmlPreview.Core/Bannerlord.XmlPreview.Core.csproj)
-- Bannerlord-Adapter: [Bannerlord.XmlPreview.Bannerlord.csproj](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord.XmlPreview.Bannerlord/Bannerlord.XmlPreview.Bannerlord.csproj)
-- DemoData: [Bannerlord.XmlPreview.DemoData.csproj](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord.XmlPreview.DemoData/Bannerlord.XmlPreview.DemoData.csproj)
-Die Solution ist: [Bannerlord.XmlPreview.sln](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord.XmlPreview.sln)
-Architektur in einem Satz
-Core rendert XML-Knoten generisch und fragt über Interfaces nach externem Wissen; Bannerlord liefert dieses Wissen über Adapter/Provider; die WPF-App verdrahtet alles per DI.
-Wichtige Laufzeit-Pipeline
-1. XML wird über [PrefabLoader.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Services/PrefabLoader.cs) geladen.
-2. Widget-Namen werden über IWidgetNodeFactory in Node-Typen gemappt.
-3. Ein PrefabDocument wird erzeugt.
-4. [PrefabRenderer.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Services/PrefabRenderer.cs) erstellt den PrefabRenderContext.
-5. Die Node-Hierarchie rendert sich rekursiv in WPF-Elemente.
-6. Die WPF-App zeigt das Ergebnis im Preview-UI an.
-Wichtige Core-Bausteine
-- Render-Kontext: [PrefabRenderContext.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Rendering/PrefabRenderContext.cs)
-- Dokumentmodell: [PrefabDocument.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/PrefabDocument.cs)
-- Node-Basis: [PrefabNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/Nodes/PrefabNode.cs)
-- Typische generische Nodes:
-  - [WidgetNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/Nodes/WidgetNode.cs)
-  - [ContainerPrefabNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/Nodes/ContainerPrefabNode.cs)
-  - [ButtonWidgetNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/Nodes/ButtonWidgetNode.cs)
-  - [BrushWidgetNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/Nodes/BrushWidgetNode.cs)
-  - [NavigatableListPanelNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Models/Nodes/NavigatableListPanelNode.cs)
-Wichtige Adapter-Schnittstellen
-Diese liegen in Core unter den Abstractions und definieren den Schnitt zwischen generischem Renderer und Bannerlord-Wissen:
-- [IWidgetNodeFactory.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IWidgetNodeFactory.cs)
-- [IPreviewDataSourceProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IPreviewDataSourceProvider.cs)
-- [IRootLayoutHints.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IRootLayoutHints.cs)
-- [IBrushMetricsProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IBrushMetricsProvider.cs)
-- [IBrushOverlayFeatureHandler.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IBrushOverlayFeatureHandler.cs)
-- [IWidgetTextSourceProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IWidgetTextSourceProvider.cs)
-- [IWidgetDebugMetadataProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Core/Abstractions/IWidgetDebugMetadataProvider.cs)
-- [IAssetCatalog.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Interfaces/IAssetCatalog.cs)
-Bannerlord-spezifische Implementierungen
-Die Adapter sitzen im Projekt Bannerlord:
-- Widget-Mapping: [BannerlordWidgetNodeFactory.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Adapters/BannerlordWidgetNodeFactory.cs)
-- Root-Layout-Hints: [BannerlordRootLayoutHints.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Adapters/BannerlordRootLayoutHints.cs)
-- Brush-Metriken: [BannerlordBrushMetricsProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Adapters/BannerlordBrushMetricsProvider.cs)
-- Brush-Overlay-Sondermodi wie CoverWithTexture: [BannerlordBrushOverlayFeatureHandler.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Adapters/BannerlordBrushOverlayFeatureHandler.cs)
-- Button-Text-Sonderwissen: [BannerlordWidgetTextSourceProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Adapters/BannerlordWidgetTextSourceProvider.cs)
-- Tooltip-/Debug-Schlüssel: [BannerlordWidgetDebugMetadataProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Adapters/BannerlordWidgetDebugMetadataProvider.cs)
-- Preview-DataSource-Sonderfälle: [BannerlordPreviewDataSourceProvider.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Preview/BannerlordPreviewDataSourceProvider.cs)
-- Bannerlord-Asset-Katalog: [BannerlordAssetCatalog.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Services/BannerlordAssetCatalog.cs)
-- Bannerlord-spezifisches Escape-Menu-Widget: [EscapeMenuButtonWidgetNode.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Bannerlord/Widgets/EscapeMenuButtonWidgetNode.cs)
-Wichtige Refaktorierungs-Ergebnisse
-Diese Punkte sind schon umgesetzt:
-- Widget-Mapping ist aus PrefabLoader in IWidgetNodeFactory gezogen.
-- NavigatableListPanel kennt keine Bannerlord-Demo-Items mehr direkt, sondern fragt IPreviewDataSourceProvider.
-- EscapeMenuButtonWidget ist isoliert im Bannerlord-Adapter.
-- Root-Größe läuft über IRootLayoutHints.
-- Parameter.ButtonText läuft über IWidgetTextSourceProvider.
-- Brush-Metriken/Padding laufen über IBrushMetricsProvider.
-- Tooltip-/Debug-Schlüssel laufen über IWidgetDebugMetadataProvider.
-- CoverWithTexture läuft über IBrushOverlayFeatureHandler.
-- IBannerlordAssetCatalog wurde in neutrales IAssetCatalog umbenannt.
-- Die wichtigsten Asset-Modelle im Core tragen jetzt generische Namen wie SpriteDefinition, BrushDefinition, BrushLayerDefinition.
-DI-Verdrahtung
-Die App registriert die Implementierungen in [App.xaml.cs](C:/Dev/WPF/Bannerlord.XmlPreview/App.xaml.cs). Wenn etwas “magisch” zur Laufzeit zusammengebaut wird, ist das meistens dort verdrahtet.
-Preview-/Debug-relevante Stellen
-- Debug Attached Properties: [PreviewElementDebugProperties.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Rendering/PreviewElementDebugProperties.cs)
-- Auswahlrahmen im UI: [SelectionBorderAdorner.cs](C:/Dev/WPF/Bannerlord.XmlPreview/Rendering/SelectionBorderAdorner.cs)
-- ViewModel der App: [MainWindowViewModel.cs](C:/Dev/WPF/Bannerlord.XmlPreview/ViewModels/MainWindowViewModel.cs)
+# Bannerlord.XmlPreview
+
+`Bannerlord.XmlPreview` ist ein WPF-Werkzeug zum Laden, Expandieren und Rendern von Bannerlord-Gauntlet-Prefabs aus XML. Ziel ist eine nachvollziehbare Preview, die Layout-, Asset-, Binding- und Referenzprobleme ohne Spielstart untersuchbar macht.
+
+## Solution
+
+- `Bannerlord.XmlPreview.csproj`: WPF-Host, DI, UI und Startargumente
+- `Bannerlord.XmlPreview.Core/`: generische Loader-, Render-, Node- und Diagnostics-Logik
+- `Bannerlord.XmlPreview.Bannerlord/`: Bannerlord-spezifische Adapter, Assets und Preview-Daten
+- `Bannerlord.XmlPreview.DemoData/`: deterministische Preview-Daten
+- `Bannerlord.XmlPreview.Tests/`: automatisierte M0-Vertrags- und Diagnostics-Tests
+
+Der Core bleibt generisch. Bannerlord-Namen und -Semantik gehören in den Adapter. Mod-spezifischer ausführbarer Widget-Code wird nicht geladen; siehe [ADR 0001](docs/adr/0001-do-not-execute-mod-code-widgets.md).
+
+## Build und Tests
+
+```powershell
+dotnet restore C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln
+dotnet build C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-restore
+dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-build
+```
+
+## App starten
+
+```powershell
+C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe
+```
+
+Unterstützte Argumente:
+
+- `--prefab <path>` lädt direkt ein Prefab.
+- `--bannerlord-root <path>` setzt die Bannerlord-Installation.
+- `--diagnostics-out <path>` schreibt einen Diagnostics-Snapshot.
+- `--exit-after-load` beendet die App nach dem technischen Lauf.
+
+Beispiel:
+
+```powershell
+C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe `
+  --bannerlord-root "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord" `
+  --prefab "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord\Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml"
+```
+
+## Technische Regression
+
+Phase 9 prüft sechs kuratierte Fixtures. `Complete` ist erfolgreich; Timeout, Prozessfehler, fehlende Diagnostics, `Partial` und `Failed` führen zu einem Gesamt-Exitcode ungleich null. Einzel-Diagnostics und `summary.md` bleiben auch bei Fehlschlägen erhalten.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 `
+  -PerFixtureTimeoutSeconds 30 `
+  -OutputRoot C:\path\to\m0-validation
+```
+
+Diagnostics enthalten unter anderem `CompletionStatus`, `TruncationReason`, `RootActual`, `ElementLayout` und Phasen-Timings. Der Lauf ist eine technische Prüfung und keine visuelle Endabnahme.
+
+## Architektur und Planung
+
+- [Glossar](GLOSSARY.md)
+- [Roadmap](docs/roadmap.md)
+- [Milestone-Pläne](docs/implementation-plans/README.md)
+- [M0-Abschlussbericht](docs/reports/m0-completion.md)
+
+Wichtige Einstiegspunkte sind `App.xaml.cs`, `ViewModels/MainWindowViewModel.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs` und `Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`.

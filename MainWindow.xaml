@@ -200,7 +200,7 @@
                                       BorderThickness="0"
                                       Foreground="#D7E0EA"
                                       Margin="0, 12,0,0"
-                                      ItemsSource="{Binding PreviewTree}"
+                                      ItemsSource="{Binding PreviewInspector.PreviewTree}"
                                       SelectedItemChanged="PreviewTreeOnSelectedItemChanged">
                                 <TreeView.Resources>
                                     <HierarchicalDataTemplate DataType="{x:Type viewModels:PreviewTreeNodeViewModel}"
@@ -253,7 +253,7 @@
                         IsExpanded="True"
                         VirtualizingPanel.IsVirtualizing="True"
                         Style="{StaticResource MaterialDesignExpander}">
-                        <controls:SelectedInfoView DataContext="{Binding SelectedElementInfo}" />
+                        <controls:SelectedInfoView DataContext="{Binding PreviewInspector.SelectedElementInfo}" />
                     </Expander>
                     <Expander
                         Header="Diagnostics"
@@ -275,7 +275,7 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
                                       Background="#13161B">
-                            <ItemsControl ItemsSource="{Binding Mocks}"
+                            <ItemsControl ItemsSource="{Binding MockEditor.Mocks}"
                                           Margin="12,8,12,0">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -362,7 +362,7 @@
                                      Margin="12,0"
                                      VerticalAlignment="Stretch"
                                      HorizontalAlignment="Stretch"
-                                     Text="{Binding BindingsFilter, UpdateSourceTrigger=PropertyChanged}"
+                                     Text="{Binding MockEditor.BindingsFilter, UpdateSourceTrigger=PropertyChanged}"
                                      materialDesign:HintAssist.Hint="Filter Bindings"
                                      Style="{StaticResource MaterialDesignFilledTextBox}" />
                             <ScrollViewer Grid.Row="1"
@@ -371,7 +371,7 @@
                                           VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
                                           Background="#13161B">
-                                <ItemsControl ItemsSource="{Binding BindingsView}"
+                                <ItemsControl ItemsSource="{Binding MockEditor.BindingsView}"
                                               Margin="12,8,12,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>

@@ -39,6 +39,19 @@ public sealed class PrefabRenderer : IPrefabRenderer
 
     public FrameworkElement Render(PrefabDocument document, PreviewDiagnostics diagnostics)
     {
+        try
+        {
+            return RenderCore(document, diagnostics);
+        }
+        catch (Exception exception)
+        {
+            diagnostics.MarkFailed($"Render failed: {exception.Message}");
+            throw;
+        }
+    }
+
+    private FrameworkElement RenderCore(PrefabDocument document, PreviewDiagnostics diagnostics)
+    {
         using var totalTiming = diagnostics.MeasurePhase("PrefabRenderer.Render.Total");
         PrefabRenderContext context;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.CreateContext"))
