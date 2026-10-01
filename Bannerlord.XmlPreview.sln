@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Banne
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.DemoData", "Bannerlord.XmlPreview.DemoData\Bannerlord.XmlPreview.DemoData.csproj", "{E29A9187-F99F-41DF-985B-171D4D5844CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Tests", "Bannerlord.XmlPreview.Tests\Bannerlord.XmlPreview.Tests.csproj", "{74331BA6-506F-4A21-BE65-D14EA43E39CD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{E29A9187-F99F-41DF-985B-171D4D5844CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E29A9187-F99F-41DF-985B-171D4D5844CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E29A9187-F99F-41DF-985B-171D4D5844CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

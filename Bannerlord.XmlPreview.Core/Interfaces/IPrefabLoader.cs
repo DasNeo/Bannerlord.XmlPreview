@@ -4,5 +4,8 @@ namespace Bannerlord.XmlPreview.Interfaces;
 
 public interface IPrefabLoader
 {
-    PrefabDocument Load(string path, PreviewDiagnostics diagnostics);
+    PrefabDocument Load(
+        string path,
+        PreviewDiagnostics diagnostics,
+        CancellationToken cancellationToken = default);
 }

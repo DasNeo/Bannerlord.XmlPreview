@@ -16,7 +16,7 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.SelectPreviewTreeNode(e.NewValue as PreviewTreeNodeViewModel);
+            viewModel.PreviewInspector.SelectPreviewTreeNode(e.NewValue as PreviewTreeNodeViewModel);
         }
     }
 }

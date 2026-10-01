@@ -1,26 +1,19 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using System.IO;
-using System.Text;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using Bannerlord.XmlPreview.Core.Abstractions;
 using Bannerlord.XmlPreview.Infrastructure;
 using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Models;
-using Bannerlord.XmlPreview.Models.Nodes;
-using Bannerlord.XmlPreview.Rendering;
+using Bannerlord.XmlPreview.Services;
 using Bannerlord.XmlPreview.ViewModels.Mocks;
 
 namespace Bannerlord.XmlPreview.ViewModels;
 
-public sealed class MainWindowViewModel : ViewModelBase
+public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private const string DefaultWindowTitle = "Bannerlord XML Preview";
 
@@ -33,6 +26,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     private readonly RelayCommand _applyBannerlordInstallCommand;
     private readonly RelayCommand _applyPreviewSizeCommand;
     private readonly IAppSettingsService _appSettingsService;
+    private readonly IDiagnosticsSnapshotWriter _diagnosticsSnapshotWriter;
+    private readonly IPreviewEnvironmentInitializer _environmentInitializer;
 
     private readonly Dispatcher _dispatcher;
     private readonly IFileDialogService _fileDialogService;
@@ -40,31 +35,22 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private readonly IPrefabLoader _prefabLoader;
     private readonly IPrefabRenderer _prefabRenderer;
-    private readonly IPreviewDataSourceProvider _previewDataSourceProvider;
-    private readonly Dictionary<FrameworkElement, PreviewTreeNodeViewModel> _previewTreeLookup = [];
+    private readonly LatestLoadCoordinator<string, LoadedPrefab> _loadCoordinator;
     private readonly RelayCommand _reloadCommand;
     private readonly IRootLayoutHints _rootLayoutHints;
     private string _bannerlordInstallPath = string.Empty;
-    private string _bindingsFilter = string.Empty;
     private PrefabDocument? _currentDocument;
     private string? _currentPrefabPath;
+    private string? _watchedPrefabPath;
     private string _diagnosticsText = string.Empty;
+    private PreviewDiagnostics? _currentDiagnostics;
     private string _filePath = string.Empty;
-    private FrameworkElement? _interactivePreviewRoot;
-    private bool _isPopulatingBindings;
-    private bool _isSynchronizingSelection;
-    private string? _mockDocumentSourcePath;
     private FrameworkElement? _previewContent;
     private string _previewHeight = string.Empty;
     private string _previewWidth = string.Empty;
-    private SelectedElementInfoViewModel _selectedElementInfo =
-        SelectedElementInfoViewModel.Empty("Click an element in the preview to inspect its layout and assets.");
-    private SelectionBorderAdorner? _selectedPreviewAdorner;
-    private AdornerLayer? _selectedPreviewAdornerLayer;
-    private FrameworkElement? _selectedPreviewElement;
-    private PreviewTreeNodeViewModel? _selectedPreviewTreeNode;
     private string _statusText = "Waiting for prefab...";
     private string _title = DefaultWindowTitle;
+    private bool _disposed;
 
     public MainWindowViewModel(
         IPrefabLoader prefabLoader,
@@ -73,7 +59,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         IFileWatcherService fileWatcherService,
         IAppSettingsService appSettingsService,
         IRootLayoutHints rootLayoutHints,
-        IPreviewDataSourceProvider previewDataSourceProvider)
+        IDiagnosticsSnapshotWriter diagnosticsSnapshotWriter,
+        IPreviewEnvironmentInitializer environmentInitializer,
+        MockEditorViewModel mockEditor,
+        PreviewInspectorViewModel previewInspector)
     {
         _prefabLoader = prefabLoader;
         _prefabRenderer = prefabRenderer;
@@ -81,7 +70,14 @@ public sealed class MainWindowViewModel : ViewModelBase
         _fileWatcherService = fileWatcherService;
         _appSettingsService = appSettingsService;
         _rootLayoutHints = rootLayoutHints;
-        _previewDataSourceProvider = previewDataSourceProvider;
+        _diagnosticsSnapshotWriter = diagnosticsSnapshotWriter;
+        _environmentInitializer = environmentInitializer;
+        _loadCoordinator = new LatestLoadCoordinator<string, LoadedPrefab>(
+            LoadPrefabDocumentAsync,
+            PublishLoadedPrefab,
+            PublishLoadFailure);
+        MockEditor = mockEditor;
+        PreviewInspector = previewInspector;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         _bannerlordInstallPath = _appSettingsService.BannerlordInstallRoot;
         _previewWidth = FormatDimension(_rootLayoutHints.PreviewSize.Width);
@@ -95,17 +91,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         _applyPreviewSizeCommand = new RelayCommand(ApplyPreviewSize, CanApplyPreviewSize);
         ApplyBannerlordInstallCommand = _applyBannerlordInstallCommand;
         ApplyPreviewSizeCommand = _applyPreviewSizeCommand;
-        BindingsView = CollectionViewSource.GetDefaultView(Bindings);
-        BindingsView.Filter = FilterBinding;
 
         _fileWatcherService.FileChanged += FileWatcherServiceOnFileChanged;
+        MockEditor.Changed += (_, _) => ReRenderCurrentDocument();
     }
 
     #region Events
 
     private void FileWatcherServiceOnFileChanged(object? sender, FileInfo e)
     {
-        if (!string.Equals(e.FullName, _filePath, StringComparison.OrdinalIgnoreCase)) return;
+        if (!string.Equals(e.FullName, _watchedPrefabPath, StringComparison.OrdinalIgnoreCase)) return;
 
         if (_dispatcher.CheckAccess())
         {
@@ -164,30 +159,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         set => SetProperty(ref _diagnosticsText, value);
     }
 
-    public string BindingsFilter
-    {
-        get => _bindingsFilter;
-        set
-        {
-            if (value == _bindingsFilter) return;
-            SetProperty(ref _bindingsFilter, value);
-            BindingsView.Refresh();
-        }
-    }
+    public MockEditorViewModel MockEditor { get; }
 
-    public SelectedElementInfoViewModel SelectedElementInfo
-    {
-        get => _selectedElementInfo;
-        private set => SetProperty(ref _selectedElementInfo, value);
-    }
-
-    public ObservableCollection<EditableBindingViewModel> Bindings { get; } = [];
-
-    public ObservableCollection<EditableListMockViewModel> Mocks { get; } = [];
-
-    public ICollectionView BindingsView { get; }
-
-    public ObservableCollection<PreviewTreeNodeViewModel> PreviewTree { get; } = [];
+    public PreviewInspectorViewModel PreviewInspector { get; }
 
     public string BannerlordInstallPath
     {
@@ -222,13 +196,20 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public void ApplyStartupOptions(string? bannerlordInstallPath, string? prefabPath)
     {
+        _ = ApplyStartupOptionsAsync(bannerlordInstallPath, prefabPath);
+    }
+
+    public async Task ApplyStartupOptionsAsync(string? bannerlordInstallPath, string? prefabPath)
+    {
         if (!string.IsNullOrWhiteSpace(bannerlordInstallPath))
         {
             BannerlordInstallPath = bannerlordInstallPath;
             ApplyBannerlordInstall();
         }
 
-        if (!string.IsNullOrWhiteSpace(prefabPath)) OpenPrefabPath(prefabPath);
+        StartEnvironmentWarmUp();
+        if (!string.IsNullOrWhiteSpace(prefabPath))
+            await OpenPrefabPathAsync(prefabPath);
     }
 
     public void ExportDiagnosticsSnapshot(string outputPath)
@@ -239,31 +220,21 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var directoryPath = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrWhiteSpace(directoryPath)) Directory.CreateDirectory(directoryPath);
-
-        var lines = new List<string>
-        {
-            $"GeneratedAtUtc: {DateTime.UtcNow:O}",
-            $"Status: {StatusText}"
-        };
-
-        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) lines.Add($"Prefab: {_currentPrefabPath}");
-
-        if (!string.IsNullOrWhiteSpace(BannerlordInstallPath)) lines.Add($"BannerlordRoot: {BannerlordInstallPath}");
-
-        lines.Add(string.Empty);
-        lines.Add(string.IsNullOrWhiteSpace(DiagnosticsText)
-            ? "No diagnostics were generated."
-            : DiagnosticsText);
-
-        File.WriteAllText(outputPath, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+        _diagnosticsSnapshotWriter.Write(
+            outputPath,
+            new DiagnosticsSnapshot(
+                StatusText,
+                PrefabPath: _currentPrefabPath,
+                BannerlordRoot: BannerlordInstallPath,
+                DiagnosticsText: DiagnosticsText,
+                CompletionStatus: _currentDiagnostics?.CompletionStatus,
+                TruncationReasons: _currentDiagnostics?.TruncationReasons));
     }
 
     private void OpenPrefab()
     {
         var selectedPath = _fileDialogService.OpenPrefab(GetOpenPrefabSeedPath());
-        if (!string.IsNullOrWhiteSpace(selectedPath)) OpenPrefabPath(selectedPath);
+        if (!string.IsNullOrWhiteSpace(selectedPath)) _ = OpenPrefabPathAsync(selectedPath);
     }
 
     private string GetOpenPrefabSeedPath()
@@ -300,7 +271,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void ReloadPrefab()
     {
-        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) LoadPrefab(_currentPrefabPath);
+        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) _ = LoadPrefabAsync(_currentPrefabPath);
     }
 
     private void BrowseBannerlordInstall()
@@ -330,8 +301,9 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         BannerlordInstallPath = normalizedPath;
         StatusText = $"Bannerlord installation set to {normalizedPath}";
+        StartEnvironmentWarmUp();
 
-        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) LoadPrefab(_currentPrefabPath);
+        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) _ = LoadPrefabAsync(_currentPrefabPath);
     }
 
     private void ApplyPreviewSize()
@@ -358,324 +330,83 @@ public sealed class MainWindowViewModel : ViewModelBase
             StatusText = $"Preview size set to {FormatSize(requestedSize)}";
     }
 
-    private void OpenPrefabPath(string path)
+    private async Task OpenPrefabPathAsync(string path)
     {
         if (!_dispatcher.CheckAccess())
         {
-            _dispatcher.Invoke(() => OpenPrefabPath(path));
+            await _dispatcher.InvokeAsync(() => OpenPrefabPathAsync(path)).Task.Unwrap();
             return;
         }
 
         SwitchWatchedFile(path);
-        LoadPrefab(path);
+        await LoadPrefabAsync(path);
     }
 
-    private void LoadPrefab(string path)
+    private async Task LoadPrefabAsync(string path)
     {
         if (!_dispatcher.CheckAccess())
         {
-            _dispatcher.Invoke(() => LoadPrefab(path));
+            await _dispatcher.InvokeAsync(() => LoadPrefabAsync(path)).Task.Unwrap();
             return;
         }
 
-        try
-        {
-            var diagnostics = new PreviewDiagnostics();
-            var document = _prefabLoader.Load(path, diagnostics);
-            _currentDocument = document;
-            PopulateBindings(document);
-            PopulateMocks(document);
-            RenderPreview(document, diagnostics);
-            FilePath = path;
-            _currentPrefabPath = path;
-            Title = $"{DefaultWindowTitle} - {Path.GetFileName(path)}";
-            StatusText = $"Loaded {Path.GetFileName(path)}";
-        }
-        catch (Exception exception)
-        {
-            _currentDocument = null;
-            ClearPreviewSelection();
-            PreviewContent = null;
-            AttachPreviewInteractions(null);
-            DiagnosticsText = exception.ToString();
-            Bindings.Clear();
-            Mocks.Clear();
-            ClearPreviewTree();
-            SelectedElementInfo = SelectedElementInfoViewModel.Empty("No element selected because loading failed.");
-            FilePath = path;
-            _currentPrefabPath = path;
-            Title = DefaultWindowTitle;
-            StatusText = "Load failed.";
-        }
-        finally
-        {
-            _reloadCommand.RaiseCanExecuteChanged();
-        }
+        StatusText = $"Loading {Path.GetFileName(path)}...";
+        await _loadCoordinator.RunAsync(path);
+        _reloadCommand.RaiseCanExecuteChanged();
+    }
+
+    private Task<LoadedPrefab> LoadPrefabDocumentAsync(string path, CancellationToken cancellationToken)
+    {
+        return Task.Run(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var diagnostics = new PreviewDiagnostics();
+                using var diagnosticsTimingScope = diagnostics.BeginTimingScope();
+                return new LoadedPrefab(_prefabLoader.Load(path, diagnostics, cancellationToken), diagnostics);
+            },
+            cancellationToken);
+    }
+
+    private void PublishLoadedPrefab(string path, LoadedPrefab loadedPrefab)
+    {
+        _currentDocument = loadedPrefab.Document;
+        _currentDiagnostics = loadedPrefab.Diagnostics;
+        using (loadedPrefab.Diagnostics.MeasurePhase("MainWindow.Load.MockEditor"))
+            MockEditor.Load(loadedPrefab.Document);
+        using (loadedPrefab.Diagnostics.BeginTimingScope())
+            RenderPreview(loadedPrefab.Document, loadedPrefab.Diagnostics);
+        FilePath = path;
+        _currentPrefabPath = path;
+        Title = $"{DefaultWindowTitle} - {Path.GetFileName(path)}";
+        StatusText = $"Loaded {Path.GetFileName(path)}";
+    }
+
+    private void PublishLoadFailure(string path, Exception exception)
+    {
+        _currentDocument = null;
+        _currentDiagnostics = new PreviewDiagnostics();
+        _currentDiagnostics.MarkFailed($"Load failed: {exception.Message}");
+        PreviewContent = null;
+        DiagnosticsText = $"{_currentDiagnostics.ToDisplayText()}{Environment.NewLine}{Environment.NewLine}{exception}";
+        MockEditor.Clear();
+        PreviewInspector.Reset("No element selected because loading failed.");
+        FilePath = path;
+        _currentPrefabPath = path;
+        Title = DefaultWindowTitle;
+        StatusText = "Load failed.";
     }
 
     private void SwitchWatchedFile(string path)
     {
-        if (string.Equals(_currentPrefabPath, path, StringComparison.OrdinalIgnoreCase)) return;
+        var fullPath = Path.GetFullPath(path);
+        if (string.Equals(_watchedPrefabPath, fullPath, StringComparison.OrdinalIgnoreCase)) return;
 
-        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) _fileWatcherService.Stop(new FileInfo(_currentPrefabPath));
+        if (!string.IsNullOrWhiteSpace(_watchedPrefabPath))
+            _fileWatcherService.Stop(new FileInfo(_watchedPrefabPath));
 
-        _fileWatcherService.Start(new FileInfo(path));
-    }
-
-    private void AttachPreviewInteractions(FrameworkElement? root)
-    {
-        if (_interactivePreviewRoot is not null)
-            _interactivePreviewRoot.PreviewMouseLeftButtonDown -= PreviewRootOnPreviewMouseLeftButtonDown;
-
-        _interactivePreviewRoot = root;
-        if (_interactivePreviewRoot is not null)
-            _interactivePreviewRoot.PreviewMouseLeftButtonDown += PreviewRootOnPreviewMouseLeftButtonDown;
-    }
-
-    private void PreviewRootOnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.OriginalSource is not DependencyObject originalSource) return;
-
-        var element = FindDebugElement(originalSource);
-        if (element is null) return;
-
-        SelectPreviewElement(element);
-    }
-
-    private FrameworkElement? FindDebugElement(DependencyObject? current)
-    {
-        while (current is not null)
-        {
-            if (current is FrameworkElement element &&
-                PreviewElementDebugProperties.GetDebugInfo(element) is not null)
-                return element;
-
-            current = current switch
-            {
-                Visual visual => VisualTreeHelper.GetParent(visual),
-                Visual3D visual3D => VisualTreeHelper.GetParent(visual3D),
-                FrameworkContentElement contentElement => contentElement.Parent,
-                _ => null
-            };
-        }
-
-        return null;
-    }
-
-    private void SelectPreviewElement(FrameworkElement element)
-    {
-        if (_isSynchronizingSelection) return;
-
-        _isSynchronizingSelection = true;
-        try
-        {
-            if (!ReferenceEquals(_selectedPreviewElement, element))
-            {
-                ClearPreviewSelection();
-
-                _selectedPreviewElement = element;
-                _selectedPreviewAdornerLayer = AdornerLayer.GetAdornerLayer(element);
-                if (_selectedPreviewAdornerLayer is not null)
-                {
-                    _selectedPreviewAdorner = new SelectionBorderAdorner(element);
-                    _selectedPreviewAdornerLayer.Add(_selectedPreviewAdorner);
-                }
-            }
-
-            SelectedElementInfo = SelectedElementInfoViewModel.FromDebugInfo(
-                PreviewElementDebugProperties.GetDebugInfo(element));
-            SetSelectedPreviewTreeNode(_previewTreeLookup.GetValueOrDefault(element));
-        }
-        finally
-        {
-            _isSynchronizingSelection = false;
-        }
-    }
-
-    private void ClearPreviewSelection()
-    {
-        if (_selectedPreviewAdornerLayer is not null && _selectedPreviewAdorner is not null)
-            _selectedPreviewAdornerLayer.Remove(_selectedPreviewAdorner);
-
-        _selectedPreviewElement = null;
-        _selectedPreviewAdornerLayer = null;
-        _selectedPreviewAdorner = null;
-        SetSelectedPreviewTreeNode(null);
-    }
-
-    private void PopulateBindings(PrefabDocument document)
-    {
-        _isPopulatingBindings = true;
-        try
-        {
-            Bindings.Clear();
-            foreach (var key in document.BindingKeys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase))
-            {
-                var value = PrefabRenderContext.ResolveMockBindingValue(key);
-                PrefabRenderContext.SetMockBindingValue(key, value);
-                Bindings.Add(new EditableBindingViewModel(key, value, OnBindingValueChanged));
-            }
-        }
-        finally
-        {
-            _isPopulatingBindings = false;
-        }
-    }
-
-    private void PopulateMocks(PrefabDocument document)
-    {
-        var previousItems = string.Equals(
-            _mockDocumentSourcePath,
-            document.SourcePath,
-            StringComparison.OrdinalIgnoreCase)
-            ? Mocks.ToDictionary(
-                static mock => mock.TargetKey,
-                static mock => mock.CreateSnapshot(),
-                StringComparer.OrdinalIgnoreCase)
-            : new Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>(
-                StringComparer.OrdinalIgnoreCase);
-
-        Mocks.Clear();
-        _mockDocumentSourcePath = document.SourcePath;
-        foreach (var target in FindTemplateMockTargets(document.RootNode))
-        {
-            IReadOnlyList<IReadOnlyDictionary<string, string>> items;
-            if (previousItems.TryGetValue(target.TargetKey, out var preservedItems))
-            {
-                items = preservedItems;
-            }
-            else if (_previewDataSourceProvider.TryGetTemplateItemBindings(target.Node, out var providedItems))
-            {
-                items = providedItems;
-            }
-            else
-            {
-                items =
-                [
-                    target.FieldKeys.ToDictionary(
-                        static key => key,
-                        static key => PrefabRenderContext.ResolveMockBindingValue(key),
-                        StringComparer.OrdinalIgnoreCase)
-                ];
-            }
-
-            var mock = new EditableListMockViewModel(
-                target.TargetKey,
-                target.DisplayName,
-                target.Description,
-                target.Node,
-                target.FieldKeys,
-                items,
-                PrefabRenderContext.ResolveMockBindingValue,
-                OnMockChanged);
-            Mocks.Add(mock);
-            ApplyMock(mock);
-        }
-    }
-
-    private static IEnumerable<TemplateMockTarget> FindTemplateMockTargets(PrefabNode root)
-    {
-        return FindTemplateMockTargets(root, "0");
-    }
-
-    private static IEnumerable<TemplateMockTarget> FindTemplateMockTargets(PrefabNode node, string path)
-    {
-        var template = node.Children.OfType<ItemTemplateNode>().FirstOrDefault();
-        if (template is not null && IsTemplateMockNode(node))
-        {
-            node.Attributes.TryGetValue("Id", out var id);
-            node.Attributes.TryGetValue("DataSource", out var dataSource);
-            var displayName = !string.IsNullOrWhiteSpace(id)
-                ? id
-                : !string.IsNullOrWhiteSpace(dataSource)
-                    ? dataSource
-                    : node.Name;
-            var descriptionParts = new[] { node.Name, dataSource }
-                .Where(static part => !string.IsNullOrWhiteSpace(part));
-            yield return new TemplateMockTarget(
-                path,
-                displayName,
-                string.Join(" · ", descriptionParts),
-                node,
-                FindTemplateBindingKeys(template));
-        }
-
-        for (var index = 0; index < node.Children.Count; index++)
-        {
-            foreach (var target in FindTemplateMockTargets(node.Children[index], $"{path}.{index}"))
-            {
-                yield return target;
-            }
-        }
-    }
-
-    private static bool IsTemplateMockNode(PrefabNode node)
-    {
-        return node is ListPanelNode or NavigatableListPanelNode or GridWidgetNode;
-    }
-
-    private static IReadOnlyList<string> FindTemplateBindingKeys(PrefabNode template)
-    {
-        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        CollectTemplateBindingKeys(template, keys);
-        return keys.OrderBy(static key => key, StringComparer.OrdinalIgnoreCase).ToArray();
-    }
-
-    private static void CollectTemplateBindingKeys(PrefabNode node, ISet<string> keys)
-    {
-        foreach (var value in node.Attributes.Values)
-        {
-            if (value.Length > 1 && value[0] == '@')
-            {
-                keys.Add(value[1..]);
-            }
-        }
-
-        foreach (var child in node.Children)
-        {
-            CollectTemplateBindingKeys(child, keys);
-        }
-    }
-
-    private void OnMockChanged(EditableListMockViewModel mock)
-    {
-        ApplyMock(mock);
-        ReRenderCurrentDocument();
-    }
-
-    private void ApplyMock(EditableListMockViewModel mock)
-    {
-        _previewDataSourceProvider.SetTemplateItemBindings(mock.TargetNode, mock.CreateSnapshot());
-    }
-
-    private void OnBindingValueChanged(EditableBindingViewModel binding)
-    {
-        if (_isPopulatingBindings) return;
-
-        PrefabRenderContext.SetMockBindingValue(binding.Key, binding.Value);
-        if (!string.IsNullOrWhiteSpace(BindingsFilter))
-        {
-            BindingsView.Refresh();
-        }
-
-        ReRenderCurrentDocument();
-    }
-
-    private bool FilterBinding(object item)
-    {
-        if (item is not EditableBindingViewModel binding)
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(BindingsFilter))
-        {
-            return true;
-        }
-
-        return binding.Key.Contains(BindingsFilter, StringComparison.OrdinalIgnoreCase) ||
-               binding.DisplayKey.Contains(BindingsFilter, StringComparison.OrdinalIgnoreCase) ||
-               binding.Value.Contains(BindingsFilter, StringComparison.OrdinalIgnoreCase);
+        _fileWatcherService.Start(new FileInfo(fullPath));
+        _watchedPrefabPath = fullPath;
     }
 
     private void ReRenderCurrentDocument()
@@ -690,86 +421,32 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private void RenderPreview(PrefabDocument document, PreviewDiagnostics diagnostics)
     {
-        ClearPreviewSelection();
-        PreviewContent = _prefabRenderer.Render(document, diagnostics);
-        AttachPreviewInteractions(PreviewContent);
-        RebuildPreviewTree(PreviewContent);
-        DiagnosticsText = diagnostics.ToDisplayText();
-        SelectedElementInfo = SelectedElementInfoViewModel.Empty(
-            "Click an element in the preview to inspect its layout and assets.");
+        _currentDiagnostics = diagnostics;
+        using (diagnostics.MeasurePhase("MainWindow.Render.Renderer"))
+            PreviewContent = _prefabRenderer.Render(document, diagnostics);
+        using (diagnostics.MeasurePhase("MainWindow.Render.PreviewInspector"))
+            PreviewInspector.Attach(PreviewContent);
+        using (diagnostics.MeasurePhase("MainWindow.Render.DiagnosticsText"))
+            DiagnosticsText = diagnostics.ToDisplayText();
     }
 
-    public void SelectPreviewTreeNode(PreviewTreeNodeViewModel? node)
+    private void StartEnvironmentWarmUp()
     {
-        if (node?.Element is null || _isSynchronizingSelection) return;
-
-        SelectPreviewElement(node.Element);
+        _ = WarmEnvironmentAsync();
     }
 
-    private void RebuildPreviewTree(FrameworkElement? root)
+    private async Task WarmEnvironmentAsync()
     {
-        ClearPreviewTree();
-        if (root is null) return;
-
-        foreach (var node in BuildPreviewTreeNodes(root)) PreviewTree.Add(node);
-    }
-
-    private void ClearPreviewTree()
-    {
-        PreviewTree.Clear();
-        _previewTreeLookup.Clear();
-        _selectedPreviewTreeNode = null;
-    }
-
-    private IEnumerable<PreviewTreeNodeViewModel> BuildPreviewTreeNodes(DependencyObject current)
-    {
-        var currentNode = TryCreatePreviewTreeNode(current);
-        var childNodes = new List<PreviewTreeNodeViewModel>();
-
-        if (current is Visual or Visual3D)
+        try
         {
-            var childCount = VisualTreeHelper.GetChildrenCount(current);
-            for (var index = 0; index < childCount; index++)
-            {
-                var child = VisualTreeHelper.GetChild(current, index);
-                childNodes.AddRange(BuildPreviewTreeNodes(child));
-            }
+            await _environmentInitializer.WarmUpAsync();
         }
-
-        if (currentNode is null) return childNodes;
-
-        foreach (var childNode in childNodes) currentNode.AddChild(childNode);
-
-        return [currentNode];
-    }
-
-    private PreviewTreeNodeViewModel? TryCreatePreviewTreeNode(DependencyObject current)
-    {
-        if (current is not FrameworkElement element) return null;
-
-        var debugInfo = PreviewElementDebugProperties.GetDebugInfo(element);
-        if (debugInfo is null) return null;
-
-        var label = PreviewElementDebugProperties.GetTreeLabel(element);
-        var node = new PreviewTreeNodeViewModel(
-            string.IsNullOrWhiteSpace(label) ? element.GetType().Name : label,
-            element);
-        _previewTreeLookup[element] = node;
-        return node;
-    }
-
-    private void SetSelectedPreviewTreeNode(PreviewTreeNodeViewModel? node)
-    {
-        if (ReferenceEquals(_selectedPreviewTreeNode, node)) return;
-
-        if (_selectedPreviewTreeNode is not null) _selectedPreviewTreeNode.IsSelected = false;
-
-        _selectedPreviewTreeNode = node;
-
-        if (_selectedPreviewTreeNode is not null)
+        catch (OperationCanceledException)
         {
-            _selectedPreviewTreeNode.ExpandPath();
-            _selectedPreviewTreeNode.IsSelected = true;
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Preview environment warm-up failed: {exception}");
         }
     }
 
@@ -806,12 +483,17 @@ public sealed class MainWindowViewModel : ViewModelBase
         return value.ToString("0.##", CultureInfo.InvariantCulture);
     }
 
-    private sealed record TemplateMockTarget(
-        string TargetKey,
-        string DisplayName,
-        string Description,
-        PrefabNode Node,
-        IReadOnlyList<string> FieldKeys);
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _fileWatcherService.FileChanged -= FileWatcherServiceOnFileChanged;
+        if (!string.IsNullOrWhiteSpace(_watchedPrefabPath))
+            _fileWatcherService.Stop(new FileInfo(_watchedPrefabPath));
+        _loadCoordinator.Dispose();
+    }
+
+    private sealed record LoadedPrefab(PrefabDocument Document, PreviewDiagnostics Diagnostics);
 
     #endregion
 }

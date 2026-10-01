@@ -1,5 +1,6 @@
 using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Models;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -8,6 +9,8 @@ namespace Bannerlord.XmlPreview.Adapters.Bannerlord;
 
 public interface IBannerlordWidgetReflectionService
 {
+    Task WarmUpAsync(CancellationToken cancellationToken = default);
+
     bool TryGetRenderKind(string widgetName, out BannerlordWidgetRenderKind renderKind);
 
     bool TryGetWidgetType(string widgetName, out Type widgetType);
@@ -31,17 +34,39 @@ public enum BannerlordWidgetRenderKind
 public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflectionService
 {
     private readonly IAppSettingsService _appSettingsService;
+    private readonly IBannerlordInstallationIndex _installationIndex;
     private readonly object _sync = new();
     private WidgetReflectionSnapshot? _snapshot;
 
-    public BannerlordWidgetReflectionService(IAppSettingsService appSettingsService)
+    public BannerlordWidgetReflectionService(
+        IAppSettingsService appSettingsService,
+        IBannerlordInstallationIndex installationIndex)
     {
         _appSettingsService = appSettingsService;
+        _installationIndex = installationIndex;
+    }
+
+    public Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _ = GetSnapshot();
+            },
+            cancellationToken);
     }
 
     public bool TryGetRenderKind(string widgetName, out BannerlordWidgetRenderKind renderKind)
     {
         var snapshot = GetSnapshot();
+        if (snapshot is not null &&
+            snapshot.RenderKindsByWidgetName.TryGetValue(widgetName, out renderKind))
+        {
+            return true;
+        }
+
+        snapshot = EnsureModuleWidgetsLoaded(snapshot);
         if (snapshot is not null &&
             snapshot.RenderKindsByWidgetName.TryGetValue(widgetName, out renderKind))
         {
@@ -55,6 +80,13 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
     public bool TryGetWidgetType(string widgetName, out Type widgetType)
     {
         var snapshot = GetSnapshot();
+        if (snapshot is not null &&
+            snapshot.WidgetTypesByName.TryGetValue(widgetName, out widgetType!))
+        {
+            return true;
+        }
+
+        snapshot = EnsureModuleWidgetsLoaded(snapshot);
         if (snapshot is not null &&
             snapshot.WidgetTypesByName.TryGetValue(widgetName, out widgetType!))
         {
@@ -95,11 +127,12 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         }
     }
 
-    private static WidgetReflectionSnapshot? BuildSnapshot(string installRoot)
+    private WidgetReflectionSnapshot? BuildSnapshot(string installRoot)
     {
         using var totalTiming = PreviewDiagnostics.MeasureCurrentPhase("BannerlordWidgetReflectionService.BuildSnapshot.Total");
 
-        var assemblyPathsByName = CollectAssemblyPaths(installRoot);
+        var assemblyPathsByName = CollectAssemblyPaths(
+            _installationIndex.GetSnapshot(installRoot).AssemblyFiles);
         if (assemblyPathsByName.Count == 0)
         {
             return null;
@@ -107,9 +140,15 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
 
         var loadContext = new WidgetReflectionLoadContext(assemblyPathsByName);
         var loadedAssemblies = new List<Assembly>();
+        var moduleAssemblyPaths = assemblyPathsByName.Values
+            .Where(IsModuleAssembly)
+            .ToArray();
+        var scanAssemblyPaths = assemblyPathsByName.Values
+            .Where(path => !IsModuleAssembly(path) && IsWidgetAssemblyCandidate(path))
+            .ToArray();
         using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordWidgetReflectionService.BuildSnapshot.LoadAssemblies"))
         {
-            foreach (var assemblyPath in assemblyPathsByName.Values)
+            foreach (var assemblyPath in scanAssemblyPaths)
             {
                 try
                 {
@@ -130,8 +169,8 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
             return null;
         }
 
-        var widgetTypesByName = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
-        var renderKindsByWidgetName = new Dictionary<string, BannerlordWidgetRenderKind>(StringComparer.OrdinalIgnoreCase);
+        var widgetTypesByName = new ConcurrentDictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+        var renderKindsByWidgetName = new ConcurrentDictionary<string, BannerlordWidgetRenderKind>(StringComparer.OrdinalIgnoreCase);
         using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordWidgetReflectionService.BuildSnapshot.ScanWidgetTypes"))
         {
             foreach (var assembly in loadedAssemblies)
@@ -163,14 +202,61 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
                 loadContext,
                 widgetBaseType,
                 widgetTypesByName,
-                renderKindsByWidgetName);
+                renderKindsByWidgetName,
+                moduleAssemblyPaths);
     }
 
-    private static Dictionary<string, string> CollectAssemblyPaths(string installRoot)
+    private WidgetReflectionSnapshot? EnsureModuleWidgetsLoaded(WidgetReflectionSnapshot? snapshot)
+    {
+        if (snapshot is null || snapshot.ModulesLoaded) return snapshot;
+
+        lock (_sync)
+        {
+            if (!ReferenceEquals(snapshot, _snapshot)) return _snapshot;
+            if (snapshot.ModulesLoaded) return snapshot;
+
+            using var timing = PreviewDiagnostics.MeasureCurrentPhase(
+                "BannerlordWidgetReflectionService.LoadModuleWidgets.Total");
+            foreach (var assemblyPath in snapshot.ModuleAssemblyPaths)
+            {
+                try
+                {
+                    var assembly = snapshot.LoadContext.LoadFromAssemblyPath(assemblyPath);
+                    AddWidgetTypes(
+                        assembly,
+                        snapshot.WidgetBaseType,
+                        snapshot.WidgetTypesByName,
+                        snapshot.RenderKindsByWidgetName);
+                }
+                catch
+                {
+                }
+            }
+
+            snapshot.ModulesLoaded = true;
+            return snapshot;
+        }
+    }
+
+    private static bool IsWidgetAssemblyCandidate(string assemblyPath)
+    {
+        return Path.GetFileName(assemblyPath)
+            .Contains("GauntletUI", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsModuleAssembly(string assemblyPath)
+    {
+        return assemblyPath.Contains(
+            $"{Path.DirectorySeparatorChar}Modules{Path.DirectorySeparatorChar}",
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, string> CollectAssemblyPaths(
+        IEnumerable<string> assemblyPaths)
     {
         using var timing = PreviewDiagnostics.MeasureCurrentPhase("BannerlordWidgetReflectionService.BuildSnapshot.CollectAssemblyPaths");
         var pathsByAssemblyName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var assemblyPath in EnumerateAssemblyPaths(installRoot))
+        foreach (var assemblyPath in assemblyPaths)
         {
             try
             {
@@ -188,42 +274,6 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         return pathsByAssemblyName;
     }
 
-    private static IEnumerable<string> EnumerateAssemblyPaths(string installRoot)
-    {
-        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var directory in GetAssemblyDirectories(installRoot))
-        {
-            if (!Directory.Exists(directory))
-            {
-                continue;
-            }
-
-            foreach (var path in Directory.EnumerateFiles(directory, "*.dll", SearchOption.TopDirectoryOnly))
-            {
-                if (seenPaths.Add(path))
-                {
-                    yield return Path.GetFullPath(path);
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<string> GetAssemblyDirectories(string installRoot)
-    {
-        yield return Path.Combine(installRoot, "bin", "Win64_Shipping_Client");
-
-        var modulesPath = Path.Combine(installRoot, "Modules");
-        if (!Directory.Exists(modulesPath))
-        {
-            yield break;
-        }
-
-        foreach (var modulePath in Directory.EnumerateDirectories(modulesPath))
-        {
-            yield return Path.Combine(modulePath, "bin", "Win64_Shipping_Client");
-        }
-    }
-
     private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
     {
         try
@@ -237,6 +287,28 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         catch
         {
             return Array.Empty<Type>();
+        }
+    }
+
+    private static void AddWidgetTypes(
+        Assembly assembly,
+        Type widgetBaseType,
+        IDictionary<string, Type> widgetTypesByName,
+        IDictionary<string, BannerlordWidgetRenderKind> renderKindsByWidgetName)
+    {
+        foreach (var type in GetLoadableTypes(assembly))
+        {
+            if (!type.IsClass ||
+                type.IsAbstract ||
+                !widgetBaseType.IsAssignableFrom(type))
+            {
+                continue;
+            }
+
+            widgetTypesByName.TryAdd(type.Name, type);
+            var renderKind = ClassifyRenderKind(type);
+            if (renderKind != BannerlordWidgetRenderKind.Unknown)
+                renderKindsByWidgetName.TryAdd(type.Name, renderKind);
         }
     }
 
@@ -289,10 +361,20 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         }
     }
 
-    private sealed record WidgetReflectionSnapshot(
-        string InstallRoot,
-        WidgetReflectionLoadContext LoadContext,
-        Type WidgetBaseType,
-        IReadOnlyDictionary<string, Type> WidgetTypesByName,
-        IReadOnlyDictionary<string, BannerlordWidgetRenderKind> RenderKindsByWidgetName);
+    private sealed class WidgetReflectionSnapshot(
+        string installRoot,
+        WidgetReflectionLoadContext loadContext,
+        Type widgetBaseType,
+        ConcurrentDictionary<string, Type> widgetTypesByName,
+        ConcurrentDictionary<string, BannerlordWidgetRenderKind> renderKindsByWidgetName,
+        IReadOnlyList<string> moduleAssemblyPaths)
+    {
+        public string InstallRoot { get; } = installRoot;
+        public WidgetReflectionLoadContext LoadContext { get; } = loadContext;
+        public Type WidgetBaseType { get; } = widgetBaseType;
+        public ConcurrentDictionary<string, Type> WidgetTypesByName { get; } = widgetTypesByName;
+        public ConcurrentDictionary<string, BannerlordWidgetRenderKind> RenderKindsByWidgetName { get; } = renderKindsByWidgetName;
+        public IReadOnlyList<string> ModuleAssemblyPaths { get; } = moduleAssemblyPaths;
+        public bool ModulesLoaded { get; set; }
+    }
 }

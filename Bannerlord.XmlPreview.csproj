@@ -19,6 +19,7 @@
         <Compile Remove="Bannerlord.XmlPreview.DemoData\**\*.cs"/>
         <Compile Remove="Bannerlord.XmlPreview.Core\**\*.cs"/>
         <Compile Remove="Bannerlord.XmlPreview.Bannerlord\**\*.cs"/>
+        <Compile Remove="Bannerlord.XmlPreview.Tests\**\*.cs"/>
         <Compile Remove="Models\**\*.cs"/>
         <Compile Remove="Rendering\PreviewElementDebugProperties.cs"/>
         <Compile Remove="Rendering\PrefabRenderContext.cs"/>

@@ -73,10 +73,8 @@ public abstract class ContainerPrefabNode : PrefabNode
         Rect childLayoutRect = Rect.Empty;
         Rect selectionRect = Rect.Empty;
 
-        Size RenderContent(Size? overrideContainerSize = null)
+        Size LayoutContent(bool renderChildren, Size? overrideContainerSize = null)
         {
-            childCanvas.Children.Clear();
-
             var baseContainerSize = overrideContainerSize ?? context.ResolveElementRenderSize(border, measureInput);
             selectionRect = !string.IsNullOrWhiteSpace(spriteId)
                 ? context.ResolveSpriteSelectionRect(spriteId, baseContainerSize)
@@ -88,23 +86,36 @@ public abstract class ContainerPrefabNode : PrefabNode
                 ? new Point(0, -Math.Max(0, selectionRect.Y))
                 : new Point(0, 0);
             childLayoutRect = new Rect(childOrigin, baseContainerSize);
-            context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
+            if (renderChildren)
+            {
+                childCanvas.Children.Clear();
+                context.AttachChildren(childCanvas, Children, childLayoutRect.Size, childLayoutRect.Location);
+            }
+            else
+            {
+                context.RelayoutCanvasChildren(
+                    childCanvas,
+                    Children,
+                    childLayoutRect.Size,
+                    childLayoutRect.Location);
+            }
 
             var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
-            context.ApplyCanvasLayout(childCanvas, contentBounds);
+            if (renderChildren)
+                context.ApplyCanvasLayout(childCanvas, contentBounds);
             return context.TryMeasureReferencedElement(Attributes, "InnerPanel", childLayoutRect.Size, out var innerPanelSize)
                 ? innerPanelSize
                 : contentBounds.IsEmpty ? new Size(0, 0) : contentBounds.Size;
         }
 
-        var contentSize = RenderContent(new Size(
+        var contentSize = LayoutContent(true, new Size(
             containerSize.Width > 0 ? containerSize.Width : measureInput.Width,
             containerSize.Height > 0 ? containerSize.Height : measureInput.Height));
         containerSize = context.FinalizeCoverChildrenSize(
             border,
             Attributes,
             contentSize,
-            () => RenderContent());
+            () => LayoutContent(false));
 
         PreviewElementDebugProperties.SetSelectionBounds(border, selectionRect);
 

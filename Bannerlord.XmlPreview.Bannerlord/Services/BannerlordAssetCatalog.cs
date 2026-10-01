@@ -12,15 +12,101 @@ namespace Bannerlord.XmlPreview.Services;
 public sealed class BannerlordAssetCatalog : IAssetCatalog
 {
     private readonly IAppSettingsService _settingsService;
+    private readonly IBannerlordInstallationIndex _installationIndex;
     private readonly Dictionary<string, ImageSource> _spriteImageCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _spriteImageCacheLock = new();
     private readonly object _snapshotLock = new();
     private AssetSnapshot? _snapshot;
     private string? _snapshotInstallRoot;
 
-    public BannerlordAssetCatalog(IAppSettingsService settingsService)
+    public BannerlordAssetCatalog(
+        IAppSettingsService settingsService,
+        IBannerlordInstallationIndex installationIndex)
     {
         _settingsService = settingsService;
+        _installationIndex = installationIndex;
+    }
+
+    public Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.Run(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _ = GetSnapshot();
+            },
+            cancellationToken);
+    }
+
+    public Task WarmUpAssetsAsync(
+        IReadOnlyCollection<string> brushNames,
+        IReadOnlyCollection<string> spriteNames,
+        CancellationToken cancellationToken = default)
+    {
+        using (ExecutionContext.SuppressFlow())
+        {
+            return Task.Run(
+                () => WarmUpAssets(brushNames, spriteNames, cancellationToken),
+                cancellationToken);
+        }
+    }
+
+    private void WarmUpAssets(
+        IEnumerable<string> brushNames,
+        IEnumerable<string> spriteNames,
+        CancellationToken cancellationToken)
+    {
+        var snapshot = GetSnapshot();
+        var requiredSprites = new HashSet<string>(
+            spriteNames.Where(IsStaticAssetName),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var brushName in brushNames.Where(IsStaticAssetName).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!snapshot.Brushes.TryGetValue(brushName, out var brush)) continue;
+
+            foreach (var layer in brush.Layers)
+            {
+                AddSpriteName(requiredSprites, layer.SpriteName);
+                AddSpriteName(requiredSprites, layer.OverlaySpriteName);
+            }
+
+            foreach (var style in brush.Styles.Values)
+            {
+                foreach (var layer in style.LayerOverrides.Values)
+                {
+                    AddSpriteName(requiredSprites, layer.SpriteName);
+                    AddSpriteName(requiredSprites, layer.OverlaySpriteName);
+                }
+            }
+        }
+
+        foreach (var spriteName in requiredSprites)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                _ = GetSpriteImage(spriteName);
+            }
+            catch (IOException)
+            {
+            }
+            catch (NotSupportedException)
+            {
+            }
+        }
+    }
+
+    private static void AddSpriteName(ISet<string> spriteNames, string? spriteName)
+    {
+        if (IsStaticAssetName(spriteName)) spriteNames.Add(spriteName!);
+    }
+
+    private static bool IsStaticAssetName(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               value[0] is not ('@' or '!' or '*');
     }
 
     public SpriteDefinition? FindSprite(string? spriteName)
@@ -135,7 +221,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         }
     }
 
-    private static AssetSnapshot LoadSnapshot(string installRoot)
+    private AssetSnapshot LoadSnapshot(string installRoot)
     {
         using var totalTiming = PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSnapshot.Total");
         var spriteParts = new Dictionary<string, SpritePartDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -143,15 +229,11 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         var brushes = new Dictionary<string, BrushDefinition>(StringComparer.OrdinalIgnoreCase);
         var spriteImages = LoadSpriteImages(installRoot);
 
-        var modulesPath = Path.Combine(installRoot, "Modules");
-        if (!Directory.Exists(modulesPath))
-        {
-            return new AssetSnapshot(sprites, brushes, spriteImages);
-        }
+        var installationSnapshot = _installationIndex.GetSnapshot(installRoot);
 
         using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSnapshot.SpriteDataFiles"))
         {
-            foreach (var spriteDataPath in Directory.EnumerateFiles(modulesPath, "*SpriteData.xml", SearchOption.AllDirectories))
+            foreach (var spriteDataPath in installationSnapshot.SpriteDataFiles)
             {
                 LoadSpriteData(spriteDataPath, spriteParts, sprites);
             }
@@ -159,8 +241,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
 
         using (PreviewDiagnostics.MeasureCurrentPhase("BannerlordAssetCatalog.LoadSnapshot.BrushXmlFiles"))
         {
-            foreach (var brushPath in Directory.EnumerateFiles(modulesPath, "*.xml", SearchOption.AllDirectories)
-                         .Where(path => path.Contains($"{Path.DirectorySeparatorChar}GUI{Path.DirectorySeparatorChar}Brushes{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)))
+            foreach (var brushPath in installationSnapshot.BrushFiles)
             {
                 LoadBrushData(brushPath, brushes);
             }
@@ -182,11 +263,14 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         BitmapSource bitmap;
         using (var stream = File.OpenRead(imagePath))
         {
-            var decoder = new PngBitmapDecoder(
-                stream,
-                BitmapCreateOptions.PreservePixelFormat,
-                BitmapCacheOption.OnLoad);
-            bitmap = decoder.Frames[0];
+            var source = new BitmapImage();
+            source.BeginInit();
+            source.CacheOption = BitmapCacheOption.OnLoad;
+            source.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
+            source.StreamSource = stream;
+            source.EndInit();
+            source.Freeze();
+            bitmap = source;
         }
 
         if (bitmap.Format != PixelFormats.Pbgra32)
@@ -214,8 +298,8 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         {
             foreach (var root in EnumerateSpriteImageRoots())
             {
-                IndexManifest(root, exactMatches, baseNameCandidates);
-                IndexPngFiles(root, exactMatches, baseNameCandidates);
+                if (!IndexManifest(root, exactMatches, baseNameCandidates))
+                    IndexPngFiles(root, exactMatches, baseNameCandidates);
             }
         }
 
@@ -255,7 +339,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         }
     }
 
-    private static void IndexManifest(
+    private static bool IndexManifest(
         string root,
         Dictionary<string, string> exactMatches,
         Dictionary<string, HashSet<string>> baseNameCandidates)
@@ -264,9 +348,10 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         var manifestPath = Path.Combine(root, "_manifest.csv");
         if (!File.Exists(manifestPath))
         {
-            return;
+            return false;
         }
 
+        var indexedAny = false;
         foreach (var line in File.ReadLines(manifestPath).Skip(1))
         {
             var parts = line.Split(',', 7);
@@ -284,7 +369,10 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
 
             AddExactMatch(exactMatches, spriteName, imagePath);
             RegisterBaseNameCandidate(baseNameCandidates, spriteName, imagePath);
+            indexedAny = true;
         }
+
+        return indexedAny;
     }
 
     private static void IndexPngFiles(
@@ -320,19 +408,31 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
             {
                 foreach (var key in GetModuleSpriteKeys(modulePath, modulesPath, filePath))
                 {
-                    AddExactMatch(exactMatches, key, filePath);
-                    RegisterBaseNameCandidate(baseNameCandidates, key, filePath);
+                    AddExactMatch(exactMatches, key, filePath, replaceMissing: true);
+                    RegisterBaseNameCandidate(
+                        baseNameCandidates,
+                        key,
+                        filePath,
+                        removeMissingCandidates: true);
                 }
             }
         }
     }
 
-    private static void AddExactMatch(Dictionary<string, string> exactMatches, string key, string imagePath)
+    private static void AddExactMatch(
+        Dictionary<string, string> exactMatches,
+        string key,
+        string imagePath,
+        bool replaceMissing = false)
     {
-        if (string.IsNullOrWhiteSpace(key) || !File.Exists(imagePath) || exactMatches.ContainsKey(key))
+        if (string.IsNullOrWhiteSpace(key))
         {
             return;
         }
+
+        if (exactMatches.TryGetValue(key, out var existingPath) &&
+            (!replaceMissing || File.Exists(existingPath)))
+            return;
 
         exactMatches[key] = imagePath;
     }
@@ -340,9 +440,10 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
     private static void RegisterBaseNameCandidate(
         Dictionary<string, HashSet<string>> baseNameCandidates,
         string key,
-        string imagePath)
+        string imagePath,
+        bool removeMissingCandidates = false)
     {
-        if (string.IsNullOrWhiteSpace(key) || !File.Exists(imagePath))
+        if (string.IsNullOrWhiteSpace(key))
         {
             return;
         }
@@ -357,6 +458,10 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         {
             paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             baseNameCandidates[baseName] = paths;
+        }
+        else if (removeMissingCandidates)
+        {
+            paths.RemoveWhere(path => !File.Exists(path));
         }
 
         paths.Add(imagePath);
@@ -488,12 +593,16 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
 
     private static bool TryGetSpriteImagePath(SpriteImageIndex index, string key, bool useBaseName, out string imagePath)
     {
-        if (!useBaseName && index.ExactMatches.TryGetValue(key, out imagePath!))
+        if (!useBaseName &&
+            index.ExactMatches.TryGetValue(key, out imagePath!) &&
+            File.Exists(imagePath))
         {
             return true;
         }
 
-        if (useBaseName && index.UniqueBaseNameMatches.TryGetValue(key, out imagePath!))
+        if (useBaseName &&
+            index.UniqueBaseNameMatches.TryGetValue(key, out imagePath!) &&
+            File.Exists(imagePath))
         {
             return true;
         }

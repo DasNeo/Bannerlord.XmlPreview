@@ -12,6 +12,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Bannerlord.XmlPreview.Rendering;
 
@@ -19,13 +20,15 @@ public sealed class PrefabRenderContext
 {
     private const byte SignificantAlphaThreshold = 64;
     private const byte ContentCoreAlphaThreshold = 192;
-    private const int MaxRenderedNodeCount = 5000;
+    private const int MaxRenderedNodeCount = 10000;
     private const string WidgetPathSeparator = " > ";
-    private readonly Dictionary<string, Int32Rect?> _spriteOpaqueBoundsCache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, (int Top, int Bottom)?> _spriteCoreVerticalBoundsCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConditionalWeakTable<BitmapSource, SpritePixelBounds> SpritePixelBoundsCache = new();
     private readonly Dictionary<string, SpriteDefinition?> _spriteDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<FrameworkElement, Rect?> _alignmentBoundsByElement = [];
     private readonly Dictionary<string, BrushDefinition?> _brushDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, BrushDebugInfo> _brushDebugInfoCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<BrushLayerDefinition>> _visibleBrushLayersCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Brush> _renderBrushCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SpriteAssetResolution> _spriteAssetResolutionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RenderedWidgetRegistration> _renderedWidgetsByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<IReadOnlyDictionary<string, string>> _bindingScopes = [];
@@ -1893,11 +1896,12 @@ public sealed class PrefabRenderContext
             return new Rect(new Point(0, 0), renderedSize);
         }
 
-        var layer = ResolveVisibleBrushLayers(brushName, isDisabled)
+        var visibleLayers = ResolveVisibleBrushLayers(brushName, isDisabled);
+        var layer = visibleLayers
             .FirstOrDefault(candidate =>
                 string.Equals(candidate.Name, "Default", StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrWhiteSpace(candidate.SpriteName))
-            ?? ResolveVisibleBrushLayers(brushName, isDisabled)
+            ?? visibleLayers
                 .FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate.SpriteName));
         if (layer is null)
         {
@@ -1941,8 +1945,7 @@ public sealed class PrefabRenderContext
             return null;
         }
 
-        var cacheKey = spriteAsset.MatchedKey ?? spriteAsset.RequestedName;
-        return GetSpriteOpaqueBounds(cacheKey, spriteImage);
+        return GetSpriteOpaqueBounds(spriteImage);
     }
 
     private (int Top, int Bottom)? ResolveSpriteCoreVerticalBounds(string? spriteName)
@@ -1967,8 +1970,7 @@ public sealed class PrefabRenderContext
             return null;
         }
 
-        var cacheKey = spriteAsset.MatchedKey ?? spriteAsset.RequestedName;
-        return GetSpriteCoreVerticalBounds(cacheKey, spriteImage);
+        return GetSpriteCoreVerticalBounds(spriteImage);
     }
 
     public FrameworkElement? CreateBrushOverlay(string? brushName, bool isDisabled, double referenceWidth, double referenceHeight)
@@ -2533,8 +2535,10 @@ public sealed class PrefabRenderContext
         }
 
         _renderBudgetExceeded = true;
-        _diagnostics.Add(
-            $"Render node budget of {MaxRenderedNodeCount} was reached. Remaining descendant widgets were skipped to keep the preview responsive.");
+        var reason =
+            $"Render node budget of {MaxRenderedNodeCount} was reached. Remaining descendant widgets were skipped to keep the preview responsive.";
+        _diagnostics.MarkTruncated(reason);
+        _diagnostics.Add(reason);
         return false;
     }
 
@@ -2931,14 +2935,20 @@ public sealed class PrefabRenderContext
             return new BrushDebugInfo(string.Empty, null, false, []);
         }
 
+        var cacheKey = CreateBrushStateCacheKey(brushName, isDisabled);
+        if (_brushDebugInfoCache.TryGetValue(cacheKey, out var cachedInfo))
+            return cachedInfo;
+
         var brushDefinition = FindBrush(brushName);
         if (brushDefinition is null)
         {
-            return new BrushDebugInfo(
+            var missingInfo = new BrushDebugInfo(
                 brushName,
                 null,
                 PanelBrushes.ContainsKey(brushName) || TextBrushes.ContainsKey(brushName),
                 []);
+            _brushDebugInfoCache[cacheKey] = missingInfo;
+            return missingInfo;
         }
 
         var style = ResolveBrushStyle(brushDefinition, isDisabled);
@@ -2952,14 +2962,24 @@ public sealed class PrefabRenderContext
             .Where(layer => layer.IsHidden != true)
             .ToArray();
 
-        return new BrushDebugInfo(brushName, brushDefinition, false, visibleLayers);
+        var info = new BrushDebugInfo(brushName, brushDefinition, false, visibleLayers);
+        _brushDebugInfoCache[cacheKey] = info;
+        return info;
     }
 
     private IReadOnlyList<BrushLayerDefinition> ResolveVisibleBrushLayers(string? brushName, bool isDisabled)
     {
+        if (string.IsNullOrWhiteSpace(brushName))
+            return [];
+
+        var cacheKey = CreateBrushStateCacheKey(brushName, isDisabled);
+        if (_visibleBrushLayersCache.TryGetValue(cacheKey, out var cachedLayers))
+            return cachedLayers;
+
         var brush = ResolveCatalogBrush(brushName);
         if (brush is null)
         {
+            _visibleBrushLayersCache[cacheKey] = [];
             return [];
         }
 
@@ -2974,6 +2994,7 @@ public sealed class PrefabRenderContext
             .Where(layer => layer.IsHidden != true)
             .ToArray();
 
+        _visibleBrushLayersCache[cacheKey] = layers;
         return layers;
     }
 
@@ -3017,6 +3038,12 @@ public sealed class PrefabRenderContext
 
     private bool TryCreateBrushImageBrush(string? brushName, bool isDisabled, out Brush brush)
     {
+        if (!string.IsNullOrWhiteSpace(brushName) &&
+            _renderBrushCache.TryGetValue(
+                CreateBrushStateCacheKey(brushName, isDisabled),
+                out brush!))
+            return true;
+
         var referenceSprite = ResolvePrimaryBrushSprite(brushName, isDisabled);
         var referenceWidth = Math.Max(
             1,
@@ -3042,7 +3069,14 @@ public sealed class PrefabRenderContext
             AlignmentX = AlignmentX.Center,
             AlignmentY = AlignmentY.Center
         };
+        if (!string.IsNullOrWhiteSpace(brushName))
+            _renderBrushCache[CreateBrushStateCacheKey(brushName, isDisabled)] = brush;
         return true;
+    }
+
+    private static string CreateBrushStateCacheKey(string brushName, bool isDisabled)
+    {
+        return $"{(isDisabled ? '1' : '0')}|{brushName}";
     }
 
     private FrameworkElement? CreateBrushLayerVisual(BrushLayerDefinition layer, double referenceWidth, double referenceHeight)
@@ -3226,20 +3260,22 @@ public sealed class PrefabRenderContext
         };
     }
 
-    private Int32Rect? GetSpriteOpaqueBounds(string cacheKey, BitmapSource bitmapSource)
+    private static Int32Rect? GetSpriteOpaqueBounds(BitmapSource bitmapSource)
     {
-        if (_spriteOpaqueBoundsCache.TryGetValue(cacheKey, out var cachedBounds))
-        {
-            return cachedBounds;
-        }
+        return SpritePixelBoundsCache.GetValue(bitmapSource, AnalyzeSpritePixelBounds).OpaqueBounds;
+    }
 
+    private static (int Top, int Bottom)? GetSpriteCoreVerticalBounds(BitmapSource bitmapSource)
+    {
+        return SpritePixelBoundsCache.GetValue(bitmapSource, AnalyzeSpritePixelBounds).CoreVerticalBounds;
+    }
+
+    private static SpritePixelBounds AnalyzeSpritePixelBounds(BitmapSource bitmapSource)
+    {
         var width = bitmapSource.PixelWidth;
         var height = bitmapSource.PixelHeight;
         if (width <= 0 || height <= 0)
-        {
-            _spriteOpaqueBoundsCache[cacheKey] = null;
-            return null;
-        }
+            return new SpritePixelBounds(null, null);
 
         var normalized = bitmapSource.Format == PixelFormats.Bgra32
             ? bitmapSource
@@ -3252,13 +3288,25 @@ public sealed class PrefabRenderContext
         var minY = height;
         var maxX = -1;
         var maxY = -1;
+        var centerX = width / 2;
+        var halfBand = Math.Min(4, Math.Max(0, width / 40));
+        var startX = Math.Max(0, centerX - halfBand);
+        var endX = Math.Min(width - 1, centerX + halfBand);
+        var coreTop = -1;
+        var coreBottom = -1;
 
         for (var y = 0; y < height; y++)
         {
             var rowOffset = y * stride;
+            var hasCorePixel = false;
             for (var x = 0; x < width; x++)
             {
                 var alpha = pixels[rowOffset + (x * 4) + 3];
+                if (alpha >= ContentCoreAlphaThreshold &&
+                    x >= startX &&
+                    x <= endX)
+                    hasCorePixel = true;
+
                 if (alpha < SignificantAlphaThreshold)
                 {
                     continue;
@@ -3284,80 +3332,26 @@ public sealed class PrefabRenderContext
                     maxY = y;
                 }
             }
+
+            if (hasCorePixel)
+            {
+                if (coreTop < 0) coreTop = y;
+                coreBottom = y;
+            }
         }
 
-        Int32Rect? bounds = maxX >= 0 && maxY >= 0
+        Int32Rect? opaqueBounds = maxX >= 0 && maxY >= 0
             ? new Int32Rect(minX, minY, maxX - minX + 1, maxY - minY + 1)
             : null;
-        _spriteOpaqueBoundsCache[cacheKey] = bounds;
-        return bounds;
-    }
-
-    private (int Top, int Bottom)? GetSpriteCoreVerticalBounds(string cacheKey, BitmapSource bitmapSource)
-    {
-        if (_spriteCoreVerticalBoundsCache.TryGetValue(cacheKey, out var cachedBounds))
-        {
-            return cachedBounds;
-        }
-
-        var width = bitmapSource.PixelWidth;
-        var height = bitmapSource.PixelHeight;
-        if (width <= 0 || height <= 0)
-        {
-            _spriteCoreVerticalBoundsCache[cacheKey] = null;
-            return null;
-        }
-
-        var normalized = bitmapSource.Format == PixelFormats.Bgra32
-            ? bitmapSource
-            : new FormatConvertedBitmap(bitmapSource, PixelFormats.Bgra32, null, 0);
-        var stride = width * 4;
-        var pixels = new byte[stride * height];
-        normalized.CopyPixels(pixels, stride, 0);
-
-        var centerX = width / 2;
-        var halfBand = Math.Min(4, Math.Max(0, width / 40));
-        var startX = Math.Max(0, centerX - halfBand);
-        var endX = Math.Min(width - 1, centerX + halfBand);
-
-        var top = -1;
-        var bottom = -1;
-
-        for (var y = 0; y < height; y++)
-        {
-            var rowOffset = y * stride;
-            var hasCorePixel = false;
-            for (var x = startX; x <= endX; x++)
-            {
-                var alpha = pixels[rowOffset + (x * 4) + 3];
-                if (alpha < ContentCoreAlphaThreshold)
-                {
-                    continue;
-                }
-
-                hasCorePixel = true;
-                break;
-            }
-
-            if (!hasCorePixel)
-            {
-                continue;
-            }
-
-            if (top < 0)
-            {
-                top = y;
-            }
-
-            bottom = y;
-        }
-
-        (int Top, int Bottom)? bounds = top >= 0 && bottom >= top
-            ? (top, bottom)
+        (int Top, int Bottom)? coreVerticalBounds = coreTop >= 0 && coreBottom >= coreTop
+            ? (coreTop, coreBottom)
             : null;
-        _spriteCoreVerticalBoundsCache[cacheKey] = bounds;
-        return bounds;
+        return new SpritePixelBounds(opaqueBounds, coreVerticalBounds);
     }
+
+    private sealed record SpritePixelBounds(
+        Int32Rect? OpaqueBounds,
+        (int Top, int Bottom)? CoreVerticalBounds);
 
     public double ApplyVisualTextCentering(TextBlock textBlock, double availableWidth)
     {
@@ -4401,6 +4395,15 @@ public sealed class PrefabRenderContext
 
     public void RelayoutCanvasChildren(Canvas host, IReadOnlyList<PrefabNode> children, Size parentSize)
     {
+        RelayoutCanvasChildren(host, children, parentSize, new Point(0, 0));
+    }
+
+    public void RelayoutCanvasChildren(
+        Canvas host,
+        IReadOnlyList<PrefabNode> children,
+        Size parentSize,
+        Point origin)
+    {
         host.RenderTransform = Transform.Identity;
         host.Margin = new Thickness(0);
         host.Width = double.NaN;
@@ -4415,8 +4418,8 @@ public sealed class PrefabRenderContext
             var elementSize = Measure(element, child.Attributes, parentSize);
             _alignmentBoundsByElement.TryGetValue(element, out var alignmentBounds);
             var position = ComputePosition(child.Attributes, parentSize, elementSize, alignmentBounds);
-            Canvas.SetLeft(element, position.X);
-            Canvas.SetTop(element, position.Y);
+            Canvas.SetLeft(element, origin.X + position.X);
+            Canvas.SetTop(element, origin.Y + position.Y);
             AttachElementLayoutDebugMetadata(
                 element,
                 child.Attributes,

@@ -7,13 +7,17 @@ namespace Bannerlord.XmlPreview.Adapters.Bannerlord;
 public sealed class BannerlordPrefabReferenceResolver : IPrefabReferenceResolver
 {
     private readonly IAppSettingsService _appSettingsService;
+    private readonly IBannerlordInstallationIndex _installationIndex;
     private readonly object _sync = new();
     private string? _indexedInstallRoot;
     private Dictionary<string, List<PrefabReferenceCandidate>> _index = new(StringComparer.OrdinalIgnoreCase);
 
-    public BannerlordPrefabReferenceResolver(IAppSettingsService appSettingsService)
+    public BannerlordPrefabReferenceResolver(
+        IAppSettingsService appSettingsService,
+        IBannerlordInstallationIndex installationIndex)
     {
         _appSettingsService = appSettingsService;
+        _installationIndex = installationIndex;
     }
 
     public PrefabReferenceResolveResult Resolve(string sourcePrefabPath, string referenceName)
@@ -115,30 +119,18 @@ public sealed class BannerlordPrefabReferenceResolver : IPrefabReferenceResolver
                 return;
             }
 
-            _index = BuildIndex(installRoot);
+            _index = BuildIndex(_installationIndex.GetSnapshot(installRoot).PrefabFiles);
             _indexedInstallRoot = installRoot;
         }
     }
 
-    private static Dictionary<string, List<PrefabReferenceCandidate>> BuildIndex(string installRoot)
+    private static Dictionary<string, List<PrefabReferenceCandidate>> BuildIndex(
+        IEnumerable<string> prefabFiles)
     {
         var index = new Dictionary<string, List<PrefabReferenceCandidate>>(StringComparer.OrdinalIgnoreCase);
-        var modulesPath = Path.Combine(installRoot, "Modules");
-        if (!Directory.Exists(modulesPath))
-        {
-            return index;
-        }
-
-        foreach (var file in Directory.EnumerateFiles(modulesPath, "*.xml", SearchOption.AllDirectories))
+        foreach (var file in prefabFiles)
         {
             var normalizedPath = Path.GetFullPath(file);
-            if (!normalizedPath.Contains(
-                    $"{Path.DirectorySeparatorChar}GUI{Path.DirectorySeparatorChar}Prefabs{Path.DirectorySeparatorChar}",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
             var referenceName = Path.GetFileNameWithoutExtension(normalizedPath);
             if (string.IsNullOrWhiteSpace(referenceName))
             {
