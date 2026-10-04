@@ -30,7 +30,7 @@ $fixtures = [ordered]@{
         )
     }
     "land-management" = @{
-        Path = Join-Path $BannerlordRoot "Modules\AgricultureEstate\GUI\Prefabs\LandManagement.xml"
+        Path = Join-Path $RepoRoot "fixtures\AgricultureEstate\GUI\Prefabs\LandManagement.xml"
         Checks = @(
             "ListPanel-/Button-Drift bleibt schnell sichtbar.",
             "Guter Referenzfall fuer Button-Cropping und Textzentrierung."

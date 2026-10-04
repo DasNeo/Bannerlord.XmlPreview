@@ -277,7 +277,7 @@ Only after the fourth case passes should the project record the final Behavior G
 
 1. Native `SPConversation.xml`: verifies `ImageWidget`, `ImageIdentifierWidget`, and deterministic provider data.
 2. Native `BannerBuilderScreen.xml`: verifies `MaskedTextureWidget` and static images. `BannerTableauWidget` remains an explicit runtime-only `Partial` follow-up and is not an M3 blocker.
-3. Mod `AgricultureEstate/GUI/Prefabs/LandManagement.xml`: verifies mod sprites and Native brushes using the strongest existing mod baseline.
+3. Preserved mod `fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`: verifies mod sprites and Native brushes using the strongest existing mod baseline.
 
 ### Exit criteria
 

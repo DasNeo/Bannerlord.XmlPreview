@@ -28,7 +28,7 @@ $fixtures = [ordered]@{
         Focus = "ClipRect-, InnerPanel- und Scrollbar-Referenzen."
     }
     "land-management" = @{
-        Path = Join-Path $BannerlordRoot "Modules\AgricultureEstate\GUI\Prefabs\LandManagement.xml"
+        Path = Join-Path $RepoRoot "fixtures\AgricultureEstate\GUI\Prefabs\LandManagement.xml"
         Focus = "kombinierter Drift-Test fuer Liste, Button und Text."
     }
     "tournament-scrollable-panel" = @{

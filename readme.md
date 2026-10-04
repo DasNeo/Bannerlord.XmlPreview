@@ -45,6 +45,8 @@ C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview
 
 Phase 9 prüft sechs kuratierte Fixtures. `Complete` ist erfolgreich; Timeout, Prozessfehler, fehlende Diagnostics, `Partial` und `Failed` führen zu einem Gesamt-Exitcode ungleich null. Einzel-Diagnostics und `summary.md` bleiben auch bei Fehlschlägen erhalten.
 
+Das Fixture `land-management` verwendet in beiden Fixture-Skripten die archivierte Version unter [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml). Herkunft und Abhängigkeiten sind in der [Fixture-Dokumentation](fixtures/README.md) beschrieben.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 `
   -PerFixtureTimeoutSeconds 30 `

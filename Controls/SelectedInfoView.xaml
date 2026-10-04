@@ -305,11 +305,15 @@
                                             </WrapPanel>
 
                                             <TextBlock Margin="0,4,0,0"
-                                                       Text="{Binding ImageDisplayPath}"
                                                        Foreground="#D7E2ED"
                                                        TextWrapping="Wrap"
                                                        ToolTip="{Binding ImagePath}"
-                                                       Visibility="{Binding HasImagePath, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                       Visibility="{Binding HasImagePath, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Hyperlink Click="OpenSprite_Click"
+                                                           Foreground="#8EC8FF">
+                                                    <Run Text="{Binding ImageDisplayPath}" />
+                                                </Hyperlink>
+                                            </TextBlock>
                                             <TextBlock Margin="0,4,0,0"
                                                        Text="{Binding SourceDisplayPath}"
                                                        Foreground="#93A7BA"
