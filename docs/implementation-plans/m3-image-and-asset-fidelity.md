@@ -108,9 +108,9 @@ Create a scenario with fixed banner code, colors, provider values, and selection
 
 Tableau fidelity remains outside M3.
 
-### `AgricultureEstate/GUI/Prefabs/LandManagement.xml`
+### `fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`
 
-Use the existing strong mod baseline. Verify:
+Use the preserved strong mod baseline from the repository fixture, with assets resolved from the installed game. Verify:
 
 - `ae_gardens`, `ae_granary`, `ae_storehouse`, `ae_irrigation`, and `ae_patrols`
 - Native brush dependencies
