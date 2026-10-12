@@ -147,6 +147,6 @@ public sealed class ButtonWidgetNode : BrushChromeNodeBase
 
     private PrefabNode? GetTextNode()
     {
-        return Children.FirstOrDefault(static child => child.Name is "RichTextWidget" or "TextWidget");
+        return Children.FirstOrDefault(static child => child is TextWidgetNodeBase);
     }
 }

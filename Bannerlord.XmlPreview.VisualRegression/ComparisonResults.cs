@@ -38,7 +38,8 @@ public sealed record VisualRegressionArtifacts(
     string? RenderStructureJson = null,
     string? LayoutJson = null,
     string? ReportJson = null,
-    string? ReportMarkdown = null);
+    string? ReportMarkdown = null,
+    string? BehaviorTraceJson = null);
 
 /// <summary>Absent timings indicate phases that did not run, rather than a measured zero.</summary>
 public sealed record VisualRegressionTiming(

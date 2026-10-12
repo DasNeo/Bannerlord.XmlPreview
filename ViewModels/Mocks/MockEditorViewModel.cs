@@ -10,14 +10,16 @@ namespace Bannerlord.XmlPreview.ViewModels.Mocks;
 public sealed class MockEditorViewModel : ViewModelBase
 {
     private readonly Dictionary<EditableListMockViewModel, TemplateMockDefinition> _definitions = [];
+    private readonly Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore _bindings;
     private readonly ITemplateMockService _templateMockService;
     private string _bindingsFilter = string.Empty;
     private string? _currentSourcePath;
     private bool _isPopulating;
 
-    public MockEditorViewModel(ITemplateMockService templateMockService)
+    public MockEditorViewModel(ITemplateMockService templateMockService, Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore bindings)
     {
         _templateMockService = templateMockService;
+        _bindings = bindings;
         BindingsView = CollectionViewSource.GetDefaultView(Bindings);
         BindingsView.Filter = FilterBinding;
     }
@@ -76,8 +78,8 @@ public sealed class MockEditorViewModel : ViewModelBase
         Bindings.Clear();
         foreach (var key in document.BindingKeys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase))
         {
-            var value = PrefabRenderContext.ResolveMockBindingValue(key);
-            PrefabRenderContext.SetMockBindingValue(key, value);
+            var value = _bindings.Resolve(key);
+            _bindings.Set(key, value);
             Bindings.Add(new EditableBindingViewModel(key, value, OnBindingValueChanged));
         }
     }
@@ -97,7 +99,7 @@ public sealed class MockEditorViewModel : ViewModelBase
                 definition.Node,
                 definition.FieldKeys,
                 items,
-                PrefabRenderContext.ResolveMockBindingValue,
+                _bindings.Resolve,
                 OnListMockChanged);
             _definitions[mock] = definition;
             Mocks.Add(mock);
@@ -108,7 +110,7 @@ public sealed class MockEditorViewModel : ViewModelBase
     {
         if (_isPopulating) return;
 
-        PrefabRenderContext.SetMockBindingValue(binding.Key, binding.Value);
+        _bindings.Set(binding.Key, binding.Value);
         if (!string.IsNullOrWhiteSpace(BindingsFilter)) BindingsView.Refresh();
         Changed?.Invoke(this, EventArgs.Empty);
     }

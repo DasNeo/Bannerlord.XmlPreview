@@ -17,27 +17,27 @@ param(
 $fixtures = [ordered]@{
     "standard-window" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml"
-        Focus = "Root-Struktur und Root-Messung."
+        Focus = "Root structure and root measurement."
     }
     "standard-background" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Standard\Standard.Background.xml"
-        Focus = "ruhiger Container-Fall fuer Brush-/Sprite-Drift."
+        Focus = "A simple container case for brush and sprite drift."
     }
     "standard-scrollable-panel" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Standard\Standard.ScrollablePanel.xml"
-        Focus = "ClipRect-, InnerPanel- und Scrollbar-Referenzen."
+        Focus = "ClipRect, InnerPanel, and Scrollbar references."
     }
     "land-management" = @{
         Path = Join-Path $RepoRoot "fixtures\AgricultureEstate\GUI\Prefabs\LandManagement.xml"
-        Focus = "kombinierter Drift-Test fuer Liste, Button und Text."
+        Focus = "A combined drift test for lists, buttons, and text."
     }
     "tournament-scrollable-panel" = @{
         Path = Join-Path $BannerlordRoot "Modules\SandBox\GUI\Prefabs\Tournament\Tournament.xml"
-        Focus = "Placeholder-basierte Child-Insertion im Include-Fall."
+        Focus = "Placeholder-based child insertion for includes."
     }
     "options-top-panel" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Options\SPOptions\Options.xml"
-        Focus = "Root-Fallback fuer Include ohne LogicalChildrenLocation."
+        Focus = "Root fallback for includes without LogicalChildrenLocation."
     }
 }
 

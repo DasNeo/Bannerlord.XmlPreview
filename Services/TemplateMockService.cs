@@ -11,11 +11,13 @@ public sealed class TemplateMockService : ITemplateMockService
     private readonly Dictionary<string, Dictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>>
         _itemsBySourcePath = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore _bindings;
     private readonly IPreviewDataSourceProvider _previewDataSourceProvider;
 
-    public TemplateMockService(IPreviewDataSourceProvider previewDataSourceProvider)
+    public TemplateMockService(IPreviewDataSourceProvider previewDataSourceProvider, Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore bindings)
     {
         _previewDataSourceProvider = previewDataSourceProvider;
+        _bindings = bindings;
     }
 
     public IReadOnlyList<TemplateMockDefinition> Discover(PrefabDocument document)
@@ -42,7 +44,7 @@ public sealed class TemplateMockService : ITemplateMockService
             [
                 definition.FieldKeys.ToDictionary(
                     static key => key,
-                    static key => PrefabRenderContext.ResolveMockBindingValue(key),
+                    key => _bindings.Resolve(key),
                     StringComparer.OrdinalIgnoreCase)
             ];
         }

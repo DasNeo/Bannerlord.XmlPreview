@@ -4,9 +4,13 @@
 
 Render static, provider-backed, masked, Native, and mod-provided image data honestly. Eliminate silent image substitution and distinguish resolved, missing, runtime-only, and invalid assets.
 
+Load Gauntlet sprite atlases directly from the installed game's TPAC packages, eliminating manual TPAC-to-DDS export and PNG cropping as production prerequisites. Keep controlled image fixtures for portable tests.
+
 ## Prerequisite
 
 M2 is complete. Image widget semantics are implemented as Bannerlord Widget Behavior rules, not new Core name checks.
+
+Direct TPAC loading is M3 work and does not expand M2. Start M3 with the decoding spike below, then complete structured resolution, module precedence, and production TPAC loading before implementing the image widget families.
 
 ## Target module shape
 
@@ -24,6 +28,7 @@ Define an image-resolution result containing:
 - requested identity and provider information
 - owning module
 - resolved source path or runtime-only reason
+- TPAC package path, texture identity, and sprite crop bounds when the source is an atlas
 - dimensions and format metadata
 - status: resolved, missing, runtime-only, or invalid
 - Diagnostics entries
@@ -49,7 +54,31 @@ Extend `BannerlordInstallationIndex` and `BannerlordAssetCatalog`:
 
 Add tests with synthetic module graphs for direct dependency, transitive dependency, duplicate asset name, missing dependency, and cycle or malformed metadata.
 
-## Work package 3.3: Implement `ImageWidget` behavior
+## Work package 3.3: Load sprite images directly from TPAC
+
+Begin with a focused decoding spike against the installed game:
+
+1. Decode representative BC7 and DXT5 atlases and crop sprites using SpriteData XML coordinates.
+2. Compare dimensions, orientation, color channels, and transparent edges against the existing extracted PNGs. This verifies decoding consistency, not in-game rendering fidelity.
+3. Record cold-load time, warm-load time, and peak memory before choosing the decoder and cache strategy.
+
+Use [TpacTool](https://github.com/szszss/TpacTool) as a package-reader candidate and [GauntletUI-LSP](https://github.com/kerema14/GauntletUI-LSP) and its TpacTool fork as integration references. Inspect decoder coverage, dependencies, licenses, and compatibility with the application's target framework before adopting or adapting code; the dependency choice remains evidence-driven.
+
+Production integration:
+
+1. Keep TPAC parsing and texture decoding behind the asset module in the Bannerlord adapter.
+2. Extend installation indexing to discover module AssetPackages and apply the precedence from work package 3.2 to texture lookup.
+3. Retain sprite-part SheetX, SheetY, width, and height in the asset snapshot; resolve the category and sheet ID to the atlas texture identity.
+4. Load package metadata lazily, decompress only requested texture payloads, decode pixels, and crop sprites in memory without requiring intermediate DDS or PNG files.
+5. Cover the formats found in the installed Native UI package: BC7, DXT1, DXT5, BC4, and R8_UNORM. Report unsupported formats, absent pixel data, corrupt payloads, and invalid crop bounds explicitly.
+6. Produce frozen WPF bitmaps with the existing premultiplied-alpha semantics. Preserve sprite dimensions and nine-region metadata.
+7. Decode each requested atlas once per cache lifetime, coordinate concurrent requests, and bound decoded-atlas memory. Perform expensive loading during background asset warm-up.
+8. Report package, texture, crop, and failure information through structured resolution and Diagnostics rather than requiring an image file path.
+9. Keep controlled image fixtures and explicitly selected PNG overrides; remove manual extraction as a production setup requirement and document the resulting setup.
+
+Verify direct loading with representative Native sprites and the AgricultureEstate mod sprites. Existing extracted PNGs may serve as migration comparison inputs but must not be required for the installed-game acceptance runs.
+
+## Work package 3.4: Implement `ImageWidget` behavior
 
 1. Map image properties into declarative Behavior Contributions.
 2. Resolve static image and brush-backed content through the asset module.
@@ -57,7 +86,7 @@ Add tests with synthetic module graphs for direct dependency, transitive depende
 4. Emit explicit Diagnostics for missing data.
 5. Add focused unit fixtures and an M3 Visual Regression case.
 
-## Work package 3.4: Implement `ImageIdentifierWidget` behavior
+## Work package 3.5: Implement `ImageIdentifierWidget` behavior
 
 1. Define the provider input contract for `AdditionalArgs`, `ImageId`, and `TextureProviderName`.
 2. Supply provider values through the Preview Scenario, never global state.
@@ -67,14 +96,14 @@ Add tests with synthetic module graphs for direct dependency, transitive depende
 
 Do not load mod assemblies to invoke image providers.
 
-## Work package 3.5: Implement `MaskedTextureWidget` behavior
+## Work package 3.6: Implement `MaskedTextureWidget` behavior
 
 1. Express mask image, source texture, color, and layout intent through Behavior Contributions.
 2. Perform WPF-specific masking only inside Core materialization.
 3. Preserve deterministic output at the Capture Profile resolution.
 4. Add focused tests for missing mask, missing source, dimensions, and color changes.
 
-## Work package 3.6: Make placeholders explicit
+## Work package 3.7: Make placeholders explicit
 
 Create visually distinct placeholders for:
 
@@ -85,7 +114,7 @@ Create visually distinct placeholders for:
 
 Each placeholder includes machine-readable status and debug metadata. A placeholder must never resemble a successfully resolved production asset.
 
-## Work package 3.7: Build acceptance scenarios
+## Work package 3.8: Build acceptance scenarios
 
 ### `SPConversation.xml`
 
@@ -117,7 +146,7 @@ Use the preserved strong mod baseline from the repository fixture, with assets r
 - exact classification of `clan_frame_small` as resolved or genuinely missing
 - no regression in existing geometry
 
-## Work package 3.8: Publish Fidelity Status
+## Work package 3.9: Publish Fidelity Status
 
 Generate a machine-readable and Markdown matrix for image widget families:
 
@@ -133,6 +162,10 @@ Derive `Verified` from explicit behavior, asset-resolution, dimensions and mask 
 
 - in-memory asset adapter tests every structured result
 - module precedence tests use synthetic module graphs
+- controlled texture inputs verify decoder output, alpha handling, and crop bounds for the supported formats
+- installed-game acceptance resolves Native and AgricultureEstate sprites directly from TPAC without extracted DDS or PNG prerequisites
+- negative TPAC cases distinguish missing textures, absent pixel data, unsupported formats, corrupt payloads, and invalid bounds
+- decoding spike records cold/warm loading and peak memory; portable CI retains controlled image fixtures without requiring a game installation
 - Behavior tests cover all three image families
 - Structure Only regression covers the three accepted screens; focused asset and mask assertions use controlled inputs without in-game screenshots
 - negative cases verify missing, runtime-only, invalid, and Code Widget placeholders
@@ -142,6 +175,9 @@ Derive `Verified` from explicit behavior, asset-resolution, dimensions and mask 
 
 - [ ] All three image widget families have real Behavior rules.
 - [ ] Module dependency order controls data-asset lookup.
+- [ ] Native and AgricultureEstate sprites load directly from TPAC without manual DDS export or PNG cropping.
+- [ ] Supported texture formats, crop bounds, alpha handling, and explicit TPAC failure outcomes are verified.
+- [ ] Cold/warm loading and peak memory are recorded, and decoded-atlas caching is bounded.
 - [ ] Silent fallback images are eliminated.
 - [ ] Runtime-only content is visible and `Partial`.
 - [ ] Both Native image screens pass their scoped structural, asset-resolution, dimensions and mask assertions.

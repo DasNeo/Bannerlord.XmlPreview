@@ -67,9 +67,18 @@
       "WidgetIdOrPath": "$document",
       "Message": "No <Constants> section found. Using generic preview defaults.",
       "Reason": "Exact diagnostic from the archived expanded Native fixture using metadata-only assets. This profile does not compare image pixels."
+    },
+    {
+      "Code": "legacy.c5a0007005dd7bbc",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
     }
   ],
   "Masks": [],
   "BoundsTolerance": 0.5,
-  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance."
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance.",
+  "OptionalConnectionExplanations": {
+    "Window > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control."
+  }
 }

@@ -350,7 +350,8 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        StatusText = $"Loading {Path.GetFileName(path)}...";
+        IsPreviewStale = PreviewContent is not null;
+        StatusText = $"Loading {Path.GetFileName(path)}..." + (IsPreviewStale ? " Last Good Preview is stale." : "");
         await _loadCoordinator.RunAsync(path);
         _reloadCommand.RaiseCanExecuteChanged();
     }
@@ -379,7 +380,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         FilePath = path;
         _currentPrefabPath = path;
         Title = $"{DefaultWindowTitle} - {Path.GetFileName(path)}";
-        StatusText = $"Loaded {Path.GetFileName(path)}";
+        if (!IsPreviewStale && loadedPrefab.Diagnostics.CompletionStatus != RenderCompletionStatus.Failed) StatusText = $"Loaded {Path.GetFileName(path)}";
     }
 
     private void PublishLoadFailure(string path, Exception exception)
@@ -387,14 +388,14 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         _currentDocument = null;
         _currentDiagnostics = new PreviewDiagnostics();
         _currentDiagnostics.MarkFailed($"Load failed: {exception.Message}");
-        PreviewContent = null;
+        IsPreviewStale = PreviewContent is not null;
         DiagnosticsText = $"{_currentDiagnostics.ToDisplayText()}{Environment.NewLine}{Environment.NewLine}{exception}";
         MockEditor.Clear();
         PreviewInspector.Reset("No element selected because loading failed.");
         FilePath = path;
         _currentPrefabPath = path;
         Title = DefaultWindowTitle;
-        StatusText = "Load failed.";
+        StatusText = IsPreviewStale ? "Load failed. Last Good Preview is stale." : "Load failed.";
     }
 
     private void SwitchWatchedFile(string path)
@@ -415,15 +416,32 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
         var diagnostics = new PreviewDiagnostics();
         RenderPreview(_currentDocument, diagnostics);
-        StatusText =
+        if (!IsPreviewStale && diagnostics.CompletionStatus != RenderCompletionStatus.Failed) StatusText =
             $"Updated preview for {Path.GetFileName(_currentDocument.SourcePath)} ({FormatSize(_rootLayoutHints.PreviewSize)})";
     }
+
+    private bool _isPreviewStale;
+    public bool IsPreviewStale { get => _isPreviewStale; private set => SetProperty(ref _isPreviewStale, value); }
 
     private void RenderPreview(PrefabDocument document, PreviewDiagnostics diagnostics)
     {
         _currentDiagnostics = diagnostics;
-        using (diagnostics.MeasurePhase("MainWindow.Render.Renderer"))
-            PreviewContent = _prefabRenderer.Render(document, diagnostics);
+        try
+        {
+            FrameworkElement candidate;
+            using (diagnostics.MeasurePhase("MainWindow.Render.Renderer"))
+                candidate = _prefabRenderer.Render(document, diagnostics);
+            PreviewContent = candidate;
+            IsPreviewStale = false;
+        }
+        catch (Exception exception)
+        {
+            IsPreviewStale = PreviewContent is not null;
+            diagnostics.MarkFailed(exception is OperationCanceledException ? "Render cancelled." : exception.Message);
+            DiagnosticsText = diagnostics.ToDisplayText();
+            StatusText = IsPreviewStale ? "Last Good Preview is stale: render failed or was cancelled." : "Render failed.";
+            return;
+        }
         using (diagnostics.MeasurePhase("MainWindow.Render.PreviewInspector"))
             PreviewInspector.Attach(PreviewContent);
         using (diagnostics.MeasurePhase("MainWindow.Render.DiagnosticsText"))

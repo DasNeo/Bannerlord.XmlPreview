@@ -44,6 +44,8 @@ public sealed class PreviewDiagnostics
 
     public IReadOnlyList<string> Messages => _messages;
 
+    public Bannerlord.XmlPreview.Core.Behaviors.BehaviorGraphSummary? BehaviorGraph { get; internal set; }
+    public System.Collections.Immutable.ImmutableArray<Bannerlord.XmlPreview.Core.Behaviors.BehaviorTrace> BehaviorTrace { get; internal set; } = [];
     public RenderStructureSnapshot? RenderStructure { get; internal set; }
     public LayoutSnapshot? Layout { get; internal set; }
 
@@ -79,6 +81,12 @@ public sealed class PreviewDiagnostics
             $"TruncationReason: {(_truncationReasons.Count == 0 ? "None" : string.Join(" | ", _truncationReasons))}"
         };
 
+        if (BehaviorGraph is { } graph)
+        {
+            sections.Add($"Behavior Graph: rules={graph.RuleCount}, matchedRules={graph.MatchedRuleCount}, matches={graph.MatchCount}, edges={graph.EdgeCount}, total={graph.TotalMilliseconds:0.###}ms, matching={graph.MatchingMilliseconds:0.###}ms, sorting={graph.SortingMilliseconds:0.###}ms");
+            sections.Add("Contributions: " + string.Join(", ", graph.ContributionCounts.Select(p => $"{p.Key}={p.Value}")));
+            sections.Add("Support: " + string.Join(", ", graph.SupportCounts.Select(p => $"{p.Key}={p.Value}")));
+        }
         AddSectionSeparator(sections);
 
         if (!string.IsNullOrWhiteSpace(_sourcePath))

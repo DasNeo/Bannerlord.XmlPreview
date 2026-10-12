@@ -9,7 +9,11 @@ namespace Bannerlord.XmlPreview.VisualRegression;
 public sealed record CapturedDiagnostic(string Code, string WidgetIdOrPath, string Message);
 public sealed record CapturedPreview(RenderStructureSnapshot Structure, LayoutSnapshot Layout,
     IReadOnlyList<CapturedDiagnostic> Diagnostics, RenderCompletionStatus CompletionStatus,
-    RgbImage? Pixels, VisualRegressionTiming Timing, string? ModuleVersion = null);
+    RgbImage? Pixels, VisualRegressionTiming Timing, string? ModuleVersion = null)
+{
+    public Bannerlord.XmlPreview.Core.Behaviors.BehaviorGraphSummary? BehaviorGraph { get; init; }
+    public System.Collections.Immutable.ImmutableArray<Bannerlord.XmlPreview.Core.Behaviors.BehaviorTrace> BehaviorTrace { get; init; } = [];
+}
 
 public sealed record RgbImage(int Width, int Height, byte[] Pixels)
 {

@@ -1,21 +1,23 @@
 # Bannerlord.XmlPreview
 
-`Bannerlord.XmlPreview` ist ein WPF-Werkzeug zum Laden, Expandieren und Rendern von Bannerlord-Gauntlet-Prefabs aus XML. Ziel ist eine nachvollziehbare Preview, die Layout-, Asset-, Binding- und Referenzprobleme ohne Spielstart untersuchbar macht.
+`Bannerlord.XmlPreview` is a WPF tool for loading, expanding, and rendering Bannerlord Gauntlet prefabs from XML. It provides an inspectable preview for investigating layout, asset, binding, and reference issues without launching the game.
+
+All project documentation and Markdown files must be written in English.
 
 ## Solution
 
-- `Bannerlord.XmlPreview.csproj`: WPF-Host, DI, UI und Startargumente
-- `Bannerlord.XmlPreview.Core/`: generische Loader-, Render-, Node- und Diagnostics-Logik
-- `Bannerlord.XmlPreview.Bannerlord/`: Bannerlord-spezifische Adapter, Assets und Preview-Daten
-- `Bannerlord.XmlPreview.DemoData/`: deterministische Preview-Daten
-- `Bannerlord.XmlPreview.Tests/`: automatisierte M0-Vertrags- und Diagnostics-Tests
-- `Bannerlord.XmlPreview.VisualRegression/`: Szenarien, Snapshots, Capture, Vergleicher, Reports und Referenzannahme
-- `Bannerlord.XmlPreview.VisualRegression.Cli/`: Compare, Capture, Accept, Calibrate und Benchmark
-- `Bannerlord.XmlPreview.VisualRegression.Tests/`: Vergleichs-, Capture- und Workflow-Tests sowie neun Native-Fälle
+- `Bannerlord.XmlPreview.csproj`: WPF host, DI, UI, and startup arguments
+- `Bannerlord.XmlPreview.Core/`: generic loading, rendering, node, and Diagnostics logic
+- `Bannerlord.XmlPreview.Bannerlord/`: Bannerlord-specific adapters, assets, and preview data
+- `Bannerlord.XmlPreview.DemoData/`: deterministic preview data
+- `Bannerlord.XmlPreview.Tests/`: automated M0 contract and Diagnostics tests
+- `Bannerlord.XmlPreview.VisualRegression/`: scenarios, snapshots, capture, comparators, reports, and Baseline Acceptance
+- `Bannerlord.XmlPreview.VisualRegression.Cli/`: compare, capture, accept, calibrate, and benchmark commands
+- `Bannerlord.XmlPreview.VisualRegression.Tests/`: comparison, capture, and workflow tests, plus nine Native cases
 
-Der Core bleibt generisch. Bannerlord-Namen und -Semantik gehören in den Adapter. Mod-spezifischer ausführbarer Widget-Code wird nicht geladen; siehe [ADR 0001](docs/adr/0001-do-not-execute-mod-code-widgets.md).
+Core remains generic. Bannerlord names and semantics belong in the adapter. Mod-specific executable widget code is not loaded; see [ADR 0001](docs/adr/0001-do-not-execute-mod-code-widgets.md).
 
-## Build und Tests
+## Build and tests
 
 ```powershell
 dotnet restore C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln
@@ -23,20 +25,20 @@ dotnet build C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-res
 dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-build
 ```
 
-## App starten
+## Run the app
 
 ```powershell
 C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe
 ```
 
-Unterstützte Argumente:
+Supported arguments:
 
-- `--prefab <path>` lädt direkt ein Prefab.
-- `--bannerlord-root <path>` setzt die Bannerlord-Installation.
-- `--diagnostics-out <path>` schreibt einen Diagnostics-Snapshot.
-- `--exit-after-load` beendet die App nach dem technischen Lauf.
+- `--prefab <path>` loads a prefab directly.
+- `--bannerlord-root <path>` sets the Bannerlord installation path.
+- `--diagnostics-out <path>` writes a Diagnostics snapshot.
+- `--exit-after-load` exits the app after the technical validation run.
 
-Beispiel:
+Example:
 
 ```powershell
 C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe `
@@ -44,11 +46,11 @@ C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview
   --prefab "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord\Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml"
 ```
 
-## Technische Regression
+## Technical regression
 
-Phase 9 prüft sechs kuratierte Fixtures. `Complete` ist erfolgreich; Timeout, Prozessfehler, fehlende Diagnostics, `Partial` und `Failed` führen zu einem Gesamt-Exitcode ungleich null. Einzel-Diagnostics und `summary.md` bleiben auch bei Fehlschlägen erhalten.
+Phase 9 checks six curated fixtures. `Complete` indicates success; timeouts, process failures, missing Diagnostics, `Partial`, and `Failed` produce a nonzero aggregate exit code. Per-fixture Diagnostics and `summary.md` are preserved even when validation fails.
 
-Das Fixture `land-management` verwendet in beiden Fixture-Skripten die archivierte Version unter [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml). Herkunft und Abhängigkeiten sind in der [Fixture-Dokumentation](fixtures/README.md) beschrieben.
+Both fixture scripts use the archived version at [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml) for the `land-management` fixture. Its provenance and dependencies are described in the [fixture documentation](fixtures/README.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 `
@@ -56,15 +58,15 @@ powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\
   -OutputRoot C:\path\to\m0-validation
 ```
 
-Diagnostics enthalten unter anderem `CompletionStatus`, `TruncationReason`, `RootActual`, `ElementLayout` und Phasen-Timings. Der Lauf ist eine technische Prüfung und keine visuelle Endabnahme.
+Diagnostics include `CompletionStatus`, `TruncationReason`, `RootActual`, `ElementLayout`, and phase timings. This run performs technical validation; visual acceptance is assessed separately.
 
-## Architektur und Planung
+## Architecture and planning
 
-- [Glossar](GLOSSARY.md)
+- [Glossary](GLOSSARY.md)
 - [Roadmap](docs/roadmap.md)
-- [Milestone-Pläne](docs/implementation-plans/README.md)
-- [M0-Abschlussbericht](docs/reports/m0-completion.md)
-- [M1-Verifikation](docs/reports/m1-progress.md): automatisierte Struktur-, Layout-, Verhaltens- und Asset-Prüfung; Screenshot-Vergleiche sind optional.
-- [Visual-Regression-Workflow](test-data/visual-regression/README.md): neun Szenarien, portable CI, Referenzpakete und CLI-Befehle.
+- [Milestone plans](docs/implementation-plans/README.md)
+- [M0 completion report](docs/reports/m0-completion.md)
+- [M1 completion report](docs/reports/m1-completion.md): local and CI checks passed; screenshot comparisons are optional.
+- [Visual Regression workflow](test-data/visual-regression/README.md): nine scenarios, portable CI, Reference Packages, and CLI commands.
 
-Wichtige Einstiegspunkte sind `App.xaml.cs`, `ViewModels/MainWindowViewModel.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs` und `Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`.
+Key entry points are `App.xaml.cs`, `ViewModels/MainWindowViewModel.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs`, and `Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`.

@@ -37,7 +37,7 @@ public sealed class NativeSuiteTests
         using var capture = new BannerlordPreviewCapture(".", Path.Combine(data, "corpus"));
         var scenarioPath = Path.Combine(data, "portable-scenarios", id + ".json");
         var scenario = ScenarioLoader.Load(scenarioPath);
-        IVisualRegression regression = new VisualRegressionRunner(capture.CaptureAsync, Path.Combine(data, "portable-baselines"));
+        IVisualRegression regression = new VisualRegressionRunner(capture.CaptureAsync, Path.Combine(data, "m2-portable-baselines"));
         var report = await regression.CompareAsync(new(scenario.PrefabIdentity, scenarioPath, VisualRegressionMode.StructureOnly,
             new(id, "v1.4.7", "v1.4.7", scenario.CaptureProfile.Id, 1), Path.Combine(fixture.Root, "native-actual")));
         Assert.True(report.Outcome == VisualRegressionOutcome.Passed,

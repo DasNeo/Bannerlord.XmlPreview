@@ -17,7 +17,7 @@ public sealed class ItemTemplateNode : PrefabNode
         if (Children.Count == 1)
         {
             return context.RegisterRenderedNode(Children[0].Name, Children[0].Attributes, parentSize,
-                Children[0].Render(context, parentSize));
+                context.RenderNode(Children[0], parentSize));
         }
 
         var canvas = new Canvas

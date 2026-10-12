@@ -24,8 +24,11 @@ internal sealed record PortableCorpus(int SchemaVersion, string PrefabIdentity, 
             .ToDictionary(g => g.Key, g => (IReadOnlyDictionary<string, ResolvedWidgetProperty>)g.ToDictionary(p => p.AttributeName, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
         var references = References.GroupBy(r => r.WidgetPath)
             .ToDictionary(g => g.Key, g => (IReadOnlyDictionary<string, ResolvedWidgetReference>)g.ToDictionary(p => p.AttributeName, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
-        return new(PrefabIdentity, CreateNode(Root), Constants, BindingKeys.ToHashSet(StringComparer.OrdinalIgnoreCase),
-            new(properties), new(references));
+        var root = CreateNode(Root);
+        // Re-resolve XML ports using the current resolver; archived M1 maps omitted ClipRect, Handle and scrollbars.
+        var referenceMap = new Bannerlord.XmlPreview.Services.WidgetReferenceResolver().Resolve(root, new PreviewDiagnostics());
+        return new(PrefabIdentity, root, Constants, BindingKeys.ToHashSet(StringComparer.OrdinalIgnoreCase),
+            new(properties), referenceMap);
     }
 
     private static object? Parsed(ResolvedWidgetProperty p)

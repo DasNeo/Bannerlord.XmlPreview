@@ -1,4 +1,3 @@
-using Bannerlord.XmlPreview.DemoData;
 using Bannerlord.XmlPreview.Rendering;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,7 +30,7 @@ public abstract class ContainerPrefabNode : PrefabNode
         var borderColor = hasMissingReference
             ? new SolidColorBrush(Colors.Red)
             : _frameBrush
-                ? context.CreateSolidBrush(PreviewDemoCatalog.FrameBorderColor)
+                ? context.CreateSolidBrush(context.FrameBorderColor)
                 : Brushes.Transparent;
         
         var border = new Border
