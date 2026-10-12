@@ -1,3 +1,6 @@
+using Bannerlord.XmlPreview.Core.Behaviors;
+using System.Collections.Immutable;
+using System.IO;
 using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Core.Abstractions;
 using Bannerlord.XmlPreview.Models;
@@ -11,6 +14,7 @@ namespace Bannerlord.XmlPreview.Services;
 
 public sealed class PrefabRenderer : IPrefabRenderer
 {
+    private readonly IBehaviorRuleProvider? _behaviorRules;
     private readonly IAssetCatalog _assetCatalog;
     private readonly IBrushMetricsProvider _brushMetricsProvider;
     private readonly IBrushOverlayFeatureHandler _brushOverlayFeatureHandler;
@@ -26,8 +30,10 @@ public sealed class PrefabRenderer : IPrefabRenderer
         IPreviewDataSourceProvider previewDataSourceProvider,
         IRootLayoutHints rootLayoutHints,
         IWidgetTextSourceProvider widgetTextSourceProvider,
-        IWidgetDebugMetadataProvider widgetDebugMetadataProvider)
+        IWidgetDebugMetadataProvider widgetDebugMetadataProvider,
+        IBehaviorRuleProvider? behaviorRules = null)
     {
+        _behaviorRules = behaviorRules;
         _assetCatalog = assetCatalog;
         _brushMetricsProvider = brushMetricsProvider;
         _brushOverlayFeatureHandler = brushOverlayFeatureHandler;
@@ -46,6 +52,13 @@ public sealed class PrefabRenderer : IPrefabRenderer
         {
             return RenderCore(document, diagnostics, options);
         }
+        catch (BehaviorGraphException exception)
+        {
+            diagnostics.BehaviorTrace = exception.Trace;
+            diagnostics.BehaviorGraph = exception.Summary ?? diagnostics.BehaviorGraph;
+            diagnostics.MarkFailed($"Behavior Graph {exception.Error.Code}: {exception.Message}");
+            throw;
+        }
         catch (Exception exception)
         {
             diagnostics.MarkFailed($"Render failed: {exception.Message}");
@@ -56,7 +69,9 @@ public sealed class PrefabRenderer : IPrefabRenderer
     private FrameworkElement RenderCore(PrefabDocument document, PreviewDiagnostics diagnostics, RegressionRenderOptions? options)
     {
         using var totalTiming = diagnostics.MeasurePhase("PrefabRenderer.Render.Total");
-        using var previewState = options is null ? null : document.RootNode.ApplyPreviewState(options.WidgetStates);
+        var matcherDocument = document;
+        var previewData = _previewDataSourceProvider.CaptureSnapshot(document.RootNode);
+        document = document with { RootNode = document.RootNode.CopyForRender(options?.WidgetStates ?? new Dictionary<string, IReadOnlyDictionary<string, string>>()) };
         PrefabRenderContext context;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.CreateContext"))
         {
@@ -68,10 +83,9 @@ public sealed class PrefabRenderer : IPrefabRenderer
                 _assetCatalog,
                 _brushMetricsProvider,
                 _brushOverlayFeatureHandler,
-                _previewDataSourceProvider,
                 _widgetTextSourceProvider,
                 _widgetDebugMetadataProvider,
-                options);
+                options, previewData);
         }
 
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.EnsureBindings"))
@@ -79,60 +93,89 @@ public sealed class PrefabRenderer : IPrefabRenderer
             context.EnsureBindings(document.BindingKeys);
         }
 
-        var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
-        if (options is not null)
-            diagnostics.RenderStructure = RegressionSnapshotProducer.Structure(document, context, options.PrefabIdentity);
-        RenderedPrefabNode renderedRoot;
-        using (diagnostics.MeasurePhase("PrefabRenderer.Render.RootNodeRender"))
+        var token = options?.CancellationToken ?? default;
+        token.ThrowIfCancellationRequested();
+        var identity = options?.PrefabIdentity ?? document.PrefabIdentity ?? Path.GetFileName(document.SourcePath).ToLowerInvariant();
+        context.GraphPrefabIdentity = identity;
+        var structure = RegressionSnapshotProducer.Structure(document, context, identity);
+        var inputs = RenderBehaviorPlanner.Inputs(matcherDocument, structure, _behaviorRules, options, previewData);
+        var plan = new BehaviorGraph().Plan(inputs, _behaviorRules?.Rules ?? [], options is not null, token);
+        diagnostics.BehaviorGraph = plan.Summary;
+        diagnostics.BehaviorTrace = options?.TraceBehaviors == true || options is not null ? plan.Trace : [];
+        foreach (var message in plan.Diagnostics) diagnostics.Add(message);
+        context.SetBehaviorPlan(inputs, plan);
+        try
         {
-            renderedRoot = context.RegisterRenderedNode(
-                document.RootNode.Name,
-                document.RootNode.Attributes,
-                rootSize,
-                document.RootNode.Render(context, rootSize));
-        }
+            var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
+            if (options is not null)
+                diagnostics.RenderStructure = RegressionSnapshotProducer.Structure(document, context, options.PrefabIdentity);
+            RenderedPrefabNode renderedRoot;
+            using (diagnostics.MeasurePhase("PrefabRenderer.Render.RootNodeRender"))
+            {
+                renderedRoot = context.RegisterRenderedNode(
+                    document.RootNode.Name,
+                    document.RootNode.Attributes,
+                    rootSize,
+                    context.RenderNode(document.RootNode, rootSize));
+            }
 
-        using (diagnostics.MeasurePhase("PrefabRenderer.Render.ApplyDeferredReferenceBehaviors"))
+            token.ThrowIfCancellationRequested();
+            context.ExecuteBehaviorPhase(plan, BehaviorPhase.Connect);
+            context.ExecuteBehaviorPhase(plan, BehaviorPhase.PrepareLayout);
+
+            if (diagnostics.RenderStructure is not null)
+                diagnostics.RenderStructure = RegressionSnapshotProducer.ResolveBehavior(diagnostics.RenderStructure, context.SnapshotElements);
+
+            Size measuredRootSize;
+            using (diagnostics.MeasurePhase("PrefabRenderer.Render.MeasureRoot"))
+            {
+                measuredRootSize = context.Measure(renderedRoot.Element, document.RootNode.Attributes, rootSize);
+            }
+
+            using (diagnostics.MeasurePhase("PrefabRenderer.Render.AttachRootLayoutDebugMetadata"))
+            {
+                context.AttachElementLayoutDebugMetadata(renderedRoot.Element, document.RootNode.Attributes, rootSize, measuredRootSize);
+            }
+
+            using (diagnostics.MeasurePhase("PrefabRenderer.Render.ArrangeRoot"))
+            {
+                ArrangeRenderedRoot(renderedRoot.Element, rootSize, measuredRootSize);
+            }
+
+            IReadOnlyList<ElementLayoutSnapshot> elementLayoutSnapshots;
+            using (diagnostics.MeasurePhase("PrefabRenderer.Render.CaptureElementLayoutSnapshots"))
+            {
+                elementLayoutSnapshots = RefreshElementDebugInfoAndCaptureSnapshots(renderedRoot.Element);
+            }
+
+            diagnostics.SetRenderSummary(
+                rootSize.Width,
+                rootSize.Height,
+                measuredRootSize.Width,
+                measuredRootSize.Height,
+                renderedRoot.Element.ActualWidth,
+                renderedRoot.Element.ActualHeight);
+            diagnostics.SetElementLayoutSnapshots(elementLayoutSnapshots);
+            if (options is not null)
+                diagnostics.Layout = RegressionSnapshotProducer.Layout(renderedRoot.Element, context.SnapshotElements,
+                    options.KeyBoundsSelectors.Concat(plan.Contributions.Where(c => c.Contribution is InspectionContribution { KeyBounds: true }).Select(c => c.Widget.Value)).Distinct(StringComparer.Ordinal).ToArray());
+            token.ThrowIfCancellationRequested();
+            context.ExecuteBehaviorPhase(plan, BehaviorPhase.Inspect);
+            return renderedRoot.Element;
+        }
+        catch
         {
-            context.ApplyDeferredReferenceBehaviors();
+            diagnostics.BehaviorTrace = plan.Trace.IsEmpty ? inputs.Select(input => new BehaviorTrace(input.Widget.Id,
+                plan.Contributions.Where(c => c.Widget == input.Widget.Id).Select(c => c.Rule).Distinct().ToImmutableArray(),
+                (_behaviorRules?.Rules ?? []).Where(r => !r.Matcher.Matches(input.Widget)).Select(r => r.Id).ToImmutableArray(),
+                plan.Contributions.Where(c => c.Widget == input.Widget.Id).ToImmutableArray(),
+                plan.Contributions.Any(c => c.Widget == input.Widget.Id && c.Contribution is InspectionContribution { Support: BehaviorSupport.Partial }) ? BehaviorSupport.Partial : BehaviorSupport.Supported)
+                {
+                    Rules = (_behaviorRules?.Rules ?? []).Select(r => new BehaviorRuleTrace(r.Id, r.Phase, r.Matcher, r.Matcher.Matches(input.Widget),
+                        plan.Contributions.Any(c => c.Widget == input.Widget.Id && c.Rule == r.Id) ? Array.FindIndex(plan.Contributions.ToArray(), c => c.Widget == input.Widget.Id && c.Rule == r.Id) : null)).ToImmutableArray()
+                }).ToImmutableArray() : plan.Trace;
+            throw;
         }
-
-        if (diagnostics.RenderStructure is not null)
-            diagnostics.RenderStructure = RegressionSnapshotProducer.ResolveBehavior(diagnostics.RenderStructure, context.SnapshotElements);
-
-        Size measuredRootSize;
-        using (diagnostics.MeasurePhase("PrefabRenderer.Render.MeasureRoot"))
-        {
-            measuredRootSize = context.Measure(renderedRoot.Element, document.RootNode.Attributes, rootSize);
-        }
-
-        using (diagnostics.MeasurePhase("PrefabRenderer.Render.AttachRootLayoutDebugMetadata"))
-        {
-            context.AttachElementLayoutDebugMetadata(renderedRoot.Element, document.RootNode.Attributes, rootSize, measuredRootSize);
-        }
-
-        using (diagnostics.MeasurePhase("PrefabRenderer.Render.ArrangeRoot"))
-        {
-            ArrangeRenderedRoot(renderedRoot.Element, rootSize, measuredRootSize);
-        }
-
-        IReadOnlyList<ElementLayoutSnapshot> elementLayoutSnapshots;
-        using (diagnostics.MeasurePhase("PrefabRenderer.Render.CaptureElementLayoutSnapshots"))
-        {
-            elementLayoutSnapshots = RefreshElementDebugInfoAndCaptureSnapshots(renderedRoot.Element);
-        }
-
-        diagnostics.SetRenderSummary(
-            rootSize.Width,
-            rootSize.Height,
-            measuredRootSize.Width,
-            measuredRootSize.Height,
-            renderedRoot.Element.ActualWidth,
-            renderedRoot.Element.ActualHeight);
-        diagnostics.SetElementLayoutSnapshots(elementLayoutSnapshots);
-        if (options is not null)
-            diagnostics.Layout = RegressionSnapshotProducer.Layout(renderedRoot.Element, context.SnapshotElements, options.KeyBoundsSelectors);
-        return renderedRoot.Element;
     }
 
     private static void ArrangeRenderedRoot(FrameworkElement rootElement, Size requestedRootSize, Size measuredRootSize)

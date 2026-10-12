@@ -11,43 +11,43 @@ $fixtures = [ordered]@{
     "standard-window" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml"
         Checks = @(
-            "Window bleibt als visueller Root erhalten.",
-            "Root-Hinweis und Root-Messung sind in den Diagnostics sichtbar."
+            "Window is preserved as the visual root.",
+            "The root hint and root measurement are visible in Diagnostics."
         )
     }
     "standard-background" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Standard\Standard.Background.xml"
         Checks = @(
-            "Brush- und Sprite-Aufloesung bleibt nachvollziehbar.",
-            "Einfacher Container-Fall fuer fruehe Layout-Regressionen."
+            "Brush and sprite resolution remains inspectable.",
+            "A simple container case for detecting early layout regressions."
         )
     }
     "standard-scrollable-panel" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Standard\Standard.ScrollablePanel.xml"
         Checks = @(
-            "ClipRect-, InnerPanel- und Scrollbar-Referenzen werden aufgeloest.",
-            "Layout-Section zeigt Groessen und Canvas-Positionen der Kernelemente."
+            "ClipRect, InnerPanel, and Scrollbar references are resolved.",
+            "The layout section shows sizes and Canvas positions of the key elements."
         )
     }
     "land-management" = @{
         Path = Join-Path $RepoRoot "fixtures\AgricultureEstate\GUI\Prefabs\LandManagement.xml"
         Checks = @(
-            "ListPanel-/Button-Drift bleibt schnell sichtbar.",
-            "Guter Referenzfall fuer Button-Cropping und Textzentrierung."
+            "ListPanel and Button drift remains easy to spot.",
+            "A useful reference case for button cropping and text centering."
         )
     }
     "tournament-scrollable-panel" = @{
         Path = Join-Path $BannerlordRoot "Modules\SandBox\GUI\Prefabs\Tournament\Tournament.xml"
         Checks = @(
-            "Placeholder-Fall: uebergebene Children landen an der LogicalChildrenLocation des expandierten Standard.ScrollablePanel.",
-            "ClipRect-, InnerPanel- und Scrollbar-Struktur bleibt trotz Include-Insertion nachvollziehbar."
+            "Placeholder case: supplied children are inserted at the LogicalChildrenLocation of the expanded Standard.ScrollablePanel.",
+            "The ClipRect, InnerPanel, and Scrollbar structure remains inspectable after include insertion."
         )
     }
     "options-top-panel" = @{
         Path = Join-Path $BannerlordRoot "Modules\Native\GUI\Prefabs\Options\SPOptions\Options.xml"
         Checks = @(
-            "Root-Fallback-Fall: uebergebene Children landen am expandierten Root von Standard.TopPanel.",
-            "Fehlender Placeholder erzeugt dafuer keine eigene Warning mehr."
+            "Root fallback case: supplied children are inserted at the expanded root of Standard.TopPanel.",
+            "A missing placeholder no longer produces a separate warning for this case."
         )
     }
 }

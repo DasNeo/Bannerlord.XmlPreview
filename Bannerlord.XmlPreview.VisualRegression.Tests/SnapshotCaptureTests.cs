@@ -216,14 +216,14 @@ public sealed class SnapshotCaptureTests
         new Dictionary<string, string>(), new HashSet<string>(), PrefabWidgetPropertyMap.Empty, PrefabWidgetReferenceMap.Empty);
     private static RegressionRenderOptions Options() => new("fixture.xml", new Dictionary<string, string>(),
         new Dictionary<string, IReadOnlyDictionary<string, string>>(), []);
-    private static PrefabRenderer Renderer(IPreviewDataSourceProvider data)
+    internal static PrefabRenderer Renderer(IPreviewDataSourceProvider data, Bannerlord.XmlPreview.Core.Behaviors.IBehaviorRuleProvider? rules = null)
     {
         var assets = new EmptyAssets();
         return new(assets, new BannerlordBrushMetricsProvider(assets), new BannerlordBrushOverlayFeatureHandler(), data,
-            new FixedLayout(), new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider());
+            new FixedLayout(), new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider(), rules);
     }
 
-    private static T Sta<T>(Func<T> action)
+    internal static T Sta<T>(Func<T> action)
     {
         var source = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() => { try { source.SetResult(action()); } catch (Exception e) { source.SetException(e); } });
@@ -246,7 +246,7 @@ public sealed class SnapshotCaptureTests
         public Size PreviewSize { get; set; } = new(20, 10);
         public Size ResolveRootSize(Func<string?, double, double> resolveDouble) => PreviewSize;
     }
-    private class EmptyData : IPreviewDataSourceProvider
+    internal class EmptyData : IPreviewDataSourceProvider
     {
         public virtual bool TryGetTemplateItemBindings(PrefabNode node, out IReadOnlyList<IReadOnlyDictionary<string, string>> items) { items = []; return false; }
         public void SetTemplateItemBindings(PrefabNode node, IReadOnlyList<IReadOnlyDictionary<string, string>> items) => throw new NotSupportedException();

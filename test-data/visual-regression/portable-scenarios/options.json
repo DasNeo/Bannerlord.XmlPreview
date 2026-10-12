@@ -13,7 +13,7 @@
     "CropRule": "FullFrame"
   },
   "Scene": "Portable expanded Native options renderer fixture",
-  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures; explicit representative key labels (key artwork is outside this portable fixture)",
   "Bindings": {
     "AcceptText": "Sample AcceptText",
     "Action": "Sample Action",
@@ -2175,7 +2175,110 @@
       }
     ]
   },
-  "WidgetStates": {},
+  "WidgetStates": {
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#1 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#2 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#3 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#4 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#5 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#6 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#7 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#8 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#9 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=XboxParent] > Widget > OptionsGamepadKeyLocationWidget#10 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#1 > Widget > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#2 > Widget > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#3 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#4 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#5 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#6 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#7 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation4Parent] > Widget > OptionsGamepadKeyLocationWidget#8 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#1 > Widget > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#2 > Widget > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#3 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#4 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#5 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#6 > Widget > ListPanel > ItemTemplate > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#7 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > OptionsGamepadCategoryWidget > Widget[Id=Playstation5Parent] > Widget > OptionsGamepadKeyLocationWidget#8 > ListPanel > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > InputKeyVisualWidget#1": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > InputKeyVisualWidget#2": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel > ButtonWidget#1 > TextWidget > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel > ButtonWidget#2 > TextWidget > Widget > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > Widget[Id=BrightnessOptions] > ListPanel#2 > ButtonWidget#1 > TextWidget > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > Widget[Id=BrightnessOptions] > ListPanel#2 > ButtonWidget#2 > TextWidget > Widget > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > Widget[Id=ExposureOptions] > ListPanel#3 > ButtonWidget#1 > TextWidget > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    },
+    "Window > OptionsScreenWidget[Id=Options] > Widget[Id=ExposureOptions] > ListPanel#3 > ButtonWidget#2 > TextWidget > Widget > InputKeyVisualWidget": {
+      "KeyText": "Confirm"
+    }
+  },
   "KeyBoundsSelectors": [
     "Window"
   ],
@@ -2185,9 +2288,81 @@
       "WidgetIdOrPath": "$document",
       "Message": "No <Constants> section found. Using generic preview defaults.",
       "Reason": "Exact diagnostic from the archived expanded Native fixture using metadata-only assets. This profile does not compare image pixels."
+    },
+    {
+      "Code": "legacy.eb0a6b20cafa98c2",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GameplayOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.0ac283bc8a7495f5",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GameplayOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.197e61c3ee13fe51",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=PerformanceOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.d8e4e638aaabe890",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=VideoOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.95529aa6cc55679b",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=AudioOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.3ea05f43e5864563",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=PerformanceOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.ce88ff715f58a7e7",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > ListPanel[Id=GamepadOptions] > ItemTemplate > ListPanel[Id=GamepadCategoriesDropdown] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.40624f64aa107ff2",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=AudioOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.4f71b767545f6314",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    },
+    {
+      "Code": "legacy.1bc564bc89607678",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=VideoOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
     }
   ],
   "Masks": [],
   "BoundsTolerance": 0.5,
-  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance."
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance.",
+  "OptionalConnectionExplanations": {
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=VideoOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=VideoOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=PerformanceOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=PerformanceOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=AudioOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=AudioOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GameplayOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=BaseOptions] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GameplayOptionsPage] > ListPanel[Id=@Name] > NavigatableListPanel[Id=GroupOptions] > ItemTemplate > NavigatableListPanel > NavigatableListPanel[Id=OptionsList] > ItemTemplate > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control.",
+    "Window > OptionsScreenWidget[Id=Options] > ListPanel[Id=MainSectionListPanel] > Widget[Id=CenterPanel] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=MyClipRect] > TabControl[Id=TabControl] > Widget[Id=GamepadOptionsPage] > ListPanel > ListPanel[Id=GamepadOptions] > ItemTemplate > ListPanel[Id=GamepadCategoriesDropdown] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control."
+  }
 }

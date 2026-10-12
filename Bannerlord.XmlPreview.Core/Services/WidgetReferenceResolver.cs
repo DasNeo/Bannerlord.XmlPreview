@@ -72,6 +72,13 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
             : new PrefabWidgetReferenceMap(referencesByWidgetPath);
     }
 
+    public PrefabWidgetReferenceMap Resolve(Bannerlord.XmlPreview.Models.Nodes.PrefabNode root, PreviewDiagnostics diagnostics)
+    {
+        static XElement Xml(Bannerlord.XmlPreview.Models.Nodes.PrefabNode node) => new(node.Name,
+            node.Attributes.Select(p => new XAttribute(p.Key, p.Value)), node.Children.Select(Xml));
+        return Resolve(Xml(root), diagnostics);
+    }
+
     private static bool IsReferenceCandidate(string attributeName)
     {
         if (attributeName.StartsWith(DebugAttributeNamespacePrefix, StringComparison.OrdinalIgnoreCase) ||
@@ -80,7 +87,9 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
             return false;
         }
 
-        return attributeName.Contains("Widget", StringComparison.OrdinalIgnoreCase) ||
+        return attributeName is "ClipRect" or "Handle" or "Filler" or "Button" ||
+               attributeName.EndsWith("Scrollbar", StringComparison.OrdinalIgnoreCase) ||
+               attributeName.Contains("Widget", StringComparison.OrdinalIgnoreCase) ||
                attributeName.EndsWith("Panel", StringComparison.OrdinalIgnoreCase) ||
                attributeName.EndsWith("Container", StringComparison.OrdinalIgnoreCase);
     }

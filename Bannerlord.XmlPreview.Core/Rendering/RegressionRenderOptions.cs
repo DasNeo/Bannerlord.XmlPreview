@@ -9,7 +9,12 @@ public sealed record RegressionRenderOptions(
     string PrefabIdentity,
     IReadOnlyDictionary<string, string> Bindings,
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> WidgetStates,
-    IReadOnlyList<string> KeyBoundsSelectors);
+    IReadOnlyList<string> KeyBoundsSelectors)
+{
+    public bool TraceBehaviors { get; init; }
+    public CancellationToken CancellationToken { get; init; }
+    public IReadOnlyDictionary<string, string> OptionalConnectionExplanations { get; init; } = new Dictionary<string, string>();
+}
 
 internal static class RegressionSnapshotProducer
 {

@@ -20,8 +20,18 @@
   "KeyBoundsSelectors": [
     "Window"
   ],
-  "ExpectedWarnings": [],
+  "ExpectedWarnings": [
+    {
+      "Code": "legacy.e65c9fdb4978bfb2",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > Widget > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    }
+  ],
   "Masks": [],
   "BoundsTolerance": 0.5,
-  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance."
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance.",
+  "OptionalConnectionExplanations": {
+    "Window > Widget > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control."
+  }
 }

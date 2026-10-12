@@ -139,7 +139,7 @@ public sealed class PrefabLoader : IPrefabLoader
             nodeTypeCounts.Values.Sum(),
             maxDepth,
             nodeTypeCounts);
-        return new PrefabDocument(fullPath, rootNode, constants, bindingKeys, propertyMap, referenceMap);
+        return new PrefabDocument(fullPath, rootNode, constants, bindingKeys, propertyMap, referenceMap) { PrefabIdentity = _prefabReferenceResolver.GetPrefabIdentity(fullPath) };
     }
 
     private static (IReadOnlyCollection<string> BrushNames, IReadOnlyCollection<string> SpriteNames)

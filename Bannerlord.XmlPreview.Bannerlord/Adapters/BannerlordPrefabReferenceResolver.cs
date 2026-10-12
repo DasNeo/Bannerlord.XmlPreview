@@ -20,6 +20,18 @@ public sealed class BannerlordPrefabReferenceResolver : IPrefabReferenceResolver
         _installationIndex = installationIndex;
     }
 
+    public string GetPrefabIdentity(string sourcePrefabPath)
+    {
+        var source = Path.GetFullPath(sourcePrefabPath);
+        var relative = Path.GetRelativePath(_appSettingsService.BannerlordInstallRoot, source);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(relative))
+        {
+            var location = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(source.ToLowerInvariant())))[..16];
+            relative = "external/" + location + "/" + Path.GetFileName(source);
+        }
+        return global::Bannerlord.XmlPreview.Models.StableWidgetId.CanonicalPrefab(relative);
+    }
+
     public PrefabReferenceResolveResult Resolve(string sourcePrefabPath, string referenceName)
     {
         if (string.IsNullOrWhiteSpace(sourcePrefabPath) ||

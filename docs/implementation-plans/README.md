@@ -1,6 +1,6 @@
 # Milestone Implementation Plans
 
-Status: M0 complete and reverified 2026-10-04; M1 implementation complete, milestone acceptance pending; M2-M4 proposed
+Status: M0 complete and reverified 2026-10-04; M1 complete 2026-10-12; M2-M4 proposed
 
 These plans turn the [development roadmap](../roadmap.md) into executable work packages. They preserve the terminology in [GLOSSARY.md](../../GLOSSARY.md) and the execution boundary in [ADR 0001](../adr/0001-do-not-execute-mod-code-widgets.md).
 
@@ -16,7 +16,7 @@ Each milestone starts only after the previous milestone meets its exit criteria.
 
 M0 implementation and verification are recorded in [the M0 completion report](../reports/m0-completion.md).
 
-M1's implementation, verification, performance evidence and remaining automated validation acceptance are recorded in [the M1 progress report](../reports/m1-progress.md). Screenshot capture and Full comparison are optional and do not block milestones.
+M1's accepted validation results and observed CI evidence are recorded in [the M1 completion report](../reports/m1-completion.md); implementation history and benchmark evidence remain in [the progress report](../reports/m1-progress.md). Screenshot capture and Full comparison are optional and do not block milestones.
 
 ## Rules shared by every milestone
 

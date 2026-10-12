@@ -132,7 +132,7 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         using var totalTiming = PreviewDiagnostics.MeasureCurrentPhase("BannerlordWidgetReflectionService.BuildSnapshot.Total");
 
         var assemblyPathsByName = CollectAssemblyPaths(
-            _installationIndex.GetSnapshot(installRoot).AssemblyFiles);
+            _installationIndex.GetSnapshot(installRoot).AssemblyFiles.Where(path => BannerlordWidgetMetadataTrust.IsTrustedAssemblyPath(installRoot, path)));
         if (assemblyPathsByName.Count == 0)
         {
             return null;

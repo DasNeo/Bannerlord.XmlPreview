@@ -1,6 +1,6 @@
 # M1 Implementation and Verification Report
 
-Status: acceptance revised 2026-10-12 to automated structural, layout, behavior, asset and Diagnostics validation. Screenshot capture, calibration and Full comparison are optional. Public CI observation remains pending.
+Status: complete 2026-10-12 under automated structural, layout, behavior, asset and Diagnostics validation. The supplied CI artifacts satisfy the final CI requirement. See [the completion report](./m1-completion.md); this document preserves implementation and verification history.
 
 [M0 was reverified](./m0-completion.md) before M1 began. No renderer screenshot has been presented as an in-game reference. M1 requires all nine portable and installed-game Structure Only passes, focused correctness tests and observation of the public CI run. The verification and acceptance revisions below retain their historical context.
 
@@ -69,10 +69,10 @@ Fixtures use LF UTF-8 JSON and recorded byte hashes, enforced by `.gitattributes
 
 The [fixture and reference workflow](../../test-data/visual-regression/README.md) documents all commands, calibration, acceptance, profiles and provenance. [ADR 0001](../adr/0001-do-not-execute-mod-code-widgets.md) remains the execution boundary.
 
-## Remaining milestone acceptance
+## Milestone acceptance (completed 2026-10-12)
 
-1. Retain all nine portable and installed-game Structure Only passes and focused correctness tests.
-2. Observe the public Structure Only CI run after publication, then write the M1 completion report and close the remaining exit criteria. In-game screenshots and calibrated Full comparisons are optional investigations.
+1. All nine portable and installed-game Structure Only passes and focused correctness tests are recorded.
+2. The supplied public CI artifacts confirm 82 passed tests and nine structural passes; [the M1 completion report](./m1-completion.md) closes the remaining exit criteria. In-game screenshots and calibrated Full comparisons are optional investigations.
 
 ## Acceptance revision: 2026-10-05
 
@@ -98,4 +98,4 @@ Verified commands and results:
 
 Evidence root: `docs/evidence/build-verify/validation-policy-2026-10-12`; suite summaries are `portable/summary.md` and `native/summary.md`, and optional preview artifacts are under `optional-review/`. Final test results are the `validation-policy.trx` files in both test projects' `TestResults` directories.
 
-Structural baselines detect renderer regressions; they do not prove pixel fidelity to Bannerlord. Portable sprites remain transparent stand-ins. Focused asset tests verify metadata and metrics, not texture appearance. Fonts, colors and texture appearance may be inspected occasionally using automatically generated preview images. No in-game screenshot was created or accepted. Public CI observation and the subsequent M1 completion report remain outstanding; screenshot setup is no longer a blocker.
+Structural baselines detect renderer regressions; they do not prove pixel fidelity to Bannerlord. Portable sprites remain transparent stand-ins. Focused asset tests verify metadata and metrics, not texture appearance. Fonts, colors and texture appearance may be inspected occasionally using automatically generated preview images. No in-game screenshot was created or accepted. The subsequently supplied CI artifacts and [completion report](./m1-completion.md) close the final M1 requirements.

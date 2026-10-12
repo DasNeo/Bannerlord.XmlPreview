@@ -45,10 +45,7 @@ public sealed class BannerlordWidgetNodeFactory : IWidgetNodeFactory
             "HintWidget" => new HintWidgetNode(attributes, children),
             "Widget" => new WidgetNode(attributes, children),
             "BrushWidget" => new BrushWidgetNode(attributes, children),
-            _ when string.Equals(name, "ScrollablePanel", StringComparison.OrdinalIgnoreCase) ||
-                   name.EndsWith("ScrollablePanel", StringComparison.OrdinalIgnoreCase) ||
-                   name.EndsWith("ScrollablePanelWidget", StringComparison.OrdinalIgnoreCase) =>
-                new ScrollablePanelNode(name, attributes, children),
+            "ScrollablePanel" => new WidgetNode(name, attributes, children),
             _ when string.Equals(name, "ScrollbarWidget", StringComparison.OrdinalIgnoreCase) ||
                    name.EndsWith("ScrollbarWidget", StringComparison.OrdinalIgnoreCase) =>
                 new ScrollbarWidgetNode(name, attributes, children),
@@ -75,7 +72,7 @@ public sealed class BannerlordWidgetNodeFactory : IWidgetNodeFactory
             BannerlordWidgetRenderKind.ListPanel => new ListPanelNode(name, attributes, children),
             BannerlordWidgetRenderKind.NavigationScopeTargeter => new NavigationScopeTargeterNode(name, attributes, children),
             BannerlordWidgetRenderKind.GridWidget => new GridWidgetNode(name, attributes, children),
-            BannerlordWidgetRenderKind.ScrollablePanel => new ScrollablePanelNode(name, attributes, children),
+            BannerlordWidgetRenderKind.ScrollablePanel => new WidgetNode(name, attributes, children),
             BannerlordWidgetRenderKind.ScrollbarWidget => new ScrollbarWidgetNode(name, attributes, children),
             _ => null
         };

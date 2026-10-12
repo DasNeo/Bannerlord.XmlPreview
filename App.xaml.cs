@@ -92,11 +92,13 @@ public partial class App : Application
         services.AddSingleton<IWidgetPropertyResolver, BannerlordWidgetPropertyResolver>();
         services.AddSingleton<IWidgetReferenceResolver, WidgetReferenceResolver>();
         services.AddSingleton<IWidgetNodeFactory, BannerlordWidgetNodeFactory>();
+        services.AddSingleton<Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore>();
         services.AddSingleton<IPreviewDataSourceProvider, BannerlordPreviewDataSourceProvider>();
         services.AddSingleton<IRootLayoutHints, BannerlordRootLayoutHints>();
         services.AddSingleton<IWidgetTextSourceProvider, BannerlordWidgetTextSourceProvider>();
         services.AddSingleton<IWidgetDebugMetadataProvider, BannerlordWidgetDebugMetadataProvider>();
         services.AddSingleton<IPrefabLoader, PrefabLoader>();
+        services.AddSingleton<Bannerlord.XmlPreview.Core.Behaviors.IBehaviorRuleProvider, Bannerlord.XmlPreview.Behaviors.Bannerlord.BannerlordBehaviorRuleProvider>();
         services.AddSingleton<IPrefabRenderer, PrefabRenderer>();
         services.AddSingleton<IFileDialogService, FileDialogService>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();

@@ -16,30 +16,18 @@ public abstract class PrefabNode
 
     public IReadOnlyDictionary<string, string> Attributes { get; private set; }
 
-    internal IDisposable ApplyPreviewState(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> states)
-    {
-        var originals = new List<(PrefabNode Node, IReadOnlyDictionary<string, string> Attributes)>();
-        void Apply(PrefabNode node)
-        {
-            if (node.Attributes.TryGetValue(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, out var path) && states.TryGetValue(path, out var state))
-            {
-                originals.Add((node, node.Attributes));
-                var copy = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
-                foreach (var pair in state) copy[pair.Key] = pair.Value;
-                node.Attributes = copy;
-            }
-            foreach (var child in node.Children) Apply(child);
-        }
-        Apply(this);
-        return new PreviewStateHandle(originals);
-    }
+    public IReadOnlyList<PrefabNode> Children { get; private set; }
 
-    private sealed class PreviewStateHandle(List<(PrefabNode Node, IReadOnlyDictionary<string, string> Attributes)> originals) : IDisposable
+    internal PrefabNode CopyForRender(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> states)
     {
-        public void Dispose() { foreach (var (node, attributes) in originals) node.Attributes = attributes; originals.Clear(); }
+        var copy = (PrefabNode)MemberwiseClone();
+        var attributes = new Dictionary<string, string>(Attributes, StringComparer.OrdinalIgnoreCase);
+        if (attributes.TryGetValue(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, out var path) && states.TryGetValue(path, out var state))
+            foreach (var pair in state) attributes[pair.Key] = pair.Value;
+        copy.Attributes = attributes;
+        copy.Children = Children.Select(child => child.CopyForRender(states)).ToArray();
+        return copy;
     }
-
-    public IReadOnlyList<PrefabNode> Children { get; }
 
     public abstract RenderedPrefabNode Render(PrefabRenderContext context, Size parentSize);
 

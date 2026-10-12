@@ -1,6 +1,6 @@
 # M1 Implementation Plan: Measurable Visual Fidelity
 
-Status: acceptance revised 2026-10-12 to require automated structural, layout, behavior, asset and Diagnostics checks. Screenshots and Full comparison are optional. Public CI is configured and locally verified; its remote run remains unobserved. See [progress and verification](../reports/m1-progress.md).
+Status: complete 2026-10-12 under automated structural, layout, behavior, asset and Diagnostics validation. Screenshots and Full comparison are optional. The supplied CI artifacts confirm all required tests and all nine portable cases passed. See [the completion report](../reports/m1-completion.md).
 
 ## Objective
 
@@ -197,7 +197,7 @@ For every case, run five warm iterations and report median and p95. Record machi
 - [x] All nine Native cases pass Structure Only.
 - [x] Screenshot comparison removed from required acceptance; Full remains optional.
 - [x] Focused behavior and asset tests pass; all nine installed-game cases pass Structure Only.
-- [ ] Public CI runs the complete Structure Only suite.
+- [x] Public CI runs the complete Structure Only suite.
 - [x] Negative acceptance tests pass.
 - [x] Reference Package manifest and calibration are documented.
-- [ ] M1 completion report contains metrics and artifacts.
+- [x] M1 completion report contains metrics and artifacts.

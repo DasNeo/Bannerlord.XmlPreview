@@ -8,4 +8,7 @@ public sealed record PrefabDocument(
     IReadOnlyDictionary<string, string> Constants,
     IReadOnlySet<string> BindingKeys,
     PrefabWidgetPropertyMap PropertyMap,
-    PrefabWidgetReferenceMap ReferenceMap);
+    PrefabWidgetReferenceMap ReferenceMap)
+{
+    public string? PrefabIdentity { get; init; }
+}

@@ -1,6 +1,6 @@
+using Bannerlord.XmlPreview.Core.Behaviors;
 using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Core.Abstractions;
-using Bannerlord.XmlPreview.DemoData;
 using Bannerlord.XmlPreview.Models;
 using Bannerlord.XmlPreview.Models.Assets;
 using Bannerlord.XmlPreview.Models.Nodes;
@@ -33,20 +33,12 @@ public sealed class PrefabRenderContext
     private readonly Dictionary<string, RenderedWidgetRegistration> _renderedWidgetsByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<IReadOnlyDictionary<string, string>> _bindingScopes = [];
 
-    private static readonly Dictionary<string, string> MockBindings =
-        new(PreviewDemoCatalog.MockBindings, StringComparer.OrdinalIgnoreCase);
-
-    private static readonly Dictionary<string, Brush> PanelBrushes = PreviewDemoCatalog.PanelBrushes
-        .ToDictionary(
-            entry => entry.Key,
-            entry => CreateGradientBrush(entry.Value.FillHex, entry.Value.StrokeHex),
-            StringComparer.OrdinalIgnoreCase);
-
-    private static readonly Dictionary<string, Brush> TextBrushes = PreviewDemoCatalog.TextBrushColors
-        .ToDictionary(
-            entry => entry.Key,
-            entry => (Brush)CreateSolidBrushInternal(entry.Value),
-            StringComparer.OrdinalIgnoreCase);
+    private readonly Lazy<Dictionary<string, Brush>> _panelBrushes;
+    private Dictionary<string, Brush> PanelBrushes => _panelBrushes.Value;
+    private readonly Lazy<Dictionary<string, Brush>> _textBrushes;
+    private Dictionary<string, Brush> TextBrushes => _textBrushes.Value;
+    private readonly PreviewDataSnapshot _previewData;
+    public string FrameBorderColor => _previewData.FrameBorderColor;
 
     private readonly PreviewDiagnostics _diagnostics;
     private readonly IReadOnlyDictionary<string, string> _constants;
@@ -55,7 +47,6 @@ public sealed class PrefabRenderContext
     private readonly IAssetCatalog _assetCatalog;
     private readonly IBrushMetricsProvider _brushMetricsProvider;
     private readonly IBrushOverlayFeatureHandler _brushOverlayFeatureHandler;
-    private readonly IPreviewDataSourceProvider _previewDataSourceProvider;
     private readonly IWidgetTextSourceProvider _widgetTextSourceProvider;
     private readonly IWidgetDebugMetadataProvider _widgetDebugMetadataProvider;
     private readonly HashSet<string> _reportedBindings = new(StringComparer.OrdinalIgnoreCase);
@@ -64,6 +55,8 @@ public sealed class PrefabRenderContext
     private bool _renderBudgetExceeded;
     private readonly Dictionary<string, string> _runBindings;
     private readonly RegressionRenderOptions? _regressionOptions;
+    private readonly Dictionary<WidgetId, RenderedWidgetRegistration> _graphElements = [];
+    internal string GraphPrefabIdentity { get; set; } = "preview.xml";
     private readonly List<string> _instanceKeys = [];
     internal List<SnapshotElement> SnapshotElements { get; } = [];
 
@@ -75,11 +68,14 @@ public sealed class PrefabRenderContext
         IAssetCatalog assetCatalog,
         IBrushMetricsProvider brushMetricsProvider,
         IBrushOverlayFeatureHandler brushOverlayFeatureHandler,
-        IPreviewDataSourceProvider previewDataSourceProvider,
         IWidgetTextSourceProvider widgetTextSourceProvider,
         IWidgetDebugMetadataProvider widgetDebugMetadataProvider,
-        RegressionRenderOptions? regressionOptions = null)
+        RegressionRenderOptions? regressionOptions = null,
+        PreviewDataSnapshot? previewData = null)
     {
+        _previewData = previewData ?? PreviewDataSnapshot.Empty;
+        _panelBrushes = new(() => _previewData.PanelColors.ToDictionary(p => p.Key, p => CreateGradientBrush(p.Value.Fill, p.Value.Stroke), StringComparer.OrdinalIgnoreCase));
+        _textBrushes = new(() => _previewData.TextColors.ToDictionary(p => p.Key, p => (Brush)CreateSolidBrushInternal(p.Value), StringComparer.OrdinalIgnoreCase));
         _constants = constants;
         _propertyMap = propertyMap;
         _referenceMap = referenceMap;
@@ -87,12 +83,11 @@ public sealed class PrefabRenderContext
         _assetCatalog = assetCatalog;
         _brushMetricsProvider = brushMetricsProvider;
         _brushOverlayFeatureHandler = brushOverlayFeatureHandler;
-        _previewDataSourceProvider = previewDataSourceProvider;
         _widgetTextSourceProvider = widgetTextSourceProvider;
         _widgetDebugMetadataProvider = widgetDebugMetadataProvider;
         _regressionOptions = regressionOptions;
         _runBindings = regressionOptions is null
-            ? new Dictionary<string, string>(MockBindings, StringComparer.OrdinalIgnoreCase)
+            ? new Dictionary<string, string>(_previewData.Bindings, StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var binding in regressionOptions?.Bindings ?? new Dictionary<string, string>())
             _runBindings[binding.Key] = binding.Value;
@@ -144,26 +139,17 @@ public sealed class PrefabRenderContext
         return _runBindings.GetValueOrDefault(key, HumanizeBindingKey(key));
     }
 
-    public static string ResolveMockBindingValue(string key)
-    {
-        return MockBindings.TryGetValue(key, out var value) ? value : HumanizeBindingKey(key);
-    }
-
-    public static void SetMockBindingValue(string key, string value)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return;
-        }
-
-        MockBindings[key] = value;
-    }
-
     public bool TryGetTemplateItemBindings(
         PrefabNode node,
         out IReadOnlyList<IReadOnlyDictionary<string, string>> itemBindings)
     {
-        return _previewDataSourceProvider.TryGetTemplateItemBindings(node, out itemBindings);
+        if (_previewData.TemplateItems.TryGetValue(PreviewDataSnapshot.Path(node), out var items))
+        {
+            itemBindings = items.Select(item => (IReadOnlyDictionary<string, string>)item).ToArray();
+            return true;
+        }
+        itemBindings = [];
+        return false;
     }
 
     public string ResolveWidgetText(
@@ -405,6 +391,21 @@ public sealed class PrefabRenderContext
         string attributeName,
         out RenderedWidgetRegistration widget)
     {
+        if (_activeGraphWidget is { } active && _graphElements.TryGetValue(active, out var owner))
+        {
+            var referenceOwner = active;
+            if (TryGetWidgetPath(attributes) is { } path && path != owner.WidgetPath)
+            {
+                var instance = _graphInstanceKeys.GetValueOrDefault(active, "");
+                var candidates = _graphElements.Where(p => p.Value.WidgetPath == path && (_graphInstanceKeys.GetValueOrDefault(p.Key, "").Length == 0 || instance == _graphInstanceKeys.GetValueOrDefault(p.Key, "") || instance.StartsWith(_graphInstanceKeys.GetValueOrDefault(p.Key, "") + "/", StringComparison.Ordinal))).OrderByDescending(p => _graphInstanceKeys.GetValueOrDefault(p.Key, "").Length);
+                referenceOwner = candidates.Select(p => p.Key).FirstOrDefault();
+            }
+            if (_graphReferences.TryGetValue(referenceOwner, out var references) && references.TryGetValue(attributeName, out var target))
+                return _graphElements.TryGetValue(target, out widget!);
+            widget = null!;
+            return false;
+        }
+
         widget = null!;
 
         if (!TryGetResolvedWidgetReference(attributes, attributeName, out var reference) ||
@@ -447,12 +448,6 @@ public sealed class PrefabRenderContext
         return attributeName.StartsWith("Debug.", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsWidgetKind(RenderedWidgetRegistration widget, string widgetName)
-    {
-        return string.Equals(widget.NodeName, widgetName, StringComparison.OrdinalIgnoreCase) ||
-               widget.NodeName.EndsWith(widgetName, StringComparison.OrdinalIgnoreCase);
-    }
-
     private string ResolveStringAttribute(
         IReadOnlyDictionary<string, string> attributes,
         string attributeName,
@@ -478,91 +473,8 @@ public sealed class PrefabRenderContext
                ResolveOptionalPreviewDouble(attributes, fallbackAttributeName, unresolvedBindingFallback: 0d);
     }
 
-    private void ApplyValueBasedVisibilityBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeToggleSelection(RenderedWidgetRegistration widget)
     {
-        if (!IsWidgetKind(widget, "ValueBasedVisibilityWidget"))
-        {
-            return;
-        }
-
-        var indexToWatch = ResolveOptionalWidgetNumber(widget.Attributes, "IndexToWatchFloat", "IndexToWatch");
-        var indexToBeVisible = ResolveOptionalWidgetNumber(widget.Attributes, "IndexToBeVisibleFloat", "IndexToBeVisible");
-        if (!indexToWatch.HasValue || !indexToBeVisible.HasValue)
-        {
-            return;
-        }
-
-        var watchType = ResolveStringAttribute(widget.Attributes, "WatchType", "Equal");
-        var isVisible = watchType.Trim() switch
-        {
-            "Equal" => DoubleUtil.AreClose(indexToWatch.Value, indexToBeVisible.Value),
-            "BiggerThan" => indexToWatch.Value > indexToBeVisible.Value,
-            "BiggerThanEqual" => indexToWatch.Value >= indexToBeVisible.Value,
-            "LessThan" => indexToWatch.Value < indexToBeVisible.Value,
-            "LessThanEqual" => indexToWatch.Value <= indexToBeVisible.Value,
-            "NotEqual" => !DoubleUtil.AreClose(indexToWatch.Value, indexToBeVisible.Value),
-            _ => IsVisible(widget.Attributes)
-        };
-
-        widget.Element.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void ApplyStringBasedVisibilityBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!IsWidgetKind(widget, "StringBasedVisibilityWidget"))
-        {
-            return;
-        }
-
-        var first = ResolveStringAttribute(widget.Attributes, "FirstString");
-        var second = ResolveStringAttribute(widget.Attributes, "SecondString");
-        var watchType = ResolveStringAttribute(widget.Attributes, "WatchType", "Equal");
-        var isVisible = watchType.Trim() switch
-        {
-            "Equal" => string.Equals(first, second, StringComparison.OrdinalIgnoreCase),
-            "NotEqual" => !string.Equals(first, second, StringComparison.OrdinalIgnoreCase),
-            _ => IsVisible(widget.Attributes)
-        };
-
-        widget.Element.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void ApplyDimensionSyncWidgetBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!IsWidgetKind(widget, "DimensionSyncWidget") ||
-            !TryResolveReferencedWidget(widget.Attributes, "WidgetToCopyHeightFrom", out var sourceWidget))
-        {
-            return;
-        }
-
-        var dimensionToSync = ResolveStringAttribute(widget.Attributes, "DimensionToSync", "None").Trim();
-        if (string.Equals(dimensionToSync, "None", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var sourceParentSize = ResolveRegisteredParentSize(sourceWidget);
-        var sourceSize = Measure(sourceWidget.Element, sourceWidget.Attributes, sourceParentSize);
-        var paddingAmount = ResolveOptionalDouble(widget.Attributes, "PaddingAmount") ?? 0d;
-
-        if (dimensionToSync is "Horizontal" or "HorizontalAndVertical")
-        {
-            widget.Element.Width = Math.Max(0d, sourceSize.Width + paddingAmount);
-        }
-
-        if (dimensionToSync is "Vertical" or "HorizontalAndVertical")
-        {
-            widget.Element.Height = Math.Max(0d, sourceSize.Height + paddingAmount);
-        }
-    }
-
-    private void ApplyTabToggleWidgetBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!IsWidgetKind(widget, "TabToggleWidget"))
-        {
-            return;
-        }
-
         var includeChildren = ResolveBoolean(widget.Attributes, "UpdateChildrenStates");
         var tabName = ResolveStringAttribute(widget.Attributes, "TabName").Trim();
         var hasTabControl = TryResolveReferencedWidget(widget.Attributes, "TabControlWidget", out var tabControlWidget);
@@ -623,13 +535,8 @@ public sealed class PrefabRenderContext
         return nextSeparatorIndex >= 0 ? childPath[..nextSeparatorIndex] : childPath;
     }
 
-    private void ApplyAnimatedDropdownWidgetBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeDropdown(RenderedWidgetRegistration widget)
     {
-        if (!IsWidgetKind(widget, "AnimatedDropdownWidget"))
-        {
-            return;
-        }
-
         var widgetParentSize = ResolveRegisteredParentSize(widget);
         var widgetSize = Measure(widget.Element, widget.Attributes, widgetParentSize);
 
@@ -782,40 +689,9 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void ApplyNavigationAutoScrollWidgetBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeRadialChildren(RenderedWidgetRegistration widget)
     {
-        if (!IsWidgetKind(widget, "NavigationAutoScrollWidget"))
-        {
-            return;
-        }
-
-        CollapseNavigationHelperWidget(widget);
-    }
-
-    private void ApplyNavigationTargetSwitcherBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!IsWidgetKind(widget, "NavigationTargetSwitcher"))
-        {
-            return;
-        }
-
-        CollapseNavigationHelperWidget(widget);
-    }
-
-    private void ApplyNavigationForcedScopeCollectionTargeterBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!IsWidgetKind(widget, "NavigationForcedScopeCollectionTargeter"))
-        {
-            return;
-        }
-
-        CollapseNavigationHelperWidget(widget);
-    }
-
-    private void ApplyCircleLoadingAnimWidgetBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!IsWidgetKind(widget, "CircleLoadingAnimWidget") ||
-            widget.ChildHost is not Canvas childCanvas)
+        if (widget.ChildHost is not Canvas childCanvas)
         {
             return;
         }
@@ -858,14 +734,6 @@ public sealed class PrefabRenderContext
             Canvas.SetTop(childWidget.Element, childCenterY - childSize.Height / 2d);
             childWidget.Element.Opacity = Math.Clamp(0.35d + ((double)(index + 1) / directChildWidgets.Length) * 0.65d, 0d, 1d);
         }
-    }
-
-    private static void CollapseNavigationHelperWidget(RenderedWidgetRegistration widget)
-    {
-        widget.Element.Visibility = Visibility.Collapsed;
-        widget.Element.Width = 0d;
-        widget.Element.Height = 0d;
-        widget.Element.IsEnabled = false;
     }
 
     private IEnumerable<RenderedWidgetRegistration> EnumerateDirectChildWidgets(RenderedWidgetRegistration widget)
@@ -935,7 +803,7 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void ApplyFillWidgetReferenceBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeFill(RenderedWidgetRegistration widget, bool isVertical)
     {
         if (!TryResolveReferencedWidget(widget.Attributes, "FillWidget", out var fillWidget))
         {
@@ -965,7 +833,6 @@ public sealed class PrefabRenderContext
             return;
         }
 
-        var isVertical = widget.NodeName.Contains("Vertical", StringComparison.OrdinalIgnoreCase);
         var fillFromEnd = isVertical
             ? ResolveBoolean(widget.Attributes, "IsDirectionUpward")
             : ResolveBoolean(widget.Attributes, "IsDirectionRightward", fillWidget.Element.HorizontalAlignment != HorizontalAlignment.Right);
@@ -1034,30 +901,23 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void ApplySortVisualReferenceBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeSortIndicator(RenderedWidgetRegistration widget, string state)
     {
         if (!TryResolveReferencedWidget(widget.Attributes, "SortVisualWidget", out var sortVisual))
         {
             return;
         }
 
-        var state = ResolveBinding(widget.Attributes.TryGetValue("SortState", out var sortState) ? sortState : string.Empty);
-        var isSelected = ResolveBoolean(widget.Attributes, "IsSelected", !string.IsNullOrWhiteSpace(state));
-        var normalizedState = state.Trim();
-        var showArrow = isSelected || !string.IsNullOrWhiteSpace(normalizedState);
-
+        var showArrow = state != "Hidden";
         sortVisual.Element.Visibility = showArrow ? Visibility.Visible : Visibility.Collapsed;
         sortVisual.Element.Opacity = showArrow ? 1d : 0.35;
         sortVisual.Element.RenderTransformOrigin = new Point(0.5, 0.5);
 
-        var isDescending =
-            normalizedState.Contains("desc", StringComparison.OrdinalIgnoreCase) ||
-            normalizedState.Contains("down", StringComparison.OrdinalIgnoreCase) ||
-            normalizedState.Contains("high", StringComparison.OrdinalIgnoreCase);
+        var isDescending = state == "Descending";
         sortVisual.Element.RenderTransform = new RotateTransform(isDescending ? 180d : 0d);
     }
 
-    private void ApplyTargetWidgetReferenceBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeTargetState(RenderedWidgetRegistration widget)
     {
         if (!TryResolveReferencedWidget(widget.Attributes, "TargetWidget", out var targetWidget))
         {
@@ -1103,35 +963,8 @@ public sealed class PrefabRenderContext
         };
     }
 
-    private void ApplyStateSyncWidgetBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeDelayedState(RenderedWidgetRegistration widget)
     {
-        if (!widget.NodeName.Contains("StateSyncWidget", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (!TryResolveReferencedWidget(widget.Attributes, "SourceWidget", out var sourceWidget))
-        {
-            return;
-        }
-
-        var sourceState = ResolveWidgetPreviewState(sourceWidget);
-        if (TryResolveReferencedWidget(widget.Attributes, "TargetWidget", out var targetWidget))
-        {
-            ApplyPreviewState(targetWidget, sourceState, includeChildren: ResolveBoolean(targetWidget.Attributes, "UpdateChildrenStates"));
-            return;
-        }
-
-        ApplyPreviewState(widget, sourceState, includeChildren: ResolveBoolean(widget.Attributes, "UpdateChildrenStates"));
-    }
-
-    private void ApplyDelayedStateChangerBehavior(RenderedWidgetRegistration widget)
-    {
-        if (!widget.NodeName.Contains("DelayedStateChanger", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var targetWidget = TryResolveReferencedWidget(widget.Attributes, "TargetWidget", out var resolvedTargetWidget)
             ? resolvedTargetWidget
             : widget;
@@ -1155,14 +988,8 @@ public sealed class PrefabRenderContext
         ApplyPreviewState(targetWidget, requestedState, includeChildren);
     }
 
-    private void ApplyTwoWaySliderWidgetBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeSliderFill(RenderedWidgetRegistration widget)
     {
-        if (!widget.NodeName.Contains("TwoWaySliderWidget", StringComparison.OrdinalIgnoreCase) &&
-            !HasAttribute(widget.Attributes, "ChangeFillWidget"))
-        {
-            return;
-        }
-
         if (!TryResolveReferencedWidget(widget.Attributes, "ChangeFillWidget", out var changeFillWidget))
         {
             return;
@@ -1221,7 +1048,7 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void ApplyClipContentsBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeClip(RenderedWidgetRegistration widget)
     {
         if (!ResolveBoolean(widget.Attributes, "ClipContents"))
         {
@@ -1235,13 +1062,8 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void ApplyScrollablePanelReferenceBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeScrollViewport(RenderedWidgetRegistration widget)
     {
-        if (!IsScrollablePanelLike(widget))
-        {
-            return;
-        }
-
         if (!TryResolveReferencedWidget(widget.Attributes, "ClipRect", out var clipRectWidget) ||
             !TryResolveReferencedWidget(widget.Attributes, "InnerPanel", out var innerPanelWidget))
         {
@@ -1292,13 +1114,8 @@ public sealed class PrefabRenderContext
         }
     }
 
-    private void ApplyScrollbarWidgetReferenceBehavior(RenderedWidgetRegistration widget)
+    private void MaterializeScrollHandle(RenderedWidgetRegistration widget)
     {
-        if (!IsScrollbarWidgetLike(widget))
-        {
-            return;
-        }
-
         if (!TryResolveReferencedWidget(widget.Attributes, "Handle", out var handleWidget))
         {
             return;
@@ -1309,18 +1126,6 @@ public sealed class PrefabRenderContext
         var maxValue = ResolveDouble(widget.Attributes, "MaxValue", minValue);
         var currentValue = ResolveScrollbarValue(widget.Attributes, maxValue, reverseInitialAlignment: false);
         UpdateScrollbarHandleVisual(widget, handleWidget, scrollbarSize, minValue, maxValue, currentValue);
-    }
-
-    private bool IsScrollablePanelLike(RenderedWidgetRegistration widget)
-    {
-        return widget.NodeName.Contains("ScrollablePanel", StringComparison.OrdinalIgnoreCase) ||
-               HasAttribute(widget.Attributes, "ClipRect") && HasAttribute(widget.Attributes, "InnerPanel");
-    }
-
-    private bool IsScrollbarWidgetLike(RenderedWidgetRegistration widget)
-    {
-        return widget.NodeName.Contains("ScrollbarWidget", StringComparison.OrdinalIgnoreCase) ||
-               HasAttribute(widget.Attributes, "Handle") && HasAttribute(widget.Attributes, "AlignmentAxis");
     }
 
     private void ApplyScrollbarViewportBehavior(
@@ -1580,12 +1385,14 @@ public sealed class PrefabRenderContext
         }
 
         var prefix = widget.WidgetPath + WidgetPathSeparator;
-        foreach (var candidate in _renderedWidgetsByPath.Values)
+        var rootId = _graphElements.FirstOrDefault(p => ReferenceEquals(p.Value.Element, widget.Element)).Key;
+        var instance = _graphInstanceKeys.GetValueOrDefault(rootId, "");
+        foreach (var entry in _graphElements)
         {
-            if (candidate.WidgetPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                yield return candidate;
-            }
+            var childInstance = _graphInstanceKeys.GetValueOrDefault(entry.Key, "");
+            if (entry.Value.WidgetPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                (instance.Length == 0 || childInstance == instance || childInstance.StartsWith(instance + "/", StringComparison.Ordinal)))
+                yield return entry.Value;
         }
     }
 
@@ -1738,7 +1545,6 @@ public sealed class PrefabRenderContext
         var widgetPath = TryGetWidgetPath(attributes);
         if (!string.IsNullOrWhiteSpace(widgetPath))
         {
-            if (_regressionOptions is not null)
             {
                 var segments = widgetPath.Split(" > ", StringSplitOptions.None);
                 var templatePaths = new List<string>();
@@ -1747,9 +1553,14 @@ public sealed class PrefabRenderContext
                         templatePaths.Add(string.Join(" > ", segments.Take(i)));
                 var instance = string.Concat(_instanceKeys.Select((key, i) => "/" +
                     (i < templatePaths.Count ? templatePaths[i] : widgetPath) + "=" + key));
-                var id = StableWidgetId.Create(_regressionOptions.PrefabIdentity, widgetPath, instance);
-                if (!SnapshotElements.Any(e => e.Id == id))
-                    SnapshotElements.Add(new(id, widgetPath, renderedNode.Element, attributes));
+                var id = StableWidgetId.Create(GraphPrefabIdentity, widgetPath, instance);
+                if (_regressionOptions is not null)
+                {
+                    var previous = SnapshotElements.FindIndex(e => e.Id == id);
+                    var snapshot = new SnapshotElement(id, widgetPath, renderedNode.Element, attributes);
+                    if (previous < 0) SnapshotElements.Add(snapshot);
+                    else SnapshotElements[previous] = snapshot;
+                }
             }
             _renderedWidgetsByPath[widgetPath] = new RenderedWidgetRegistration(
                 widgetPath,
@@ -1758,38 +1569,126 @@ public sealed class PrefabRenderContext
                 parentSize,
                 renderedNode.Element,
                 renderedNode.ChildHost);
+            var instanceId = BuildInstanceKey(widgetPath);
+            _graphInstanceKeys[new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, widgetPath, instanceId))] = instanceId;
+            _graphElements[new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, widgetPath, instanceId))] = _renderedWidgetsByPath[widgetPath];
         }
 
         return renderedNode;
     }
 
-    public void ApplyDeferredReferenceBehaviors()
+    private string BuildInstanceKey(string widgetPath)
     {
-        foreach (var widget in _renderedWidgetsByPath.Values.ToArray())
+        var segments = widgetPath.Split(" > ", StringSplitOptions.None);
+        var templatePaths = new List<string>();
+        for (var i = 0; i < segments.Length; i++)
+            if (segments[i].StartsWith("ItemTemplate", StringComparison.Ordinal)) templatePaths.Add(string.Join(" > ", segments.Take(i)));
+        return string.Concat(_instanceKeys.Select((key, i) => "/" + (i < templatePaths.Count ? templatePaths[i] : widgetPath) + "=" + key));
+    }
+
+    private readonly Dictionary<WidgetId, string> _graphInstanceKeys = [];
+    private WidgetId? _activeGraphWidget;
+    private IReadOnlyDictionary<WidgetId, System.Collections.Immutable.ImmutableDictionary<string, WidgetId>> _graphReferences = new Dictionary<WidgetId, System.Collections.Immutable.ImmutableDictionary<string, WidgetId>>();
+    private IReadOnlyDictionary<WidgetId, IReadOnlyDictionary<string, string>> _graphDescriptions = new Dictionary<WidgetId, IReadOnlyDictionary<string, string>>();
+    private IReadOnlyDictionary<WidgetId, ElementBlueprint> _graphBlueprints = new Dictionary<WidgetId, ElementBlueprint>();
+    internal void SetBehaviorPlan(System.Collections.Immutable.ImmutableArray<BehaviorInput> inputs, BehaviorGraphPlan plan)
+    {
+        _graphBlueprints = plan.Contributions.Where(c => c.Contribution is ElementBlueprint).ToDictionary(c => c.Widget, c => (ElementBlueprint)c.Contribution);
+        _graphReferences = inputs.ToDictionary(i => i.Widget.Id, i => i.References);
+        _graphDescriptions = inputs.ToDictionary(i => i.Widget.Id, i => (IReadOnlyDictionary<string, string>)plan.Contributions
+            .Where(c => c.Widget == i.Widget.Id && c.Contribution is DescriptionContribution)
+            .Select(c => (DescriptionContribution)c.Contribution).GroupBy(c => c.Property, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => string.Concat(g.Select(c => c.Value)), StringComparer.OrdinalIgnoreCase));
+    }
+
+    internal RenderedPrefabNode RenderNode(PrefabNode node, Size parentSize)
+    {
+        var path = TryGetWidgetPath(node.Attributes) ?? node.Name;
+        var id = new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path)));
+        if (_graphBlueprints.TryGetValue(id, out var blueprint))
         {
-            ApplyValueBasedVisibilityBehavior(widget);
-            ApplyStringBasedVisibilityBehavior(widget);
-            ApplyDimensionSyncWidgetBehavior(widget);
-            ApplyTabToggleWidgetBehavior(widget);
-            ApplyAnimatedDropdownWidgetBehavior(widget);
-            ApplyNavigationAutoScrollWidgetBehavior(widget);
-            ApplyNavigationTargetSwitcherBehavior(widget);
-            ApplyNavigationForcedScopeCollectionTargeterBehavior(widget);
-            ApplyCircleLoadingAnimWidgetBehavior(widget);
-            ApplyClipContentsBehavior(widget);
-            ApplyScrollablePanelReferenceBehavior(widget);
-            ApplyScrollbarWidgetReferenceBehavior(widget);
-            ApplyFillWidgetReferenceBehavior(widget);
-            ApplySortVisualReferenceBehavior(widget);
-            ApplyTargetWidgetReferenceBehavior(widget);
-            ApplyStateSyncWidgetBehavior(widget);
-            ApplyDelayedStateChangerBehavior(widget);
-            ApplyTwoWaySliderWidgetBehavior(widget);
+            if (blueprint.Kind == ElementKind.Container) return new WidgetNode(node.Name, node.Attributes, node.Children).Render(this, parentSize);
+            if (blueprint.Kind == ElementKind.Placeholder) return new FallbackNode(node.Name, node.Attributes, node.Children).Render(this, parentSize);
+            if (blueprint.Kind is ElementKind.Text or ElementKind.KeyGlyph)
+            {
+                var attributes = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase) { ["Text"] = blueprint.Text ?? "" };
+                return new PreviewTextNode(node.Name, attributes, node.Children).Render(this, parentSize);
+            }
         }
+        return node.Render(this, parentSize);
+    }
+
+    internal void ExecuteBehaviorPhase(BehaviorGraphPlan plan, BehaviorPhase phase)
+    {
+        foreach (var planned in plan.Contributions.Where(c => c.Contribution.Phase == phase))
+        {
+            if (!_graphElements.TryGetValue(planned.Widget, out var widget)) continue;
+            _activeGraphWidget = planned.Widget;
+            switch (planned.Contribution)
+            {
+                case ConnectionContribution { StateSource: not null, Target: not null } state:
+                    var target = _graphElements[state.Target.Value];
+                    ApplyPreviewState(target, state.StateValue ?? "Default", ResolveBoolean(target.Attributes, "UpdateChildrenStates"));
+                    break;
+                case LayoutContribution layout:
+                    switch (layout.Intent)
+                    {
+                        case LayoutIntent.CopyDimensions:
+                            var dimensions = _graphElements[layout.Source!.Value];
+                            var size = Measure(dimensions.Element, dimensions.Attributes, ResolveRegisteredParentSize(dimensions));
+                            if (layout.Axis is "Horizontal" or "HorizontalAndVertical") widget.Element.Width = Math.Max(0, size.Width + layout.Padding);
+                            if (layout.Axis is "Vertical" or "HorizontalAndVertical") widget.Element.Height = Math.Max(0, size.Height + layout.Padding);
+                            break;
+                        case LayoutIntent.ScrollViewport: MaterializeScrollViewport(widget); break;
+                        case LayoutIntent.Clip: MaterializeClip(widget); break;
+                        case LayoutIntent.ToggleSelection: MaterializeToggleSelection(widget); break;
+                        case LayoutIntent.Dropdown: MaterializeDropdown(widget); break;
+                        case LayoutIntent.RadialChildren: MaterializeRadialChildren(widget); break;
+                        case LayoutIntent.ScrollHandle: MaterializeScrollHandle(widget); break;
+                        case LayoutIntent.Fill: MaterializeFill(widget, layout.Value == "Vertical"); break;
+                        case LayoutIntent.SortIndicator: MaterializeSortIndicator(widget, layout.Value ?? "Hidden"); break;
+                        case LayoutIntent.TargetState: MaterializeTargetState(widget); break;
+                        case LayoutIntent.DelayedState: MaterializeDelayedState(widget); break;
+                        case LayoutIntent.SliderFill: MaterializeSliderFill(widget); break;
+                        case LayoutIntent.SetState: ApplyPreviewState(widget, layout.Value ?? "Default", ResolveBoolean(widget.Attributes, "UpdateChildrenStates")); break;
+                        case LayoutIntent.RangeValue:
+                            var handle = _graphElements[layout.Source!.Value];
+                            var hostSize = Measure(widget.Element, widget.Attributes, ResolveRegisteredParentSize(widget));
+                            var handleSize = Measure(handle.Element, handle.Attributes, hostSize);
+                            var fraction = double.Parse(layout.Value!, CultureInfo.InvariantCulture);
+                            var vertical = layout.Axis == "Vertical";
+                            if (vertical) Canvas.SetTop(handle.Element, Math.Max(0, hostSize.Height - handleSize.Height) * fraction);
+                            else Canvas.SetLeft(handle.Element, Math.Max(0, hostSize.Width - handleSize.Width) * fraction);
+                            if (layout.SecondaryTarget is { } fillerId && _graphElements.TryGetValue(fillerId, out var filler))
+                            {
+                                if (vertical) filler.Element.Height = hostSize.Height * fraction;
+                                else filler.Element.Width = hostSize.Width * fraction;
+                            }
+                            break;
+                    }
+                    break;
+                case InspectionContribution inspection:
+                    if (!string.IsNullOrWhiteSpace(inspection.Diagnostic)) _diagnostics.Add($"{widget.WidgetPath}: {inspection.Diagnostic}");
+                    if (inspection.Support == BehaviorSupport.Partial) _diagnostics.MarkTruncated($"{widget.WidgetPath}: {inspection.Diagnostic ?? "Behavior fidelity is partial."}");
+                    break;
+            }
+        }
+        _activeGraphWidget = null;
+    }
+
+    private bool TryGetDescription(IReadOnlyDictionary<string, string> attributes, string property, out string value)
+    {
+        var path = TryGetWidgetPath(attributes);
+        if (path is not null && _graphDescriptions.TryGetValue(new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path))), out var description) && description.TryGetValue(property, out value!)) return true;
+        value = "";
+        return false;
     }
 
     public bool IsVisible(IReadOnlyDictionary<string, string> attributes)
     {
+        var path = TryGetWidgetPath(attributes);
+        if (path is not null && _graphDescriptions.TryGetValue(new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path))), out var description) && description.TryGetValue("IsVisible", out var visible))
+            return visible == "true";
         return !HasAttribute(attributes, "IsVisible") ||
                ResolveBoolean(attributes, "IsVisible", true);
     }
@@ -2226,6 +2125,8 @@ public sealed class PrefabRenderContext
     public void ApplyVisibility(UIElement element, IReadOnlyDictionary<string, string> attributes)
     {
         element.Visibility = IsVisible(attributes) ? Visibility.Visible : Visibility.Collapsed;
+        if (TryGetDescription(attributes, "IsEnabled", out var enabled)) element.IsEnabled = ResolveBoolean(enabled, true);
+        if (TryGetDescription(attributes, "IsHitTestVisible", out var hitTest)) element.IsHitTestVisible = ResolveBoolean(hitTest, true);
     }
 
     public void ApplyTextStyle(
@@ -2523,7 +2424,7 @@ public sealed class PrefabRenderContext
                 return;
             }
 
-            var rendered = RegisterRenderedNode(child.Name, child.Attributes, parentSize, child.Render(this, parentSize));
+            var rendered = RegisterRenderedNode(child.Name, child.Attributes, parentSize, RenderNode(child, parentSize));
             if (host is StackPanel stackPanel)
             {
                 if (rendered.AutoWidthInFlowLayout)

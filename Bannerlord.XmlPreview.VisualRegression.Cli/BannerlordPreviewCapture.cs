@@ -91,11 +91,11 @@ public sealed class BannerlordPreviewCapture : IDisposable
         var provider = new ScenarioDataSource(scenario);
         var renderer = new PrefabRenderer(assets, metrics, new BannerlordBrushOverlayFeatureHandler(), provider,
             new FixedRootLayout(new Size(scenario.CaptureProfile.Width, scenario.CaptureProfile.Height)),
-            new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider());
+            new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider(), new Bannerlord.XmlPreview.Behaviors.Bannerlord.BannerlordBehaviorRuleProvider());
         token.ThrowIfCancellationRequested();
         watch.Restart();
         var root = renderer.Render(document, diagnostics, new RegressionRenderOptions(scenario.PrefabIdentity, scenario.Bindings,
-            scenario.WidgetStates, scenario.KeyBoundsSelectors));
+            scenario.WidgetStates, scenario.KeyBoundsSelectors) { CancellationToken = token, OptionalConnectionExplanations = scenario.OptionalConnectionExplanations });
         var renderTime = watch.Elapsed;
         if (_archiveDirectory is not null && assets is RecordingAssets recorded)
         {
@@ -123,7 +123,7 @@ public sealed class BannerlordPreviewCapture : IDisposable
         if (warnings.Any(w => w.Message.Contains("placeholder", StringComparison.OrdinalIgnoreCase)) && completion == RenderCompletionStatus.Complete)
             completion = RenderCompletionStatus.Partial;
         return new(diagnostics.RenderStructure!, diagnostics.Layout!, warnings, completion, pixels,
-            new(Load: loadTime, Render: renderTime, Capture: captureTime), moduleVersion);
+            new(Load: loadTime, Render: renderTime, Capture: captureTime), moduleVersion) { BehaviorGraph = diagnostics.BehaviorGraph, BehaviorTrace = diagnostics.BehaviorTrace };
     }
 
     private static CaptureEnvironment CreateEnvironment(FixedSettings settings)

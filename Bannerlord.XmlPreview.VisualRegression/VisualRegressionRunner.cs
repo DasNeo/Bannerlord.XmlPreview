@@ -180,12 +180,14 @@ public sealed class VisualRegressionRunner(
             pngPath = OutputPath(request, "actual.png");
             WpfPreviewCapture.WritePng(pngPath, actual.Pixels);
         }
+        var behaviorTracePath = OutputPath(request, "behavior-trace.json");
+        File.WriteAllText(behaviorTracePath, JsonSerializer.Serialize(new { Summary = actual.BehaviorGraph, Widgets = actual.BehaviorTrace }, ScenarioLoader.JsonOptions));
         var evidence = new CaptureEvidence(request.Reference, actual.Structure.PrefabIdentity, scenario.CaptureProfile,
             scenario.Scene, scenario.DataState, scenarioHash, actual.CompletionStatus,
             ReferenceStore.Hash(structurePath), ReferenceStore.Hash(layoutPath), pngPath is null ? null : ReferenceStore.Hash(pngPath),
             actual.Diagnostics, actual.Timing with { ArtifactWrite = stopwatch.Elapsed });
         File.WriteAllText(OutputPath(request, "capture.json"), JsonSerializer.Serialize(evidence, ScenarioLoader.JsonOptions));
-        return (new(ActualPng: pngPath, RenderStructureJson: structurePath, LayoutJson: layoutPath), evidence.Timing);
+        return (new(ActualPng: pngPath, RenderStructureJson: structurePath, LayoutJson: layoutPath, BehaviorTraceJson: behaviorTracePath), evidence.Timing);
     }
 
     private static VisualRegressionReport WriteReport(VisualRegressionRequest request, VisualRegressionReport report, IReadOnlyList<DynamicMask> masks)

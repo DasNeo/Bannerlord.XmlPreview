@@ -1,6 +1,6 @@
 # Bannerlord.XmlPreview Development Roadmap
 
-Status: 2026-10-12. M0 complete and reverified; M1 uses automated structural, layout, behavior, asset and Diagnostics validation. Screenshot comparison is optional; public CI observation remains pending. See [M1 verification](./reports/m1-progress.md).
+Status: 2026-10-12. M0 and M1 complete; automated structural, layout, behavior, asset and Diagnostics validation passed locally and in the supplied CI results. Screenshot comparison is optional. M2 can begin. See [M1 completion](./reports/m1-completion.md).
 
 ## Product direction
 
@@ -270,6 +270,8 @@ Only after the fourth case passes should the project record the final Behavior G
 
 ### Scope
 
+- load Gauntlet sprite atlases directly from TPAC packages, removing manual DDS export and PNG cropping from production setup
+- begin with a decoding and performance spike, then integrate TPAC loading with structured resolution and module precedence before the image widget families
 - implement real behavior for `ImageIdentifierWidget`, `ImageWidget`, and `MaskedTextureWidget`
 - resolve mod-provided data assets according to module dependency order
 - use a real provider when dynamic image data exists
@@ -286,6 +288,8 @@ Only after the fourth case passes should the project record the final Behavior G
 
 - all three target image families have real behavior
 - module dependencies control asset lookup
+- Native and AgricultureEstate sprites resolve directly from TPAC without extracted DDS or PNG prerequisites; controlled image fixtures remain available for portable tests
+- texture decoding, crop bounds, alpha handling, and explicit TPAC failure outcomes are verified; loading time and memory are recorded and decoded-atlas caching is bounded
 - no silent replacement images remain
 - runtime-only content is visible and reported as `Partial`
 - both Native image targets pass their scoped assertions

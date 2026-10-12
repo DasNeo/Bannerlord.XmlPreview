@@ -7,7 +7,4 @@
         <UseWPF>true</UseWPF>
     </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\Bannerlord.XmlPreview.DemoData\Bannerlord.XmlPreview.DemoData.csproj" />
-    </ItemGroup>
 </Project>

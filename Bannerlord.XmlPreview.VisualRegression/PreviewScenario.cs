@@ -25,6 +25,7 @@ public sealed record PreviewScenario
     public Dictionary<string, List<Dictionary<string, string>>> Lists { get; init; } = new(StringComparer.Ordinal);
     public Dictionary<string, IReadOnlyDictionary<string, string>> WidgetStates { get; init; } = new(StringComparer.Ordinal);
     public string[] KeyBoundsSelectors { get; init; } = [];
+    public Dictionary<string, string> OptionalConnectionExplanations { get; init; } = new(StringComparer.Ordinal);
     public ExpectedWarning[] ExpectedWarnings { get; init; } = [];
     public DynamicMask[] Masks { get; init; } = [];
     public double BoundsTolerance { get; init; }
@@ -67,7 +68,7 @@ public static class ScenarioLoader
             p.UiScale != 1 || p.Language != "English" || p.ColorSpace != "sRGB" || p.CropRule != "FullFrame" ||
             !System.Text.RegularExpressions.Regex.IsMatch(p.Background, "^#[0-9a-fA-F]{6}$"))
             throw new InvalidDataException("Unsupported Capture Profile; use scale 1, English, sRGB and FullFrame with an RGB background.");
-        if (scenario.Bindings is null || scenario.Lists is null || scenario.WidgetStates is null ||
+        if (scenario.Bindings is null || scenario.Lists is null || scenario.WidgetStates is null || scenario.OptionalConnectionExplanations is null ||
             scenario.KeyBoundsSelectors is null || scenario.ExpectedWarnings is null || scenario.Masks is null)
             throw new InvalidDataException("Scenario collections cannot be null.");
         if (scenario.Masks.Length > 512 || scenario.Masks.Any(m => m is null) || scenario.ExpectedWarnings.Any(w => w is null))
@@ -100,8 +101,10 @@ public static class ScenarioLoader
             throw new InvalidDataException("Invalid bindings or widget states.");
         foreach (var states in scenario.WidgetStates.Values)
             foreach (var key in states.Keys)
-                if (!(key.StartsWith("Is", StringComparison.Ordinal) || key is "Opacity" or "SelectedIndex" or "IntValue" or "Value" or "CurrentState" or "Text"))
+                if (!(key.StartsWith("Is", StringComparison.Ordinal) || key is "Opacity" or "SelectedIndex" or "IntValue" or "Value" or "CurrentState" or "Text" or "KeyText" or "KeyID" or "ValueFloat" or "ValueInt" or "SortState" or "IndexToWatch" or "IndexToWatchFloat" or "IndexToBeVisible" or "IndexToBeVisibleFloat" or "CurrentSelectedIndex" or "DimensionToSync" or "PaddingAmount"))
                     throw new InvalidDataException("Widget States accept state values, not structural attributes or widget references: " + key);
+        if (scenario.OptionalConnectionExplanations.Any(p => p.Key.LastIndexOf(':') <= 0 || p.Key.EndsWith(':') || string.IsNullOrWhiteSpace(p.Value)))
+            throw new InvalidDataException("Optional Connection explanations require an expanded path, role and nonempty scenario reason.");
         if (scenario.KeyBoundsSelectors.Any(string.IsNullOrWhiteSpace) ||
             scenario.KeyBoundsSelectors.Distinct(StringComparer.Ordinal).Count() != scenario.KeyBoundsSelectors.Length)
             throw new InvalidDataException("Key Bounds selectors must be nonempty and unique.");
