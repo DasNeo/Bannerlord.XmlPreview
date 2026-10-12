@@ -44,6 +44,9 @@ public sealed class PreviewDiagnostics
 
     public IReadOnlyList<string> Messages => _messages;
 
+    public RenderStructureSnapshot? RenderStructure { get; internal set; }
+    public LayoutSnapshot? Layout { get; internal set; }
+
     public IDisposable BeginTimingScope()
     {
         return new DiagnosticsTimingContext(this);

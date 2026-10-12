@@ -38,10 +38,13 @@ public sealed class PrefabRenderer : IPrefabRenderer
     }
 
     public FrameworkElement Render(PrefabDocument document, PreviewDiagnostics diagnostics)
+        => Render(document, diagnostics, null);
+
+    public FrameworkElement Render(PrefabDocument document, PreviewDiagnostics diagnostics, RegressionRenderOptions? options)
     {
         try
         {
-            return RenderCore(document, diagnostics);
+            return RenderCore(document, diagnostics, options);
         }
         catch (Exception exception)
         {
@@ -50,9 +53,10 @@ public sealed class PrefabRenderer : IPrefabRenderer
         }
     }
 
-    private FrameworkElement RenderCore(PrefabDocument document, PreviewDiagnostics diagnostics)
+    private FrameworkElement RenderCore(PrefabDocument document, PreviewDiagnostics diagnostics, RegressionRenderOptions? options)
     {
         using var totalTiming = diagnostics.MeasurePhase("PrefabRenderer.Render.Total");
+        using var previewState = options is null ? null : document.RootNode.ApplyPreviewState(options.WidgetStates);
         PrefabRenderContext context;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.CreateContext"))
         {
@@ -66,7 +70,8 @@ public sealed class PrefabRenderer : IPrefabRenderer
                 _brushOverlayFeatureHandler,
                 _previewDataSourceProvider,
                 _widgetTextSourceProvider,
-                _widgetDebugMetadataProvider);
+                _widgetDebugMetadataProvider,
+                options);
         }
 
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.EnsureBindings"))
@@ -75,6 +80,8 @@ public sealed class PrefabRenderer : IPrefabRenderer
         }
 
         var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
+        if (options is not null)
+            diagnostics.RenderStructure = RegressionSnapshotProducer.Structure(document, context, options.PrefabIdentity);
         RenderedPrefabNode renderedRoot;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.RootNodeRender"))
         {
@@ -89,6 +96,9 @@ public sealed class PrefabRenderer : IPrefabRenderer
         {
             context.ApplyDeferredReferenceBehaviors();
         }
+
+        if (diagnostics.RenderStructure is not null)
+            diagnostics.RenderStructure = RegressionSnapshotProducer.ResolveBehavior(diagnostics.RenderStructure, context.SnapshotElements);
 
         Size measuredRootSize;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.MeasureRoot"))
@@ -120,6 +130,8 @@ public sealed class PrefabRenderer : IPrefabRenderer
             renderedRoot.Element.ActualWidth,
             renderedRoot.Element.ActualHeight);
         diagnostics.SetElementLayoutSnapshots(elementLayoutSnapshots);
+        if (options is not null)
+            diagnostics.Layout = RegressionSnapshotProducer.Layout(renderedRoot.Element, context.SnapshotElements, options.KeyBoundsSelectors);
         return renderedRoot.Element;
     }
 

@@ -1,0 +1,47 @@
+{
+  "SchemaVersion": 1,
+  "Id": "single-query-popup",
+  "PrefabIdentity": "modules/native/gui/prefabs/information/inquiries/singlequerypopup.xml",
+  "CaptureProfile": {
+    "Id": "native-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Native single-query-popup preview",
+  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+  "Bindings": {
+    "ButtonCancelLabel": "Sample ButtonCancelLabel",
+    "ButtonOkLabel": "Sample ButtonOkLabel",
+    "IsButtonCancelEnabled": "true",
+    "IsButtonCancelShown": "true",
+    "IsButtonOkEnabled": "true",
+    "IsButtonOkShown": "true",
+    "IsTimerShown": "false",
+    "IsVisible": "true",
+    "KeyID": "Sample KeyID",
+    "PopUpLabel": "Sample PopUpLabel",
+    "RemainingQueryTime": "1",
+    "TitleText": "Sample TitleText",
+    "TotalQueryTime": "1"
+  },
+  "Lists": {},
+  "WidgetStates": {},
+  "KeyBoundsSelectors": [
+    "Window"
+  ],
+  "ExpectedWarnings": [
+    {
+      "Code": "legacy.873f579babdc8434",
+      "WidgetIdOrPath": "$document",
+      "Message": "No <Constants> section found. Using generic preview defaults.",
+      "Reason": "This Native prefab omits Constants; the preview uses its documented generic defaults."
+    }
+  ],
+  "Masks": [],
+  "BoundsTolerance": 0
+}

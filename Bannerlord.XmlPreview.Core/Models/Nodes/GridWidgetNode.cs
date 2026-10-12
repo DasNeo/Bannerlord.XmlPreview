@@ -118,9 +118,11 @@ public class GridWidgetNode : PrefabNode
         Size parentSize,
         IReadOnlyList<IReadOnlyDictionary<string, string>> templateItemBindings)
     {
-        foreach (var itemBindings in templateItemBindings)
+        for (var itemIndex = 0; itemIndex < templateItemBindings.Count; itemIndex++)
         {
-            using var _ = context.PushBindingScope(itemBindings);
+            var itemBindings = templateItemBindings[itemIndex];
+            using var _ = context.PushBindingScope(itemBindings,
+                itemBindings.GetValueOrDefault("__key", itemIndex.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             var rendered = context.RegisterRenderedNode(templateNode.Name, templateNode.Attributes, parentSize, templateNode.Render(context, parentSize));
             var layoutAttributes = templateNode.Children.FirstOrDefault()?.Attributes ?? templateNode.Attributes;
             context.ApplyFlowLayout(rendered.Element, layoutAttributes);

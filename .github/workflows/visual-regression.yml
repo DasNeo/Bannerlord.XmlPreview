@@ -1,0 +1,31 @@
+name: Renderer Validation
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  structure-only:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore Bannerlord.XmlPreview.sln
+      - run: dotnet build Bannerlord.XmlPreview.sln --no-restore
+      - run: dotnet test Bannerlord.XmlPreview.sln --no-build --logger "trx;LogFileName=results.trx"
+      - name: Complete nine-case Structure Only suite
+        shell: pwsh
+        run: ./tools/run_visual_regression.ps1 -Mode StructureOnly -OutputRoot artifacts/visual-regression
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: structure-only-evidence
+          path: |
+            artifacts/visual-regression
+            **/TestResults/*.trx
+  # Optional Full runs are confined to a trusted local/private machine with
+  # a Bannerlord installation and a separately supplied, calibrated reference package.

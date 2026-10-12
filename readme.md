@@ -9,6 +9,9 @@
 - `Bannerlord.XmlPreview.Bannerlord/`: Bannerlord-spezifische Adapter, Assets und Preview-Daten
 - `Bannerlord.XmlPreview.DemoData/`: deterministische Preview-Daten
 - `Bannerlord.XmlPreview.Tests/`: automatisierte M0-Vertrags- und Diagnostics-Tests
+- `Bannerlord.XmlPreview.VisualRegression/`: Szenarien, Snapshots, Capture, Vergleicher, Reports und Referenzannahme
+- `Bannerlord.XmlPreview.VisualRegression.Cli/`: Compare, Capture, Accept, Calibrate und Benchmark
+- `Bannerlord.XmlPreview.VisualRegression.Tests/`: Vergleichs-, Capture- und Workflow-Tests sowie neun Native-Fälle
 
 Der Core bleibt generisch. Bannerlord-Namen und -Semantik gehören in den Adapter. Mod-spezifischer ausführbarer Widget-Code wird nicht geladen; siehe [ADR 0001](docs/adr/0001-do-not-execute-mod-code-widgets.md).
 
@@ -61,5 +64,7 @@ Diagnostics enthalten unter anderem `CompletionStatus`, `TruncationReason`, `Roo
 - [Roadmap](docs/roadmap.md)
 - [Milestone-Pläne](docs/implementation-plans/README.md)
 - [M0-Abschlussbericht](docs/reports/m0-completion.md)
+- [M1-Verifikation](docs/reports/m1-progress.md): automatisierte Struktur-, Layout-, Verhaltens- und Asset-Prüfung; Screenshot-Vergleiche sind optional.
+- [Visual-Regression-Workflow](test-data/visual-regression/README.md): neun Szenarien, portable CI, Referenzpakete und CLI-Befehle.
 
 Wichtige Einstiegspunkte sind `App.xaml.cs`, `ViewModels/MainWindowViewModel.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs` und `Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`.

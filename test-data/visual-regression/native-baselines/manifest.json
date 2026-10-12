@@ -1,0 +1,126 @@
+{
+  "SchemaVersion": 1,
+  "GameVersion": "v1.4.7",
+  "ModuleVersion": "v1.4.7",
+  "CaptureProfile": {
+    "Id": "native-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "GlobalPixelTolerance": null,
+  "Cases": {
+    "conversation": {
+      "PrefabIdentity": "modules/native/gui/prefabs/conversation/spconversation.xml",
+      "ScenarioSha256": "860af9c34c0cdf48300294001827aacefa005201d4bc483264118613a8b1f5c2",
+      "Scene": "Native conversation preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "conversation.structure.json",
+      "StructureSha256": "fbe9b7d2b7986c5de65bf0b53ffa14ba137370c17dcf81019bc193bb35a3f9bf",
+      "LayoutFile": "conversation.layout.json",
+      "LayoutSha256": "3ba84841d4e64613fd4f1fc185b12c0e72938448b707dcc62e05d7333bdea51f",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "crosshair": {
+      "PrefabIdentity": "modules/native/gui/prefabs/mission/crosshair.xml",
+      "ScenarioSha256": "ea82265483277775dd4d5d2f7b6c1634ad4f4e88884ca7966227bde5ad2348f1",
+      "Scene": "Native crosshair preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "crosshair.structure.json",
+      "StructureSha256": "188a79318c01a33fa864b4783fb137f818ca52f190dbe3bba3133b6c36d14743",
+      "LayoutFile": "crosshair.layout.json",
+      "LayoutSha256": "e64d0580ca38eef715fb1b7b06079dfb1b2bafa2418c75e61368007c1eb1302f",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "hint-tooltip": {
+      "PrefabIdentity": "modules/native/gui/prefabs/information/hinttooltip.xml",
+      "ScenarioSha256": "b98e4c93a07315307f3395791909695ecb5a56d13823910e5eb264db34c216f6",
+      "Scene": "Native hint-tooltip preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "hint-tooltip.structure.json",
+      "StructureSha256": "8506f75bf0155008c2cd4a287a7d4f1b75997bea197ee55d6a80b8657b6e1fc1",
+      "LayoutFile": "hint-tooltip.layout.json",
+      "LayoutSha256": "e353b17c931274e2bf963243b0d4dd70e85114ba00aa5ccbab04a24f8ff53e77",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "option-item": {
+      "PrefabIdentity": "modules/native/gui/prefabs/options/spoptions/optionitem.xml",
+      "ScenarioSha256": "de40ed58371763b7e2f68dfa3ba8aa2e222c5945f94dc048d04a61ca14173573",
+      "Scene": "Native option-item preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "option-item.structure.json",
+      "StructureSha256": "bd4fddf17a06e3c5356e12343c2131baf5d1089a4ff283c3e234e36fa2f4e536",
+      "LayoutFile": "option-item.layout.json",
+      "LayoutSha256": "248a928d5f5bbfe71f3b874d554c681e392df24f7ef5fe00bcc67317b30b084e",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "options": {
+      "PrefabIdentity": "modules/native/gui/prefabs/options/spoptions/options.xml",
+      "ScenarioSha256": "3e6a43d471e3a30e658080abe29b8eea17b2e0de061d8db54c204d991f00cb4a",
+      "Scene": "Native options preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "options.structure.json",
+      "StructureSha256": "9b840d65890ac4d3b6acd9b13b2a93e9a4ca35280a7945dc52e2bb37e8255b91",
+      "LayoutFile": "options.layout.json",
+      "LayoutSha256": "98d58e568c386cf637d2a841a5a498d3a0534819b64ddb2abdbbdde28b2324c6",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "single-query-popup": {
+      "PrefabIdentity": "modules/native/gui/prefabs/information/inquiries/singlequerypopup.xml",
+      "ScenarioSha256": "24cae3c284e4c88bebe3e5999c580ebc2bb6fc6098752af91b5747a1296833dd",
+      "Scene": "Native single-query-popup preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "single-query-popup.structure.json",
+      "StructureSha256": "85718103aee40579a7387a53991113cf1a4b9aceb53d6f36813513d07a35e4a4",
+      "LayoutFile": "single-query-popup.layout.json",
+      "LayoutSha256": "0e5b0bd4335a74fa6b8eecb65089b5bc9518b45bcb793cfddcb2516e4d9c3cdc",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "standard-dropdown": {
+      "PrefabIdentity": "modules/native/gui/prefabs/standard/standard.dropdownwithhorizontalcontrol.xml",
+      "ScenarioSha256": "716239b35a9666a5dfde261d5abd9ca6c15a144160886a16396f603e250dfc99",
+      "Scene": "Native standard-dropdown preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "standard-dropdown.structure.json",
+      "StructureSha256": "6c7e5750641368c721873dd4ab9ee2ed830b4a353bf42de189c7a72159bca665",
+      "LayoutFile": "standard-dropdown.layout.json",
+      "LayoutSha256": "7e7f2adac2b3f494ce2e699b3c76be99c2ab3631722bdffbd3fe0fea2eb2ad1b",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "standard-scrollable-panel": {
+      "PrefabIdentity": "modules/native/gui/prefabs/standard/standard.scrollablepanel.xml",
+      "ScenarioSha256": "4f539dc7ab5d332ae886a48f48ba57d871c9c58e32af5388a92cc3750877e702",
+      "Scene": "Native standard-scrollable-panel preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "standard-scrollable-panel.structure.json",
+      "StructureSha256": "95a5d7bdd44a79aaf29673316d6add938e99ab175dc183b309a6f16dc1df5c36",
+      "LayoutFile": "standard-scrollable-panel.layout.json",
+      "LayoutSha256": "5e2d04a5a2615b40da64be7ad264d7e4b1e2805595b8a4f531fccef09f3ffbe9",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "standard-window": {
+      "PrefabIdentity": "modules/native/gui/prefabs/standard/standard.window.xml",
+      "ScenarioSha256": "471d6de625665940dc54dd8ac6f242a6489d1eb04229eb18069a219e26f15002",
+      "Scene": "Native standard-window preview",
+      "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+      "StructureFile": "standard-window.structure.json",
+      "StructureSha256": "f305269d0ff605432e8a0ea0c9bd96382489ec20ef30ee2b287b993b17305b63",
+      "LayoutFile": "standard-window.layout.json",
+      "LayoutSha256": "d1ca5457ac880313f2b88c3f3c2fb14acbc73e0a85739cc4c1fac1e4c96a1b16",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    }
+  }
+}

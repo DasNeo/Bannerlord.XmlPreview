@@ -1,0 +1,40 @@
+{
+  "SchemaVersion": 1,
+  "Id": "standard-dropdown",
+  "PrefabIdentity": "modules/native/gui/prefabs/standard/standard.dropdownwithhorizontalcontrol.xml",
+  "CaptureProfile": {
+    "Id": "portable-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Portable expanded Native standard-dropdown renderer fixture",
+  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+  "Bindings": {
+    "CanBeSelected": "true",
+    "SelectedIndex": "0",
+    "StringItem": "Sample StringItem"
+  },
+  "Lists": {
+    "Window > ListPanel[Id=HorizontalControlParent] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=ClipRect] > ListPanel[Id=PrimaryUsageSelectorList]": [
+      {
+        "__key": "sample-1",
+        "CanBeSelected": "true",
+        "SelectedIndex": "0",
+        "StringItem": "Sample StringItem"
+      }
+    ]
+  },
+  "WidgetStates": {},
+  "KeyBoundsSelectors": [
+    "Window"
+  ],
+  "ExpectedWarnings": [],
+  "Masks": [],
+  "BoundsTolerance": 0.5,
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance."
+}

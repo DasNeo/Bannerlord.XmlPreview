@@ -10,6 +10,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.DemoD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Tests", "Bannerlord.XmlPreview.Tests\Bannerlord.XmlPreview.Tests.csproj", "{74331BA6-506F-4A21-BE65-D14EA43E39CD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression", "Bannerlord.XmlPreview.VisualRegression\Bannerlord.XmlPreview.VisualRegression.csproj", "{F711AD25-F953-4CB9-92C0-9E892E56837F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression.Tests", "Bannerlord.XmlPreview.VisualRegression.Tests\Bannerlord.XmlPreview.VisualRegression.Tests.csproj", "{51A29D31-0171-453D-B696-5805DFBB88EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression.Cli", "Bannerlord.XmlPreview.VisualRegression.Cli\Bannerlord.XmlPreview.VisualRegression.Cli.csproj", "{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +42,17 @@ Global
 		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74331BA6-506F-4A21-BE65-D14EA43E39CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F711AD25-F953-4CB9-92C0-9E892E56837F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F711AD25-F953-4CB9-92C0-9E892E56837F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F711AD25-F953-4CB9-92C0-9E892E56837F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F711AD25-F953-4CB9-92C0-9E892E56837F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51A29D31-0171-453D-B696-5805DFBB88EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51A29D31-0171-453D-B696-5805DFBB88EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51A29D31-0171-453D-B696-5805DFBB88EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51A29D31-0171-453D-B696-5805DFBB88EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
