@@ -62,6 +62,10 @@ public sealed class PrefabRenderContext
     private readonly HashSet<string> _reportedNodes = new(StringComparer.OrdinalIgnoreCase);
     private int _renderedNodeCount;
     private bool _renderBudgetExceeded;
+    private readonly Dictionary<string, string> _runBindings;
+    private readonly RegressionRenderOptions? _regressionOptions;
+    private readonly List<string> _instanceKeys = [];
+    internal List<SnapshotElement> SnapshotElements { get; } = [];
 
     public PrefabRenderContext(
         IReadOnlyDictionary<string, string> constants,
@@ -73,7 +77,8 @@ public sealed class PrefabRenderContext
         IBrushOverlayFeatureHandler brushOverlayFeatureHandler,
         IPreviewDataSourceProvider previewDataSourceProvider,
         IWidgetTextSourceProvider widgetTextSourceProvider,
-        IWidgetDebugMetadataProvider widgetDebugMetadataProvider)
+        IWidgetDebugMetadataProvider widgetDebugMetadataProvider,
+        RegressionRenderOptions? regressionOptions = null)
     {
         _constants = constants;
         _propertyMap = propertyMap;
@@ -85,21 +90,27 @@ public sealed class PrefabRenderContext
         _previewDataSourceProvider = previewDataSourceProvider;
         _widgetTextSourceProvider = widgetTextSourceProvider;
         _widgetDebugMetadataProvider = widgetDebugMetadataProvider;
+        _regressionOptions = regressionOptions;
+        _runBindings = regressionOptions is null
+            ? new Dictionary<string, string>(MockBindings, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var binding in regressionOptions?.Bindings ?? new Dictionary<string, string>())
+            _runBindings[binding.Key] = binding.Value;
     }
 
     public void EnsureBindings(IEnumerable<string> keys)
     {
         foreach (var key in keys)
         {
-            if (MockBindings.ContainsKey(key))
+            if (_runBindings.ContainsKey(key))
             {
                 continue;
             }
 
-            MockBindings[key] = HumanizeBindingKey(key);
+            _runBindings[key] = HumanizeBindingKey(key);
             if (_reportedBindings.Add(key))
             {
-                _diagnostics.Add($"Binding '@{key}' had no mock value. Preview generated '{MockBindings[key]}'.");
+                _diagnostics.Add($"Binding '@{key}' had no mock value. Preview generated '{_runBindings[key]}'.");
             }
         }
     }
@@ -130,7 +141,7 @@ public sealed class PrefabRenderContext
             return scopedValue;
         }
 
-        return ResolveMockBindingValue(key);
+        return _runBindings.GetValueOrDefault(key, HumanizeBindingKey(key));
     }
 
     public static string ResolveMockBindingValue(string key)
@@ -165,10 +176,34 @@ public sealed class PrefabRenderContext
         return string.IsNullOrEmpty(resolvedText) ? fallbackText : resolvedText;
     }
 
-    public IDisposable PushBindingScope(IReadOnlyDictionary<string, string> values)
+    public IDisposable PushBindingScope(IReadOnlyDictionary<string, string> values, string? instanceKey = null)
     {
         _bindingScopes.Add(values);
-        return new BindingScopeHandle(_bindingScopes, values);
+        _instanceKeys.Add(instanceKey ?? values.GetValueOrDefault("__key", "0"));
+        return new SnapshotScopeHandle(new BindingScopeHandle(_bindingScopes, values), _instanceKeys);
+    }
+
+    internal IReadOnlyDictionary<string, string> SnapshotAttributes(IReadOnlyDictionary<string, string> attributes)
+    {
+        var path = TryGetWidgetPath(attributes);
+        if (path is null || _regressionOptions is null || !_regressionOptions.WidgetStates.TryGetValue(path, out var states))
+            return attributes;
+        var copy = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase);
+        foreach (var state in states) copy[state.Key] = state.Value;
+        return copy;
+    }
+
+    internal string ResolveSnapshotValue(IReadOnlyDictionary<string, string> attributes, string key, string raw)
+    {
+        if (raw.StartsWith('@')) return ResolveBinding(raw);
+        if (raw.StartsWith('!') && _constants.TryGetValue(raw[1..], out var constant)) return constant;
+        if (TryGetResolvedWidgetProperty(attributes, key, out var property)) return property.GetDisplayValue();
+        return raw;
+    }
+
+    private sealed class SnapshotScopeHandle(IDisposable binding, List<string> keys) : IDisposable
+    {
+        public void Dispose() { binding.Dispose(); keys.RemoveAt(keys.Count - 1); }
     }
 
     public bool ResolveBoolean(string? rawValue, bool fallback = false)
@@ -285,7 +320,8 @@ public sealed class PrefabRenderContext
     {
         var widgetPath = TryGetWidgetPath(attributes);
         if (widgetPath is not null &&
-            _propertyMap.TryGetProperty(widgetPath, attributeName, out property))
+            _propertyMap.TryGetProperty(widgetPath, attributeName, out property) &&
+            attributes.GetValueOrDefault(attributeName) == property.RawValue)
         {
             return true;
         }
@@ -1702,6 +1738,19 @@ public sealed class PrefabRenderContext
         var widgetPath = TryGetWidgetPath(attributes);
         if (!string.IsNullOrWhiteSpace(widgetPath))
         {
+            if (_regressionOptions is not null)
+            {
+                var segments = widgetPath.Split(" > ", StringSplitOptions.None);
+                var templatePaths = new List<string>();
+                for (var i = 0; i < segments.Length; i++)
+                    if (segments[i].StartsWith("ItemTemplate", StringComparison.Ordinal))
+                        templatePaths.Add(string.Join(" > ", segments.Take(i)));
+                var instance = string.Concat(_instanceKeys.Select((key, i) => "/" +
+                    (i < templatePaths.Count ? templatePaths[i] : widgetPath) + "=" + key));
+                var id = StableWidgetId.Create(_regressionOptions.PrefabIdentity, widgetPath, instance);
+                if (!SnapshotElements.Any(e => e.Id == id))
+                    SnapshotElements.Add(new(id, widgetPath, renderedNode.Element, attributes));
+            }
             _renderedWidgetsByPath[widgetPath] = new RenderedWidgetRegistration(
                 widgetPath,
                 nodeName,

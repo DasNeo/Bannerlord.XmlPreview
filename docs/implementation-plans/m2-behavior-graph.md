@@ -154,7 +154,7 @@ Purpose: prove local state without cross-widget references.
 3. Classify every reference as Required or Optional.
 4. Cover missing-reference and ordering failures.
 5. Remove migrated factory or deferred-reference special cases.
-6. Keep `Standard.ScrollablePanel` Full comparison passing.
+6. Keep `Standard.ScrollablePanel` Structure Only comparison and explicit viewport, inner-panel and scrollbar assertions passing.
 
 Purpose: prove child structure and widget references.
 

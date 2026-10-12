@@ -5,7 +5,7 @@ Terminology for the faithful preview and analysis of Bannerlord Gauntlet prefabs
 ## Language
 
 **Correctly Rendered Prefab**:
-A prefab whose Render Structure matches the reference, whose pixel differences remain within the agreed tolerance, and whose Diagnostics contain no unexplained warnings. Differences caused by preview data are explicitly identified.
+A prefab whose Render Structure and Key Bounds meet explicit expectations, whose relevant widget behavior and asset resolution are verified, and whose Diagnostics contain no unexplained warnings. Visual appearance is assessed separately through optional visual review; a structural pass alone does not certify in-game pixel fidelity.
 _Avoid_: Looks correct, sufficiently supported
 
 **Render Structure**:
@@ -37,11 +37,11 @@ A test result for recognized content that the preview controls and visibly repla
 _Avoid_: Passed, Failed, partially passed
 
 **Visual Regression**:
-The module that accepts a prefab, a Preview Scenario, and reference metadata, then produces a structured comparison report and reference, actual, diff, and overlay artifacts.
+The module that accepts a prefab, a Preview Scenario, and reference metadata, then produces a structured comparison report and snapshots. Optional image comparison also produces reference, actual, diff and overlay artifacts.
 _Avoid_: Screenshot script, pixel test
 
 **Full**:
-A Visual Regression run mode in which Render Structure, Key Bounds, and pixel comparison are required.
+An optional Visual Regression run mode in which Render Structure, Key Bounds, and pixel comparison are required.
 _Avoid_: Full test, complete test
 
 **Structure Only**:
@@ -93,7 +93,7 @@ The most recent successfully rendered preview, which remains visible after a lat
 _Avoid_: Current preview, fallback preview
 
 **Fidelity Status**:
-The published maturity of a widget family: `Verified` for a passed Full golden, `Implemented` for behavior without a Full golden, `Partial` for deliberately incomplete fidelity, `Placeholder` for replacement-only rendering, and `Unknown` for an unevaluated family.
+The published maturity of a widget family: `Verified` for behavior and asset resolution checked against explicit expectations, `Implemented` for behavior without those checks, `Partial` for deliberately incomplete fidelity, `Placeholder` for replacement-only rendering, and `Unknown` for an unevaluated family. Optional visual evidence is identified separately.
 _Avoid_: Supported, works
 
 **Expected Warning**:
@@ -113,5 +113,5 @@ An incomplete render run in which a configured node or rendering budget omits ad
 _Avoid_: Completed, performance optimization
 
 **Baseline Acceptance**:
-The explicit approval of new target artifacts through a separate accept command. Approval displays the reference, actual, diff, overlay, and metrics and never occurs automatically.
+The explicit approval of new target artifacts through a separate accept command. Approval identifies snapshots and available comparison evidence, including images when applicable, and never occurs automatically.
 _Avoid_: Baseline update, automatic overwrite

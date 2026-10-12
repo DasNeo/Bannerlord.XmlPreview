@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Bannerlord.XmlPreview.VisualRegression\Bannerlord.XmlPreview.VisualRegression.csproj" />
+    <ProjectReference Include="..\Bannerlord.XmlPreview.Bannerlord\Bannerlord.XmlPreview.Bannerlord.csproj" />
+  </ItemGroup>
+</Project>

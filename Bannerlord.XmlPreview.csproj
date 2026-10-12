@@ -20,6 +20,9 @@
         <Compile Remove="Bannerlord.XmlPreview.Core\**\*.cs"/>
         <Compile Remove="Bannerlord.XmlPreview.Bannerlord\**\*.cs"/>
         <Compile Remove="Bannerlord.XmlPreview.Tests\**\*.cs"/>
+        <Compile Remove="Bannerlord.XmlPreview.VisualRegression\**\*.cs"/>
+        <Compile Remove="Bannerlord.XmlPreview.VisualRegression.Tests\**\*.cs"/>
+        <Compile Remove="Bannerlord.XmlPreview.VisualRegression.Cli\**\*.cs"/>
         <Compile Remove="Models\**\*.cs"/>
         <Compile Remove="Rendering\PreviewElementDebugProperties.cs"/>
         <Compile Remove="Rendering\PrefabRenderContext.cs"/>

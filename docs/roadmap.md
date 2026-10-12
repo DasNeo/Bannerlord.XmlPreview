@@ -1,6 +1,6 @@
 # Bannerlord.XmlPreview Development Roadmap
 
-Status: 2026-09-29
+Status: 2026-10-12. M0 complete and reverified; M1 uses automated structural, layout, behavior, asset and Diagnostics validation. Screenshot comparison is optional; public CI observation remains pending. See [M1 verification](./reports/m1-progress.md).
 
 ## Product direction
 
@@ -12,14 +12,14 @@ Bannerlord.XmlPreview combines three product goals in this order:
 
 When these goals conflict, the earlier goal wins. The supported reference scope is the current Bannerlord version and its Native modules. Mod prefabs and data assets should work through the same Gauntlet model. Executable mod-defined widgets are outside the supported execution boundary and follow [ADR 0001](./adr/0001-do-not-execute-mod-code-widgets.md).
 
-The project uses the canonical terms in [GLOSSARY.md](../GLOSSARY.md). In particular, a Correctly Rendered Prefab requires a matching Render Structure, tolerated pixel differences, and no unexplained Diagnostics warnings.
+The project uses the canonical terms in [GLOSSARY.md](../GLOSSARY.md). A Correctly Rendered Prefab requires explicit structural, layout, behavior and asset expectations with no unexplained Diagnostics warnings. Visual appearance is reviewed separately; structural success does not certify matching in-game pixels.
 
 ## Roadmap overview
 
 | Stage | Outcome |
 |---|---|
 | M0 | Current async, performance, and responsibility refactor is stable and committed |
-| M1 | Renderer fidelity is objectively measurable through structural and visual regression |
+| M1 | Renderer correctness is measurable through structural, layout, behavior, asset and Diagnostics checks |
 | M2 | Bannerlord-specific widget behavior runs through a generic Core Behavior Graph |
 | M3 | Image and asset fidelity covers Native and mod-provided data assets |
 | M4 | Authoring loop supports persistent scenarios, dependency watching, navigation, and visual comparison |
@@ -60,7 +60,7 @@ The same module serves two callers:
 - `dotnet test` for automated regression checks
 - a CLI for artifact generation and explicit baseline acceptance
 
-The CLI must never replace a baseline automatically. The explicit accept operation presents reference, actual, diff, overlay, and metrics before writing accepted artifacts.
+The CLI must never replace a baseline automatically. The explicit accept operation identifies structural candidates and, for optional Full comparison, reference, actual, diff, overlay and metrics before writing accepted artifacts.
 
 ### Run modes and statuses
 
@@ -71,7 +71,9 @@ Supported run modes:
 
 `Passed` means that every check required by the selected mode passed. Other top-level outcomes are `Failed`, `Partial`, `MissingBaseline`, `InvalidScenario`, and `CaptureFailed`. Every non-`Passed` result returns a non-zero exit code unless the caller explicitly permits an expected `Partial` result.
 
-Public pull-request CI runs `StructureOnly`. A trusted local or private job runs `Full` with the optional Reference Package. Public CI must never imply that pixel comparison ran when the package was absent.
+Public pull-request CI and required local validation run `StructureOnly`. A trusted local or private job may explicitly run optional `Full` comparisons with a Reference Package. Pixel work remains `NotRun` in structural validation.
+
+Focused tests assert independently chosen sizing, alignment, visibility, text binding, list contents and asset metrics. Installed-game structural runs exercise the production loader and asset catalog; portable CI uses archived metadata and transparent sprite stand-ins. Baseline equality detects changes but cannot establish correctness by itself. Automatically generated preview PNGs may support occasional visual review without a reference package; they are not in-game reference evidence.
 
 ### Render Structure and layout
 
@@ -84,7 +86,7 @@ Two immutable snapshots remain distinct:
 
 Key Bounds include named widgets, the root, and explicitly selected layout nodes. Comparing every WPF element would create excessive noise; comparing only named widgets would miss container errors.
 
-### Reference screenshots and package
+### Optional reference screenshots and package
 
 Reference Screenshots are captured manually in the game. The initial Capture Profile is:
 
@@ -119,7 +121,7 @@ Full Native screens:
 2. `SPConversation`
 3. `SingleQueryPopup`
 
-All nine Native cases must finish as `Passed` in `Full` mode at M1 completion. `Partial` is not an accepted completion result for this suite.
+At M1 completion, all nine cases must pass Structure Only in both the portable and installed-game suites, and focused correctness tests must pass. The user approved removing screenshot comparison from required acceptance on 2026-10-12 because reproducing game state and calibrating references takes too much setup. No screenshot capture, calibration, or Full pass is required. Optional Full comparisons still require matching gameplay state and calibrated references. `Partial` is not an accepted completion result for the required suite.
 
 ### Diagnostics rules
 
@@ -139,12 +141,13 @@ An exceeded target starts a focused performance effort. It does not authorize fi
 
 ### Exit criteria
 
-- All nine selected Native cases pass in `Full` mode.
+- All nine selected cases pass Structure Only in portable and installed-game runs.
+- Focused sizing, alignment, visibility, binding, list-content and asset-metric tests pass independently of recorded baselines.
 - An intentional layout change produces a reproducible `Failed` result.
 - A missing baseline produces `MissingBaseline`.
 - An invalid scenario produces `InvalidScenario`.
 - Baselines change only through the explicit accept operation.
-- Reports contain Render Structure, Key Bounds, pixel metrics, Diagnostics, mode, and artifacts.
+- Reports contain Render Structure, Key Bounds, Diagnostics, mode and artifacts; required validation reports pixels as `NotRun`.
 - Public CI can execute the complete structural portion without the Reference Package.
 
 ## M2: Behavior Graph and widget fidelity
@@ -211,7 +214,7 @@ Other error rules:
 - handler exception: `Failed`
 - cancellation: publish no partial result
 - known product limitation: visible placeholder and `Partial`
-- missing Native behavior: `Partial`, therefore a Full-Golden failure
+- missing Native behavior: `Partial`, therefore a required validation failure
 - unknown regular XML widget: generic Core widget, Diagnostic, and `Partial`
 - Code Widget: clearly labeled placeholder and `Partial`
 
@@ -312,8 +315,8 @@ If a changed dependency fails to load, show the error and preserve the last good
 
 Never publish a binary `Supported` claim. Report every widget family as one of:
 
-- `Verified`: Full-Golden passed
-- `Implemented`: behavior exists, but no Full-Golden exists
+- `Verified`: behavior and asset resolution pass explicit expectations
+- `Implemented`: behavior exists, but those expectations are not yet verified
 - `Partial`: intentionally incomplete fidelity
 - `Placeholder`: only a visible replacement exists
 - `Unknown`: not evaluated
@@ -327,7 +330,7 @@ Publish source and the first Preview binary after M3. The release must:
 - keep the Reference Package optional and separate
 - state that only the current Bannerlord version is officially supported
 
-When Bannerlord changes version, create a new immutable Reference Package and rerun full validation. Previous packages remain archived but unsupported.
+When Bannerlord changes version, deliberately refresh versioned structural expectations and asset metadata and rerun required validation. If optional screenshot comparisons are used, create a new immutable Reference Package. Previous packages remain archived but unsupported.
 
 ## Deliberately deferred decisions
 

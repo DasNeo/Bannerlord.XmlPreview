@@ -1,0 +1,2 @@
+test-data/visual-regression/**/*.json text eol=lf
+test-data/visual-regression/**/*.json.gz binary

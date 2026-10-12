@@ -127,14 +127,14 @@ Generate a machine-readable and Markdown matrix for image widget families:
 - `Placeholder`
 - `Unknown`
 
-Derive `Verified` only from a passing Full comparison. Do not infer it from class presence or reflection coverage.
+Derive `Verified` from explicit behavior, asset-resolution, dimensions and mask assertions together with structural regression. Identify optional visual evidence separately; structural success does not certify in-game pixel fidelity. Do not infer verification from class presence or reflection coverage.
 
 ## Test strategy
 
 - in-memory asset adapter tests every structured result
 - module precedence tests use synthetic module graphs
 - Behavior tests cover all three image families
-- Visual Regression covers the three accepted screens
+- Structure Only regression covers the three accepted screens; focused asset and mask assertions use controlled inputs without in-game screenshots
 - negative cases verify missing, runtime-only, invalid, and Code Widget placeholders
 - no test executes a mod assembly
 
@@ -144,7 +144,7 @@ Derive `Verified` only from a passing Full comparison. Do not infer it from clas
 - [ ] Module dependency order controls data-asset lookup.
 - [ ] Silent fallback images are eliminated.
 - [ ] Runtime-only content is visible and `Partial`.
-- [ ] Both Native image screens pass their scoped Full assertions.
+- [ ] Both Native image screens pass their scoped structural, asset-resolution, dimensions and mask assertions.
 - [ ] Land Management passes without a Code Widget.
 - [ ] Explicit Code Widget case returns the expected `Partial`.
 - [ ] Image-family Fidelity Status is published.

@@ -1,0 +1,136 @@
+using Bannerlord.XmlPreview.Models;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Bannerlord.XmlPreview.VisualRegression;
+
+public sealed record CaptureProfile(string Id, int Width, int Height, double UiScale = 1,
+    string Language = "English", string ColorSpace = "sRGB", string Background = "#000000", string CropRule = "FullFrame");
+public sealed record ExpectedWarning(string Code, string WidgetIdOrPath, string Message, string Reason);
+public sealed record DynamicMask(string Name, string Reason, int X, int Y, int Width, int Height);
+public sealed record PixelTolerance(byte MaximumChannelDifference, double MaximumDifferingPixelProportion,
+    string CalibrationReason);
+
+public sealed record PreviewScenario
+{
+    [JsonRequired]
+    public int SchemaVersion { get; init; } = 1;
+    public required string Id { get; init; }
+    public required string PrefabIdentity { get; init; }
+    public required CaptureProfile CaptureProfile { get; init; }
+    public required string Scene { get; init; }
+    public required string DataState { get; init; }
+    public Dictionary<string, string> Bindings { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, List<Dictionary<string, string>>> Lists { get; init; } = new(StringComparer.Ordinal);
+    public Dictionary<string, IReadOnlyDictionary<string, string>> WidgetStates { get; init; } = new(StringComparer.Ordinal);
+    public string[] KeyBoundsSelectors { get; init; } = [];
+    public ExpectedWarning[] ExpectedWarnings { get; init; } = [];
+    public DynamicMask[] Masks { get; init; } = [];
+    public double BoundsTolerance { get; init; }
+    public string? BoundsToleranceReason { get; init; }
+    public PixelTolerance? PixelToleranceOverride { get; init; }
+}
+
+public static class ScenarioLoader
+{
+    public static JsonSerializerOptions JsonOptions { get; } = new()
+    {
+        WriteIndented = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    public static PreviewScenario Load(string path)
+        => LoadWithHash(path).Scenario;
+
+    internal static (PreviewScenario Scenario, string Sha256) LoadWithHash(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        using var stream = new MemoryStream(bytes);
+        using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var scenario = JsonSerializer.Deserialize<PreviewScenario>(reader.ReadToEnd(), JsonOptions)
+            ?? throw new InvalidDataException("Scenario document is null.");
+        Validate(scenario);
+        return (scenario, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)));
+    }
+
+    public static void Validate(PreviewScenario scenario)
+    {
+        if (scenario.SchemaVersion != 1) throw new InvalidDataException("Unsupported scenario schema.");
+        _ = StableWidgetId.CanonicalPrefab(scenario.PrefabIdentity);
+        if (string.IsNullOrWhiteSpace(scenario.Id) || !System.Text.RegularExpressions.Regex.IsMatch(scenario.Id, "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$") ||
+            string.IsNullOrWhiteSpace(scenario.Scene) || string.IsNullOrWhiteSpace(scenario.DataState))
+            throw new InvalidDataException("Scenario requires identity, scene and data state.");
+        var p = scenario.CaptureProfile ?? throw new InvalidDataException("Capture Profile is required.");
+        if (string.IsNullOrWhiteSpace(p.Id) || p.Width <= 0 || p.Height <= 0 || p.Width > 8192 || p.Height > 8192 ||
+            p.UiScale != 1 || p.Language != "English" || p.ColorSpace != "sRGB" || p.CropRule != "FullFrame" ||
+            !System.Text.RegularExpressions.Regex.IsMatch(p.Background, "^#[0-9a-fA-F]{6}$"))
+            throw new InvalidDataException("Unsupported Capture Profile; use scale 1, English, sRGB and FullFrame with an RGB background.");
+        if (scenario.Bindings is null || scenario.Lists is null || scenario.WidgetStates is null ||
+            scenario.KeyBoundsSelectors is null || scenario.ExpectedWarnings is null || scenario.Masks is null)
+            throw new InvalidDataException("Scenario collections cannot be null.");
+        if (scenario.Masks.Length > 512 || scenario.Masks.Any(m => m is null) || scenario.ExpectedWarnings.Any(w => w is null))
+            throw new InvalidDataException("Invalid mask or warning collection.");
+        if (!double.IsFinite(scenario.BoundsTolerance) || scenario.BoundsTolerance < 0 ||
+            (scenario.BoundsTolerance > 0 && string.IsNullOrWhiteSpace(scenario.BoundsToleranceReason)))
+            throw new InvalidDataException("Bounds tolerance requires a finite value and a reason.");
+        if (scenario.Masks.Select(m => m.Name).Distinct(StringComparer.Ordinal).Count() != scenario.Masks.Length)
+            throw new InvalidDataException("Mask names must be unique.");
+        foreach (var mask in scenario.Masks)
+            if (string.IsNullOrWhiteSpace(mask.Name) || string.IsNullOrWhiteSpace(mask.Reason) || mask.X < 0 || mask.Y < 0 ||
+                mask.Width <= 0 || mask.Height <= 0 || (long)mask.X + mask.Width > p.Width || (long)mask.Y + mask.Height > p.Height)
+                throw new InvalidDataException("Masks require a name, reason and bounds inside the capture.");
+        if (MaskedArea(scenario.Masks) >= (long)p.Width * p.Height)
+            throw new InvalidDataException("Masks cannot exclude the entire capture.");
+        foreach (var warning in scenario.ExpectedWarnings)
+            if (string.IsNullOrWhiteSpace(warning.Code) || string.IsNullOrWhiteSpace(warning.WidgetIdOrPath) ||
+                string.IsNullOrWhiteSpace(warning.Message) || string.IsNullOrWhiteSpace(warning.Reason))
+                throw new InvalidDataException("Expected Warnings require code, path, message and reason.");
+        foreach (var list in scenario.Lists)
+        {
+            if (string.IsNullOrWhiteSpace(list.Key) || list.Value is null ||
+                list.Value.Any(item => item is null || !item.TryGetValue("__key", out var key) || string.IsNullOrWhiteSpace(key)) ||
+                list.Value.Select(item => item["__key"]).Distinct(StringComparer.Ordinal).Count() != list.Value.Count)
+                throw new InvalidDataException("Every list item requires a unique stable __key.");
+        }
+        if (scenario.Bindings.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Value is null) ||
+            scenario.WidgetStates.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Value is null ||
+                p.Value.Any(v => string.IsNullOrWhiteSpace(v.Key) || v.Value is null || v.Key.StartsWith("Debug."))))
+            throw new InvalidDataException("Invalid bindings or widget states.");
+        foreach (var states in scenario.WidgetStates.Values)
+            foreach (var key in states.Keys)
+                if (!(key.StartsWith("Is", StringComparison.Ordinal) || key is "Opacity" or "SelectedIndex" or "IntValue" or "Value" or "CurrentState" or "Text"))
+                    throw new InvalidDataException("Widget States accept state values, not structural attributes or widget references: " + key);
+        if (scenario.KeyBoundsSelectors.Any(string.IsNullOrWhiteSpace) ||
+            scenario.KeyBoundsSelectors.Distinct(StringComparer.Ordinal).Count() != scenario.KeyBoundsSelectors.Length)
+            throw new InvalidDataException("Key Bounds selectors must be nonempty and unique.");
+        if (scenario.PixelToleranceOverride is not null) ValidateTolerance(scenario.PixelToleranceOverride);
+    }
+
+    internal static void ValidateTolerance(PixelTolerance tolerance)
+    {
+        if (!double.IsFinite(tolerance.MaximumDifferingPixelProportion) ||
+            tolerance.MaximumDifferingPixelProportion is < 0 or > 1 || string.IsNullOrWhiteSpace(tolerance.CalibrationReason))
+            throw new InvalidDataException("Pixel Tolerance requires a proportion in [0,1] and a calibration reason.");
+    }
+
+    private static long MaskedArea(IReadOnlyList<DynamicMask> masks)
+    {
+        var edges = masks.SelectMany(m => new[] { m.X, m.X + m.Width }).Distinct().Order().ToArray();
+        long area = 0;
+        for (var i = 1; i < edges.Length; i++)
+        {
+            var intervals = masks.Where(m => m.X <= edges[i - 1] && m.X + m.Width >= edges[i])
+                .Select(m => (Start: m.Y, End: m.Y + m.Height)).OrderBy(v => v.Start).ToArray();
+            var covered = 0; var end = 0;
+            foreach (var interval in intervals)
+            {
+                covered += Math.Max(0, interval.End - Math.Max(interval.Start, end));
+                end = Math.Max(end, interval.End);
+            }
+            area += (long)(edges[i] - edges[i - 1]) * covered;
+        }
+        return area;
+    }
+}

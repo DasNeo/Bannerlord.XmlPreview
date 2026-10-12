@@ -1,8 +1,10 @@
 # M1 Implementation Plan: Measurable Visual Fidelity
 
+Status: acceptance revised 2026-10-12 to require automated structural, layout, behavior, asset and Diagnostics checks. Screenshots and Full comparison are optional. Public CI is configured and locally verified; its remote run remains unobserved. See [progress and verification](../reports/m1-progress.md).
+
 ## Objective
 
-Create a deep Visual Regression module that produces repeatable structural, layout, Diagnostics, and pixel outcomes for the nine accepted Native cases. M1 measures performance but does not optimize it.
+Create a deep Visual Regression module that produces repeatable structural, layout and Diagnostics outcomes for the nine accepted Native cases, backed by focused behavior and asset tests. Pixel outcomes support optional visual investigation. M1 measures performance but does not optimize it.
 
 ## Prerequisite
 
@@ -130,7 +132,7 @@ Initial Capture Profile:
 - sRGB
 - fixed game version
 
-Capture each reference five times, measure internal variation, and document the selected global Pixel Tolerance. Permit a fixture-specific override only with a written reason in metadata.
+For optional Full comparison only, capture each reference five times, measure internal variation, and document the selected global Pixel Tolerance. Permit a fixture-specific override only with a written reason in metadata. This workflow is not a milestone requirement.
 
 ## Work package 1.8: Build the initial suite
 
@@ -149,14 +151,9 @@ Full Native screens:
 2. `SPConversation`
 3. `SingleQueryPopup`
 
-For each case:
+For all nine cases, define the Preview Scenario, Key Bounds and Expected Warnings, run portable and installed-game Structure Only suites and retain reports. No in-game screenshots are required.
 
-1. create the minimum Preview Scenario
-2. capture and document the in-game reference
-3. record Key Bounds and Expected Warnings
-4. run Structure Only until structural drift is resolved
-5. calibrate and run Full comparison
-6. store reports as milestone evidence
+Add focused tests with explicit expected values for sizing, alignment, visibility, bound text, list contents and asset metrics, including missing brush/sprite cases. Preserve exact Expected Warnings and explicit baseline acceptance. The user approved this replacement for screenshot acceptance on 2026-10-12. Optional preview capture and Full comparison remain available for visual review.
 
 ## Work package 1.9: Integrate tests and CI
 
@@ -169,12 +166,13 @@ Add automated tests for:
 - exit-code mapping
 - explicit baseline acceptance
 - all nine Structure Only cases
-- all nine Full cases when a Reference Package is configured
+- focused behavior and asset expectations independent of recorded snapshots
+- optional three-screen Full cases only when explicitly enabled and a Reference Package is configured
 
 CI behavior:
 
 - pull requests run Structure Only
-- a trusted local or private job runs Full
+- installed-game local validation runs Structure Only; a trusted local or private job may opt into Full
 - missing Reference Package never appears as a successful Full run
 
 ## Work package 1.10: Record performance
@@ -193,11 +191,13 @@ For every case, run five warm iterations and report median and p95. Record machi
 
 ## Exit checklist
 
-- [ ] Visual Regression module has one small caller-facing interface.
-- [ ] CLI and tests use the same module.
-- [ ] Render Structure and Layout Snapshots are deterministic.
-- [ ] All nine Native cases pass in Full mode.
+- [x] Visual Regression module has one small caller-facing interface.
+- [x] CLI and tests use the same module.
+- [x] Render Structure and Layout Snapshots are deterministic.
+- [x] All nine Native cases pass Structure Only.
+- [x] Screenshot comparison removed from required acceptance; Full remains optional.
+- [x] Focused behavior and asset tests pass; all nine installed-game cases pass Structure Only.
 - [ ] Public CI runs the complete Structure Only suite.
-- [ ] Negative acceptance tests pass.
-- [ ] Reference Package manifest and calibration are documented.
+- [x] Negative acceptance tests pass.
+- [x] Reference Package manifest and calibration are documented.
 - [ ] M1 completion report contains metrics and artifacts.
