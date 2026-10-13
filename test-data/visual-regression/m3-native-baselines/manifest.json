@@ -16,7 +16,7 @@
   "Cases": {
     "m3-banner-builder": {
       "PrefabIdentity": "modules/native/gui/prefabs/bannerbuilder/bannerbuilderscreen.xml",
-      "ScenarioSha256": "534129e5ebc2ed444d9bd0ca55c1f91784498bd757cc566a3eae0d18f10811cc",
+      "ScenarioSha256": "9973141d59a14ea2c240df15ea0538e1c798f4cf93087fc95ff973960e95202a",
       "Scene": "Scoped Native image-family acceptance",
       "DataState": "Native image properties and brushes; deterministic Banner icon 101 supplied by Preview.Sprite, fixed arguments; Tableau explicitly runtime-only.",
       "StructureFile": "m3-banner-builder.structure.json",
@@ -28,7 +28,7 @@
     },
     "m3-conversation": {
       "PrefabIdentity": "modules/native/gui/prefabs/conversation/spconversation.xml",
-      "ScenarioSha256": "4b72741f01d5b05055ec0a292bd93ceee98008b504606495d551b8f6f82114c5",
+      "ScenarioSha256": "0b6957cbec58b78f01e56447fc4070acaed4342863158c4c1ece11301ed8071a",
       "Scene": "Scoped Native image-family acceptance",
       "DataState": "Native image properties and brushes; deterministic Banner icon 101 supplied by Preview.Sprite, fixed arguments; Tableau explicitly runtime-only.",
       "StructureFile": "m3-conversation.structure.json",

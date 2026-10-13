@@ -96,10 +96,10 @@ public sealed class RegressionWorkflowTests
     }
 
     [Fact]
-    public async Task CaptureHashesTheScenarioBytesItActuallyLoaded()
+    public async Task CaptureHashesTheScenarioTextItActuallyLoaded()
     {
         using var fixture = new RegressionFixture();
-        var originalHash = ReferenceStore.Hash(fixture.ScenarioPath);
+        var originalHash = ScenarioLoader.LoadWithHash(fixture.ScenarioPath).Sha256;
         var runner = new VisualRegressionRunner((scenario, mode, token) =>
         {
             File.WriteAllText(fixture.ScenarioPath, JsonSerializer.Serialize(scenario with { Scene = "Changed during capture" }, ScenarioLoader.JsonOptions));
@@ -107,9 +107,35 @@ public sealed class RegressionWorkflowTests
         }, fixture.Metadata, fixture.Package);
         var evidence = await runner.CaptureAsync(fixture.Request);
         Assert.Equal(originalHash, evidence.ScenarioSha256);
-        Assert.NotEqual(ReferenceStore.Hash(fixture.ScenarioPath), evidence.ScenarioSha256);
+        Assert.NotEqual(ScenarioLoader.LoadWithHash(fixture.ScenarioPath).Sha256, evidence.ScenarioSha256);
         Assert.Throws<InvalidDataException>(() => BaselineAcceptance.Accept(new(fixture.ScenarioPath, fixture.Request.OutputDirectory,
             fixture.Metadata, Path.Combine(fixture.Root, "new-expectations")), _ => { }));
+    }
+
+    [Fact]
+    public async Task LineEndingChangesPreserveCaptureComparisonAndAcceptanceIdentity()
+    {
+        using var fixture = new RegressionFixture();
+        var lf = File.ReadAllText(fixture.ScenarioPath).Replace("\r\n", "\n", StringComparison.Ordinal);
+        File.WriteAllText(fixture.ScenarioPath, lf);
+        var request = fixture.Request with { Mode = VisualRegressionMode.StructureOnly };
+        var evidence = await fixture.Runner.CaptureAsync(request);
+
+        File.WriteAllText(fixture.ScenarioPath, lf.Replace("\n", "\r\n", StringComparison.Ordinal));
+        Assert.Equal(evidence.ScenarioSha256, ScenarioLoader.LoadWithHash(fixture.ScenarioPath).Sha256);
+
+        var destination = Path.Combine(fixture.Root, "accepted-line-endings");
+        BaselineAcceptance.Accept(new(fixture.ScenarioPath, request.OutputDirectory,
+            Path.Combine(fixture.Root, "no-source-metadata"), destination), _ => { });
+        Assert.Equal(VisualRegressionOutcome.Passed, (await fixture.Runner.CompareAsync(request)).Outcome);
+        var runner = new VisualRegressionRunner(fixture.Capture, destination);
+        Assert.Equal(VisualRegressionOutcome.Passed,
+            (await runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly })).Outcome);
+
+        File.WriteAllText(fixture.ScenarioPath, lf.Replace("Fixed two pixels", "Changed pixels", StringComparison.Ordinal));
+        var changed = await runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly });
+        Assert.Equal(VisualRegressionOutcome.Failed, changed.Outcome);
+        Assert.Contains("Scenario metadata or hash", changed.FailureReason);
     }
 
     [Fact]
@@ -280,7 +306,7 @@ internal sealed class RegressionFixture : IDisposable
     {
         Scenario = scenario;
         File.WriteAllText(ScenarioPath, JsonSerializer.Serialize(scenario, ScenarioLoader.JsonOptions));
-        var entry = new ReferenceEntry(scenario.PrefabIdentity, ReferenceStore.Hash(ScenarioPath), scenario.Scene, scenario.DataState,
+        var entry = new ReferenceEntry(scenario.PrefabIdentity, ScenarioLoader.LoadWithHash(ScenarioPath).Sha256, scenario.Scene, scenario.DataState,
             "structure.json", ReferenceStore.Hash(Path.Combine(Metadata, "structure.json")), "layout.json", ReferenceStore.Hash(Path.Combine(Metadata, "layout.json")),
             "reference.png", ReferenceStore.Hash(Path.Combine(Package, "reference.png")));
         var manifest = new ReferenceManifest(1, "test", "test", scenario.CaptureProfile, new(0, 0, "Synthetic exact test; not Native calibration"),

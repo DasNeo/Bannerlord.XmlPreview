@@ -52,7 +52,7 @@
     },
     "option-item": {
       "PrefabIdentity": "modules/native/gui/prefabs/options/spoptions/optionitem.xml",
-      "ScenarioSha256": "fe5c90c4e0e845246d9b54e3b1199d24de74ea72dffd21017e64ff7396952903",
+      "ScenarioSha256": "0e3cfd3dc1ca1b637f985b20e6c7080214fda22e38598880b61b46f63bae584d",
       "Scene": "Portable expanded Native option-item renderer fixture",
       "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
       "StructureFile": "option-item.structure.json",
@@ -64,7 +64,7 @@
     },
     "options": {
       "PrefabIdentity": "modules/native/gui/prefabs/options/spoptions/options.xml",
-      "ScenarioSha256": "2dc46e8f3de2cef75feddcb5e0f5d008851ab83a0c3c02c06325d8b2d6e8a75b",
+      "ScenarioSha256": "a8081d4853106cb5cc4b8be4178430230052558c824cea61f1c9c2eaacbd7c9f",
       "Scene": "Portable expanded Native options renderer fixture",
       "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures; explicit representative key labels (key artwork is outside this portable fixture)",
       "StructureFile": "options.structure.json",
@@ -76,7 +76,7 @@
     },
     "single-query-popup": {
       "PrefabIdentity": "modules/native/gui/prefabs/information/inquiries/singlequerypopup.xml",
-      "ScenarioSha256": "a2f98493b807e4f797ddeb275e57f04b6a45a4c82c344be03f43a59decc43293",
+      "ScenarioSha256": "2ca9a7b3fccbe9186a4da2fbe6924176abaf02e2c9bd14732f3bf40c2d524090",
       "Scene": "Portable expanded Native single-query-popup renderer fixture",
       "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures; explicit representative key labels (key artwork is outside this portable fixture)",
       "StructureFile": "single-query-popup.structure.json",
@@ -88,7 +88,7 @@
     },
     "standard-dropdown": {
       "PrefabIdentity": "modules/native/gui/prefabs/standard/standard.dropdownwithhorizontalcontrol.xml",
-      "ScenarioSha256": "4dcf2fe88aa95f075914f5db3de536d20080921afebebe2cc2bd231d4f8857ea",
+      "ScenarioSha256": "351bdac9b9a7f1a1543f9649ea6c4bc79d32f5bb840eb2d9e4cdf8ef13cd2378",
       "Scene": "Portable expanded Native standard-dropdown renderer fixture",
       "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
       "StructureFile": "standard-dropdown.structure.json",
@@ -100,7 +100,7 @@
     },
     "standard-scrollable-panel": {
       "PrefabIdentity": "modules/native/gui/prefabs/standard/standard.scrollablepanel.xml",
-      "ScenarioSha256": "6a27acb8443e859d5ae6e9de37fd5c35026764e7dd9c9caff13e8826fb24d7f8",
+      "ScenarioSha256": "03432455ef52b64941d39c42eddab9cb23c1e051daf264b91ffb6c27582b76aa",
       "Scene": "Portable expanded Native standard-scrollable-panel renderer fixture",
       "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
       "StructureFile": "standard-scrollable-panel.structure.json",

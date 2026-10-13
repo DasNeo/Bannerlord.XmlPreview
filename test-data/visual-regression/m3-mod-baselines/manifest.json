@@ -16,7 +16,7 @@
   "Cases": {
     "m3-land-management": {
       "PrefabIdentity": "fixtures/agricultureestate/gui/prefabs/landmanagement.xml",
-      "ScenarioSha256": "2286ec7d98138967b7b92a8a66c7357ccfd5dd0fda773813cba3ca9dd8a8bb74",
+      "ScenarioSha256": "bb580bf242ffc2c20cc388fe925c850e8c662fa78e09ec00be37c8dbacee23a8",
       "Scene": "Preserved AgricultureEstate prefab",
       "DataState": "Adapter deterministic default data; all five mod sprites resolved from TPAC and companion RDC; clan_frame_small expected missing.",
       "StructureFile": "m3-land-management.structure.json",
