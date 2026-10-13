@@ -81,8 +81,16 @@ internal sealed record PortableCorpus(int SchemaVersion, string PrefabIdentity, 
 
 internal sealed class RecordingAssets(IAssetCatalog source) : IAssetCatalog
 {
-    public SortedDictionary<string, SpriteDefinition?> Sprites { get; } = new(StringComparer.Ordinal);
-    public SortedDictionary<string, BrushDefinition?> Brushes { get; } = new(StringComparer.Ordinal);
+    public IAssetCatalog ForPrefab(string path) => new RecordingAssets(source.ForPrefab(path)) { Sprites = Sprites, Brushes = Brushes };
+    public IAssetCatalog ForPrefab(string path, string? assetModule) => new RecordingAssets(source.ForPrefab(path, assetModule)) { Sprites = Sprites, Brushes = Brushes };
+    public ImageResolution ResolveImage(ImageRequest request)
+    {
+        var result = source.ResolveImage(request);
+        if (result.Status == ImageResolutionStatus.Resolved) _ = FindSprite(request.ScenarioSprite ?? request.Identity);
+        return result;
+    }
+    public SortedDictionary<string, SpriteDefinition?> Sprites { get; private init; } = new(StringComparer.Ordinal);
+    public SortedDictionary<string, BrushDefinition?> Brushes { get; private init; } = new(StringComparer.Ordinal);
     public Task WarmUpAsync(CancellationToken cancellationToken = default) => source.WarmUpAsync(cancellationToken);
     public Task WarmUpAssetsAsync(IReadOnlyCollection<string> brushes, IReadOnlyCollection<string> sprites, CancellationToken token = default) =>
         source.WarmUpAssetsAsync(brushes, sprites, token);

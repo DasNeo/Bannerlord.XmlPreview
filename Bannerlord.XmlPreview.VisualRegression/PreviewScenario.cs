@@ -21,6 +21,8 @@ public sealed record PreviewScenario
     public required CaptureProfile CaptureProfile { get; init; }
     public required string Scene { get; init; }
     public required string DataState { get; init; }
+    public string? AssetModule { get; init; }
+    public string[] ScopeWidgetTypes { get; init; } = [];
     public Dictionary<string, string> Bindings { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, List<Dictionary<string, string>>> Lists { get; init; } = new(StringComparer.Ordinal);
     public Dictionary<string, IReadOnlyDictionary<string, string>> WidgetStates { get; init; } = new(StringComparer.Ordinal);
@@ -59,6 +61,8 @@ public static class ScenarioLoader
     public static void Validate(PreviewScenario scenario)
     {
         if (scenario.SchemaVersion != 1) throw new InvalidDataException("Unsupported scenario schema.");
+        if (scenario.ScopeWidgetTypes is null || scenario.ScopeWidgetTypes.Any(string.IsNullOrWhiteSpace) || scenario.ScopeWidgetTypes.Distinct(StringComparer.Ordinal).Count() != scenario.ScopeWidgetTypes.Length)
+            throw new InvalidDataException("Widget scope requires unique nonempty type names.");
         _ = StableWidgetId.CanonicalPrefab(scenario.PrefabIdentity);
         if (string.IsNullOrWhiteSpace(scenario.Id) || !System.Text.RegularExpressions.Regex.IsMatch(scenario.Id, "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$") ||
             string.IsNullOrWhiteSpace(scenario.Scene) || string.IsNullOrWhiteSpace(scenario.DataState))
@@ -101,7 +105,7 @@ public static class ScenarioLoader
             throw new InvalidDataException("Invalid bindings or widget states.");
         foreach (var states in scenario.WidgetStates.Values)
             foreach (var key in states.Keys)
-                if (!(key.StartsWith("Is", StringComparison.Ordinal) || key is "Opacity" or "SelectedIndex" or "IntValue" or "Value" or "CurrentState" or "Text" or "KeyText" or "KeyID" or "ValueFloat" or "ValueInt" or "SortState" or "IndexToWatch" or "IndexToWatchFloat" or "IndexToBeVisible" or "IndexToBeVisibleFloat" or "CurrentSelectedIndex" or "DimensionToSync" or "PaddingAmount"))
+                if (!(key.StartsWith("Is", StringComparison.Ordinal) || key is "Opacity" or "SelectedIndex" or "IntValue" or "Value" or "CurrentState" or "Text" or "KeyText" or "KeyID" or "ValueFloat" or "ValueInt" or "SortState" or "IndexToWatch" or "IndexToWatchFloat" or "IndexToBeVisible" or "IndexToBeVisibleFloat" or "CurrentSelectedIndex" or "DimensionToSync" or "PaddingAmount" or "ImageId" or "TextureProviderName" or "AdditionalArgs" or "Preview.ImageSprite" or "MaskSprite"))
                     throw new InvalidDataException("Widget States accept state values, not structural attributes or widget references: " + key);
         if (scenario.OptionalConnectionExplanations.Any(p => p.Key.LastIndexOf(':') <= 0 || p.Key.EndsWith(':') || string.IsNullOrWhiteSpace(p.Value)))
             throw new InvalidDataException("Optional Connection explanations require an expanded path, role and nonempty scenario reason.");

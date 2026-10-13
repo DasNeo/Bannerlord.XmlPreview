@@ -1,0 +1,288 @@
+{
+  "SchemaVersion": 1,
+  "Id": "m3-banner-builder",
+  "PrefabIdentity": "modules/native/gui/prefabs/bannerbuilder/bannerbuilderscreen.xml",
+  "CaptureProfile": {
+    "Id": "m3-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Scoped Native image-family acceptance",
+  "DataState": "Native image properties and brushes; deterministic Banner icon 101 supplied by Preview.Sprite, fixed arguments; Tableau explicitly runtime-only.",
+  "AssetModule": "SandBox",
+  "Bindings": {
+    "IsPersuading": "true"
+  },
+  "WidgetStates": {
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#1": {
+      "ImageId": "101",
+      "TextureProviderName": "Preview.Sprite",
+      "AdditionalArgs": "fixed-banner-101"
+    },
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#2": {
+      "ImageId": "101",
+      "TextureProviderName": "Preview.Sprite",
+      "AdditionalArgs": "fixed-banner-101"
+    },
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#3": {
+      "ImageId": "101",
+      "TextureProviderName": "Preview.Sprite",
+      "AdditionalArgs": "fixed-banner-101"
+    },
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#4": {
+      "ImageId": "101",
+      "TextureProviderName": "Preview.Sprite",
+      "AdditionalArgs": "fixed-banner-101"
+    },
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#5": {
+      "ImageId": "101",
+      "TextureProviderName": "Preview.Sprite",
+      "AdditionalArgs": "fixed-banner-101"
+    }
+  },
+  "Lists": {},
+  "KeyBoundsSelectors": [
+    "Window",
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#1",
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#2",
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#3",
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#4",
+    "Window > Widget > ListPanel[Id=BannerPreview] > MaskedTextureWidget#5",
+    "Window > Widget > BrushWidget[Id=LayersPanel] > ListPanel > ListPanel > ColorButtonWidget#1 > ImageWidget",
+    "Window > Widget > BrushWidget[Id=LayersPanel] > ListPanel > ListPanel > ColorButtonWidget#2 > ImageWidget",
+    "Window > Widget > BrushWidget[Id=LayersPanel] > BrushWidget#2 > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=ClipRect] > ListPanel[Id=LayerControl] > ListPanel > ItemTemplate#1 > ButtonWidget > ImageWidget",
+    "Window > Widget > BrushWidget[Id=LayersPanel] > BrushWidget#2 > ScrollbarWidget[Id=VerticalScrollbar] > ImageWidget[Id=VerticalScrollbarHandle]",
+    "Window > Widget > BrushWidget[Id=TransformPanel] > ListPanel > ListPanel#1 > Widget > ImageWidget",
+    "Window > Widget > BrushWidget[Id=TransformPanel] > ListPanel > ListPanel#2 > Widget > ImageWidget",
+    "Window > Widget > BrushWidget[Id=TransformPanel] > ListPanel > ListPanel#3 > Widget > ImageWidget",
+    "Window > Widget > BrushWidget[Id=TransformPanel] > ListPanel > ListPanel#4 > Widget > ImageWidget",
+    "Window > Widget > BrushWidget[Id=TransformPanel] > ListPanel > ListPanel#5 > Widget > ImageWidget",
+    "Window > Widget > BrushWidget[Id=LeftPanel] > BrushListPanel > BrushListPanel > BrushListPanel > Widget[Id=InnerPanel] > ScrollbarWidget[Id=VerticalScrollbar] > ImageWidget[Id=VerticalScrollbarHandle]",
+    "Window > Widget > BrushWidget > BrushWidget > NavigatableGridWidget[Id=PrimaryColorGrid] > ItemTemplate > ColorButtonWidget > ImageWidget",
+    "Window > Widget > ListPanel > ScrollbarWidget[Id=VerticalScrollbar] > ImageWidget[Id=VerticalScrollbarHandle]"
+  ],
+  "ExpectedWarnings": [
+    {
+      "Code": "legacy.fe510d8118434493",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsBannerPreviewsActive' had no mock value. Preview generated 'Is Banner Previews Active'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.5b5e274b216984bb",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@AdditionalArgs' had no mock value. Preview generated 'Additional Args'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.a22ff7107b2c1d01",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@Id' had no mock value. Preview generated 'I D'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.2dfbca229f260a6f",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@TextureProviderName' had no mock value. Preview generated 'ure Prov I Der Name'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.16cdac00dd806e0e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsDrawStrokeActive' had no mock value. Preview generated 'Is Draw Stroke Active'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.4b2b00a356aa9dbe",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsLayerPattern' had no mock value. Preview generated 'Is Layer Pattern'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.9cf00a7b9b7f2e91",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsMirrorActive' had no mock value. Preview generated 'Is Mirror Active'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.6ad5286dedb5e696",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@Color1AsStr' had no mock value. Preview generated 'Color1 As Str'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.d597d4119bf68373",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@Color2AsStr' had no mock value. Preview generated 'Color2 As Str'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.1ec172dd7e84e4a5",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsSelected' had no mock value. Preview generated 'Is Selected'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.953d9e85d7bba6ad",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IconIDAsString' had no mock value. Preview generated 'Icon I D As'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.e80f9407bf5a3d48",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@Color1' had no mock value. Preview generated 'Color1'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.b1d13112e142e871",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@Color2' had no mock value. Preview generated 'Color2'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.5e969b6db59f5bb3",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CanDeleteLayer' had no mock value. Preview generated 'Can Delete Layer'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.9f852195d24c9fb5",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@BannerCodeAsString' had no mock value. Preview generated 'Banner Code As'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.cbc7ec5442d9becb",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@EditableAreaSize' had no mock value. Preview generated 'Editable Area Size'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.a9ad7519607c0155",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@TotalAreaSize' had no mock value. Preview generated 'Total Area Size'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.aaa79ab63720f0ea",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@PositionValue' had no mock value. Preview generated 'Position Value'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.dc3ed6e8e3031803",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SizeValue' had no mock value. Preview generated 'Size Value'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.745e09ee1c3a6450",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@RotationValue' had no mock value. Preview generated 'Rotation Value'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.a0bd23f41ab30e60",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LayerIndex' had no mock value. Preview generated 'Layer Index'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.70651031589d30b1",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SizeValueX' had no mock value. Preview generated 'Size Value X'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.ff2f4c3f622559ce",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SizeValueY' had no mock value. Preview generated 'Size Value Y'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.e4b09c0fd76d46e0",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@PositionValueX' had no mock value. Preview generated 'Position Value X'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.b8bc44df1b7cd056",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@PositionValueY' had no mock value. Preview generated 'Position Value Y'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.2187058cca41e135",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@RotationValue360' had no mock value. Preview generated 'Rotation Value360'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.11b1fd910f54c94b",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@Title' had no mock value. Preview generated ''.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.8c389c2f1582c4c8",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsEnabled' had no mock value. Preview generated 'Is Enabled'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.7c4f641724c22a67",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@MeshIDAsString' had no mock value. Preview generated 'Mesh I D As'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.a70908b3bc39d15e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsEditorPreviewActive' had no mock value. Preview generated 'Is Editor Preview Active'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.678e8c6afb3d9162",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsLayerPreviewActive' had no mock value. Preview generated 'Is Layer Preview Active'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.beadc56ca9083b43",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@KeyID' had no mock value. Preview generated 'Key I D'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.e419ffa0aad93fd4",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@IsVisible' had no mock value. Preview generated 'Is Visible'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.a6490137b64b3cb7",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@DoneText' had no mock value. Preview generated 'Done'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.e31ce1519234fcab",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@ColorAsStr' had no mock value. Preview generated 'Color As Str'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    }
+  ],
+  "Masks": [],
+  "BoundsTolerance": 0,
+  "ScopeWidgetTypes": [
+    "ImageWidget",
+    "ImageIdentifierWidget",
+    "MaskedTextureWidget"
+  ]
+}

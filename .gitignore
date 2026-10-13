@@ -3,6 +3,5 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
-/res
 /artifacts/
 **/TestResults/

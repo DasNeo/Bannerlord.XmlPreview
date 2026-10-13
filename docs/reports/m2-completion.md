@@ -57,3 +57,9 @@ Unchanged Window, HintTooltip, Crosshair and Conversation expectations were carr
 - `dotnet test Bannerlord.XmlPreview.Tests/Bannerlord.XmlPreview.Tests.csproj --no-restore -m:1`: 8 passed.
 
 Full in-game pixel comparison was not run because the calibrated Reference Package/environment variables are not configured. Portable native runs report pixels as `NotRun`; focused slider fixtures perform local WPF pixel capture. No new in-game fidelity claim is based on a regenerated preview image.
+
+## Completion audit before M3
+
+Reverified on 2026-10-12 with `dotnet build Bannerlord.XmlPreview.sln --no-restore -m:1` (zero warnings/errors) and `dotnet test Bannerlord.XmlPreview.sln --no-build -m:1` (121 passed, one optional Full group skipped). The sandbox test runner could not connect to its local test host; the same command passed outside the sandbox. Core source has no matches for the migrated concrete widget names, DemoData, or MockData. ADR 0002 remains accepted, and the four proof widgets and selected family tests pass.
+
+M2 is complete within the static preview scope described above. This does not certify that every default-data installed-game preview is Complete. A fresh `tools/run_phase9_validation.ps1` run completed Window, Background, ScrollablePanel and Land Management; Tournament and Options honestly returned `Partial` for InputKeyVisualWidget instances without scenario `KeyText`. The aggregate script exited 1. Evidence is in `artifacts/m2-reverification/phase9/summary.md`. These cases are not relabeled Passed; scenario-based M2 acceptance supplies explicit representative key labels and does not claim native key artwork. Tournament also took 12.7 seconds to render, so its measured performance needs a future focused investigation.

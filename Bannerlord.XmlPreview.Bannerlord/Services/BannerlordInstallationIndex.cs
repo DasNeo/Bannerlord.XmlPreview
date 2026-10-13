@@ -55,6 +55,7 @@ public sealed class BannerlordInstallationIndex : IBannerlordInstallationIndex
         var brushFiles = new List<string>();
         var spriteDataFiles = new List<string>();
         var assemblyFiles = new List<string>();
+        var modules = new List<BannerlordModule>();
         var modulesPath = Path.Combine(installRoot, "Modules");
 
         AddFiles(
@@ -67,6 +68,7 @@ public sealed class BannerlordInstallationIndex : IBannerlordInstallationIndex
         {
             foreach (var modulePath in Directory.EnumerateDirectories(modulesPath))
             {
+                modules.Add(ModuleAssetOrder.Read(modulePath));
                 AddFiles(
                     Path.Combine(modulePath, "GUI", "Prefabs"),
                     "*.xml",
@@ -102,7 +104,7 @@ public sealed class BannerlordInstallationIndex : IBannerlordInstallationIndex
             NormalizeAndSort(prefabFiles),
             NormalizeAndSort(brushFiles),
             NormalizeAndSort(spriteDataFiles),
-            NormalizeAndSort(assemblyFiles));
+            NormalizeAndSort(assemblyFiles)) { Modules = modules.OrderBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToArray() };
     }
 
     private static void AddFiles(

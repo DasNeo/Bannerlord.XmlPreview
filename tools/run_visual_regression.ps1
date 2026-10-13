@@ -17,9 +17,9 @@ if (!(Test-Path -LiteralPath $cli)) { throw 'Build the solution before running V
 $data = Join-Path $RepoRoot 'test-data/visual-regression'
 $portable = [string]::IsNullOrWhiteSpace($BannerlordRoot)
 if ($portable -and $Mode -eq 'Full') { throw 'Full requires -BannerlordRoot; portable metadata fixtures cannot compare pixels.' }
-$scenarioDirectory = if ($portable) { Join-Path $data 'portable-scenarios' } else { Join-Path $data 'scenarios' }
+$scenarioDirectory = if ($portable) { Join-Path $data 'm3-portable-scenarios' } else { Join-Path $data 'scenarios' }
 if ([string]::IsNullOrWhiteSpace($MetadataRoot)) {
-    $MetadataRoot = if ($portable) { Join-Path $data 'm2-portable-baselines' } else { Join-Path $data 'native-baselines' }
+    $MetadataRoot = if ($portable) { Join-Path $data 'm3-portable-baselines' } else { Join-Path $data 'native-baselines' }
 }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $summary = [System.Collections.Generic.List[string]]::new()

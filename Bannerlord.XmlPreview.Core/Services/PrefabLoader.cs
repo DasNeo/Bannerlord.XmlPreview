@@ -49,6 +49,14 @@ public sealed class PrefabLoader : IPrefabLoader
         PreviewDiagnostics diagnostics,
         CancellationToken cancellationToken = default)
     {
+        var assets = _assetCatalog.ForPrefab(path);
+        var scoped = new PrefabLoader(assets, _brushMetricsProvider.ForAssets(assets), _prefabReferenceResolver,
+            _widgetPropertyResolver, _widgetReferenceResolver, _widgetNodeFactory);
+        return scoped.LoadCore(path, diagnostics, cancellationToken);
+    }
+
+    private PrefabDocument LoadCore(string path, PreviewDiagnostics diagnostics, CancellationToken cancellationToken)
+    {
         using var totalTiming = diagnostics.MeasurePhase("PrefabLoader.Load.Total");
 
         cancellationToken.ThrowIfCancellationRequested();

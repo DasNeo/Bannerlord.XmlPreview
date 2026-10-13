@@ -1,0 +1,84 @@
+{
+  "SchemaVersion": 1,
+  "Id": "option-item",
+  "PrefabIdentity": "modules/native/gui/prefabs/options/spoptions/optionitem.xml",
+  "CaptureProfile": {
+    "Id": "portable-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Portable expanded Native option-item renderer fixture",
+  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+  "Bindings": {
+    "ActionName": "Sample ActionName",
+    "CanBeSelected": "true",
+    "Description": "Sample Description",
+    "DiscreteIncrementInterval": "1",
+    "ImageIDs": "Sample ImageIDs",
+    "IsDiscrete": "true",
+    "IsEnabled": "true",
+    "Max": "1",
+    "Min": "1",
+    "Name": "Sample Name",
+    "OptionTypeID": "1",
+    "OptionValue": "1",
+    "OptionValueAsBoolean": "true",
+    "OptionValueAsString": "1",
+    "SelectedIndex": "0",
+    "StringItem": "Sample StringItem",
+    "UpdateContinuously": "true"
+  },
+  "Lists": {
+    "Window > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel] > Widget[Id=ClipRect] > ListPanel[Id=PrimaryUsageSelectorList]": [
+      {
+        "__key": "sample-1",
+        "ActionName": "Sample ActionName",
+        "CanBeSelected": "true",
+        "Description": "Sample Description",
+        "DiscreteIncrementInterval": "1",
+        "ImageIDs": "Sample ImageIDs",
+        "IsDiscrete": "true",
+        "IsEnabled": "true",
+        "Max": "1",
+        "Min": "1",
+        "Name": "Sample Name",
+        "OptionTypeID": "1",
+        "OptionValue": "1",
+        "OptionValueAsBoolean": "true",
+        "OptionValueAsString": "1",
+        "SelectedIndex": "0",
+        "StringItem": "Sample StringItem",
+        "UpdateContinuously": "true"
+      }
+    ]
+  },
+  "WidgetStates": {},
+  "KeyBoundsSelectors": [
+    "Window"
+  ],
+  "ExpectedWarnings": [
+    {
+      "Code": "legacy.873f579babdc8434",
+      "WidgetIdOrPath": "$document",
+      "Message": "No <Constants> section found. Using generic preview defaults.",
+      "Reason": "Exact diagnostic from the archived expanded Native fixture using metadata-only assets. This profile does not compare image pixels."
+    },
+    {
+      "Code": "legacy.c5a0007005dd7bbc",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]: optional 'HorizontalScrollbar' missing: This scenario provides no horizontal scrolling control.",
+      "Reason": "The Preview Scenario explicitly omits this scrolling control; its Optional Connection remains diagnostic."
+    }
+  ],
+  "Masks": [],
+  "BoundsTolerance": 0.5,
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance.",
+  "OptionalConnectionExplanations": {
+    "Window > OptionsItemWidget[Id=OptionItem] > ListPanel[Id=ListPanel] > Widget[Id=Option] > ListPanel[Id=StringOption] > AnimatedDropdownWidget[Id=DropdownParent] > Widget[Id=DropdownClipWidget] > BrushWidget[Id=DropdownContainerWidget] > ScrollablePanel[Id=ScrollablePanel]:HorizontalScrollbar": "This scenario provides no horizontal scrolling control."
+  }
+}

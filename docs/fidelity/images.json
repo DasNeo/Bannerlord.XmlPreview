@@ -1,0 +1,53 @@
+﻿{
+    "SchemaVersion":  1,
+    "Validation":  "All solution tests and three installed structural comparisons passed",
+    "Screens":  [
+                    {
+                        "Case":  "m3-conversation",
+                        "Outcome":  "Passed",
+                        "Pixels":  "NotRun"
+                    },
+                    {
+                        "Case":  "m3-banner-builder",
+                        "Outcome":  "Passed",
+                        "Pixels":  "NotRun"
+                    },
+                    {
+                        "Case":  "m3-land-management",
+                        "Outcome":  "Passed",
+                        "Pixels":  "NotRun"
+                    }
+                ],
+    "Families":  [
+                     {
+                         "Family":  "ImageWidget",
+                         "Status":  "Verified",
+                         "Scope":  "Static sprite and brush images, sizing, visibility, stretch, tint and opacity",
+                         "Limit":  "Native in-game pixels are not certified."
+                     },
+                     {
+                         "Family":  "ImageIdentifierWidget",
+                         "Status":  "Verified",
+                         "Scope":  "Explicit Preview.Sprite or scenario image data, provider identity/arguments, null and HideWhenNull",
+                         "Limit":  "Other runtime providers remain visible Partial until deterministic data is supplied."
+                     },
+                     {
+                         "Family":  "MaskedTextureWidget",
+                         "Status":  "Verified",
+                         "Scope":  "Native five-mask fixture; alpha and single-channel masks, dimensions, tint and missing-input checks",
+                         "Limit":  "Static WPF compositing; runtime provider limitations still apply."
+                     },
+                     {
+                         "Family":  "BannerTableauWidget",
+                         "Status":  "Placeholder",
+                         "Scope":  "Explicit runtime-only placeholder and Partial",
+                         "Limit":  "Runtime tableau rendering is deferred."
+                     },
+                     {
+                         "Family":  "Code Widget",
+                         "Status":  "Placeholder",
+                         "Scope":  "Labeled placeholder and Partial",
+                         "Limit":  "Mod executable code is never loaded."
+                     }
+                 ]
+}

@@ -56,6 +56,13 @@ public sealed class BannerlordPreviewCapture : IDisposable
         var diagnostics = new PreviewDiagnostics();
         using var timingScope = diagnostics.BeginTimingScope();
         var prefab = ResolvePrefab(settings.BannerlordInstallRoot, scenario.PrefabIdentity);
+        if (scenario.PrefabIdentity.StartsWith("fixtures/", StringComparison.Ordinal))
+        {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "fixtures"))) directory = directory.Parent;
+            if (directory is null) throw new InvalidDataException("Repository fixture root is unavailable.");
+            prefab = ResolvePrefab(directory.FullName, scenario.PrefabIdentity);
+        }
         var watch = Stopwatch.StartNew();
         PrefabDocument document;
         IAssetCatalog assets;
@@ -79,8 +86,11 @@ public sealed class BannerlordPreviewCapture : IDisposable
             _environment ??= CreateEnvironment(settings);
             assets = _environment.Assets; metrics = _environment.Metrics;
             document = _environment.Loader.Load(prefab, diagnostics, token);
-            moduleVersion = System.Xml.Linq.XDocument.Load(Path.Combine(settings.BannerlordInstallRoot, "Modules", "Native", "SubModule.xml"))
-                .Root?.Element("Version")?.Attribute("value")?.Value ?? throw new InvalidDataException("Native module version is missing.");
+            var installation = new BannerlordInstallationIndex().GetSnapshot(settings.BannerlordInstallRoot);
+            var module = ModuleAssetOrder.Owner(installation.Modules, prefab);
+            var moduleDirectory = installation.Modules.Single(m => m.Id == module).Directory;
+            moduleVersion = System.Xml.Linq.XDocument.Load(Path.Combine(moduleDirectory, "SubModule.xml"))
+                .Root?.Element("Version")?.Attribute("value")?.Value ?? throw new InvalidDataException("Owning module version is missing.");
         }
         var loaderMessages = diagnostics.Messages.ToArray();
         var loadTime = watch.Elapsed;
@@ -88,6 +98,17 @@ public sealed class BannerlordPreviewCapture : IDisposable
         var paths = allNodes.Select(n => n.Attributes.GetValueOrDefault(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, n.Name)).ToHashSet(StringComparer.Ordinal);
         foreach (var path in scenario.WidgetStates.Keys.Concat(scenario.Lists.Keys))
             if (!paths.Contains(path)) throw new InvalidScenarioException("Scenario selector did not match an expanded widget: " + path);
+        if (scenario.ScopeWidgetTypes.Length > 0)
+        {
+            var targets = allNodes.Where(n => scenario.ScopeWidgetTypes.Contains(n.Name, StringComparer.Ordinal)).ToArray();
+            if (targets.Length == 0) throw new InvalidScenarioException("Widget scope did not match any expanded widget.");
+            if (targets.Any(t => Descendants(t).Skip(1).Any(n => targets.Contains(n))))
+                throw new InvalidScenarioException("Widget scope cannot select both an ancestor and its child.");
+            var rootAttributes = new Dictionary<string, string> { [PrefabVisualTreeHelper.DebugWidgetPathAttributeName] = "Window",
+                ["WidthSizePolicy"] = "Fixed", ["HeightSizePolicy"] = "Fixed", ["SuggestedWidth"] = scenario.CaptureProfile.Width.ToString(),
+                ["SuggestedHeight"] = scenario.CaptureProfile.Height.ToString() };
+            document = document with { RootNode = new WindowNode(rootAttributes, targets) };
+        }
         var provider = new ScenarioDataSource(scenario);
         var renderer = new PrefabRenderer(assets, metrics, new BannerlordBrushOverlayFeatureHandler(), provider,
             new FixedRootLayout(new Size(scenario.CaptureProfile.Width, scenario.CaptureProfile.Height)),
@@ -95,7 +116,7 @@ public sealed class BannerlordPreviewCapture : IDisposable
         token.ThrowIfCancellationRequested();
         watch.Restart();
         var root = renderer.Render(document, diagnostics, new RegressionRenderOptions(scenario.PrefabIdentity, scenario.Bindings,
-            scenario.WidgetStates, scenario.KeyBoundsSelectors) { CancellationToken = token, OptionalConnectionExplanations = scenario.OptionalConnectionExplanations });
+            scenario.WidgetStates, scenario.KeyBoundsSelectors) { AssetModule = scenario.AssetModule, CancellationToken = token, OptionalConnectionExplanations = scenario.OptionalConnectionExplanations });
         var renderTime = watch.Elapsed;
         if (_archiveDirectory is not null && assets is RecordingAssets recorded)
         {

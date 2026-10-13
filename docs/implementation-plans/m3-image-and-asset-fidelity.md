@@ -1,5 +1,7 @@
 # M3 Implementation Plan: Image and Asset Fidelity
 
+Status: complete 2026-10-12. See [M3 completion, installed acceptance and supported data layouts](../reports/m3-completion.md).
+
 ## Objective
 
 Render static, provider-backed, masked, Native, and mod-provided image data honestly. Eliminate silent image substitution and distinguish resolved, missing, runtime-only, and invalid assets.
@@ -173,14 +175,14 @@ Derive `Verified` from explicit behavior, asset-resolution, dimensions and mask 
 
 ## Exit checklist
 
-- [ ] All three image widget families have real Behavior rules.
-- [ ] Module dependency order controls data-asset lookup.
-- [ ] Native and AgricultureEstate sprites load directly from TPAC without manual DDS export or PNG cropping.
-- [ ] Supported texture formats, crop bounds, alpha handling, and explicit TPAC failure outcomes are verified.
-- [ ] Cold/warm loading and peak memory are recorded, and decoded-atlas caching is bounded.
-- [ ] Silent fallback images are eliminated.
-- [ ] Runtime-only content is visible and `Partial`.
-- [ ] Both Native image screens pass their scoped structural, asset-resolution, dimensions and mask assertions.
-- [ ] Land Management passes without a Code Widget.
-- [ ] Explicit Code Widget case returns the expected `Partial`.
-- [ ] Image-family Fidelity Status is published.
+- [x] All three image widget families have real Behavior rules.
+- [x] Module dependency order controls data-asset lookup.
+- [x] Native and AgricultureEstate sprites load directly from TPAC without manual DDS export or PNG cropping. AgricultureEstate's editable package uses its validated RDC pixel companion.
+- [x] Supported texture formats, crop bounds, alpha handling, and explicit TPAC failure outcomes are verified.
+- [x] Cold/warm loading and peak memory are recorded, and decoded-atlas caching is bounded.
+- [x] Silent fallback images are eliminated.
+- [x] Runtime-only content is visible and `Partial`.
+- [x] Both Native image screens pass their scoped structural, asset-resolution, dimensions and mask assertions.
+- [x] Land Management passes without a Code Widget.
+- [x] Explicit Code Widget case returns the expected `Partial`.
+- [x] Image-family Fidelity Status is published.
