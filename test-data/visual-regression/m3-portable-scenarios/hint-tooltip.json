@@ -1,0 +1,29 @@
+{
+  "SchemaVersion": 1,
+  "Id": "hint-tooltip",
+  "PrefabIdentity": "modules/native/gui/prefabs/information/hinttooltip.xml",
+  "CaptureProfile": {
+    "Id": "portable-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Portable expanded Native hint-tooltip renderer fixture",
+  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+  "Bindings": {
+    "Text": "Sample Text"
+  },
+  "Lists": {},
+  "WidgetStates": {},
+  "KeyBoundsSelectors": [
+    "Window"
+  ],
+  "ExpectedWarnings": [],
+  "Masks": [],
+  "BoundsTolerance": 0.5,
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance."
+}

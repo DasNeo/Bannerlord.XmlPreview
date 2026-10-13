@@ -230,11 +230,13 @@ Visual Regression remains the acceptance layer for observable output. Tests must
 
 ## Exit checklist
 
-- [ ] Core has no DemoData project reference or global preview state.
-- [ ] Core contains no concrete Bannerlord widget names.
-- [ ] Graph preflight completes before WPF materialization.
-- [ ] Five fixed phases and contribution contracts are enforced.
-- [ ] Four proof widgets pass without interface expansion.
-- [ ] Legacy logic for migrated widgets is deleted.
-- [ ] Behavior Graph ADR is accepted after proof.
-- [ ] Selected Wave-1 and Wave-2 families have Behavior and Visual Regression coverage.
+- [x] Core has no DemoData project reference or global preview state.
+- [x] Core contains no concrete Bannerlord widget names.
+- [x] Graph preflight completes before WPF materialization.
+- [x] Five fixed phases and contribution contracts are enforced.
+- [x] Four proof widgets pass without interface expansion.
+- [x] Legacy logic for migrated widgets is deleted.
+- [x] Behavior Graph ADR is accepted after proof.
+- [x] Selected Wave-1 and Wave-2 families have Behavior and Visual Regression coverage.
+
+Evidence and static preview limitations are recorded in the [M2 completion report](../reports/m2-completion.md), including the 2026-10-12 audit before M3.

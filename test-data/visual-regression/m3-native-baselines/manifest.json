@@ -1,0 +1,42 @@
+{
+  "SchemaVersion": 1,
+  "GameVersion": "v1.4.7",
+  "ModuleVersion": "v1.4.7",
+  "CaptureProfile": {
+    "Id": "m3-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "GlobalPixelTolerance": null,
+  "Cases": {
+    "m3-banner-builder": {
+      "PrefabIdentity": "modules/native/gui/prefabs/bannerbuilder/bannerbuilderscreen.xml",
+      "ScenarioSha256": "534129e5ebc2ed444d9bd0ca55c1f91784498bd757cc566a3eae0d18f10811cc",
+      "Scene": "Scoped Native image-family acceptance",
+      "DataState": "Native image properties and brushes; deterministic Banner icon 101 supplied by Preview.Sprite, fixed arguments; Tableau explicitly runtime-only.",
+      "StructureFile": "m3-banner-builder.structure.json",
+      "StructureSha256": "2b04d09512c74d232da23af19cd16f663a05ad5ead19c27901c2bdc1391cb6a0",
+      "LayoutFile": "m3-banner-builder.layout.json",
+      "LayoutSha256": "a5dc3c1ffe5981b6c47e3bfb76190d8fe06eaef425e2c733097acfaf5080e78a",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    },
+    "m3-conversation": {
+      "PrefabIdentity": "modules/native/gui/prefabs/conversation/spconversation.xml",
+      "ScenarioSha256": "4b72741f01d5b05055ec0a292bd93ceee98008b504606495d551b8f6f82114c5",
+      "Scene": "Scoped Native image-family acceptance",
+      "DataState": "Native image properties and brushes; deterministic Banner icon 101 supplied by Preview.Sprite, fixed arguments; Tableau explicitly runtime-only.",
+      "StructureFile": "m3-conversation.structure.json",
+      "StructureSha256": "65de5036e6760442b28001f78d6e4b63f0d385ccf3ff3a33dc1f45a01d2e4b0c",
+      "LayoutFile": "m3-conversation.layout.json",
+      "LayoutSha256": "dc122d4611a0fc0d47ed836e7ae9325375a8c4247661ad13321694be0d12b9b4",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    }
+  }
+}

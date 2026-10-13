@@ -11,6 +11,7 @@ public sealed record RegressionRenderOptions(
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> WidgetStates,
     IReadOnlyList<string> KeyBoundsSelectors)
 {
+    public string? AssetModule { get; init; }
     public bool TraceBehaviors { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public IReadOnlyDictionary<string, string> OptionalConnectionExplanations { get; init; } = new Dictionary<string, string>();
@@ -77,6 +78,14 @@ internal static class RegressionSnapshotProducer
                 properties["Resolved.IsVisible"] = registration.Element.Visibility == Visibility.Visible ? "true" : "false";
                 properties["Resolved.IsEnabled"] = registration.Element.IsEnabled ? "true" : "false";
                 properties["Resolved.Opacity"] = registration.Element.Opacity.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                if (PreviewElementDebugProperties.GetImageResolution(registration.Element) is { } image)
+                {
+                    properties["Resolved.ImageStatus"] = image.Status.ToString();
+                    properties["Resolved.ImageIdentity"] = image.Request.Identity;
+                    properties["Resolved.ImageProvider"] = image.Request.Provider ?? "";
+                    properties["Resolved.ImageWidth"] = image.Width.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    properties["Resolved.ImageHeight"] = image.Height.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
             }
             return node with { Properties = new ReadOnlyDictionary<string, string>(properties), Children = Array.AsReadOnly(node.Children.Select(Resolve).ToArray()) };
         }

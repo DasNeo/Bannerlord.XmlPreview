@@ -12,6 +12,10 @@ public static class BannerlordBehaviorRules
     {
         var rules = new List<BehaviorRule>();
         void Add(string id, BehaviorPhase phase, MatcherCriteria matcher, IBehaviorHandler handler) => rules.Add(new(new("bannerlord." + id), phase, matcher, handler));
+        Add("image.static", BehaviorPhase.Instantiate, new(ExactType: "ImageWidget"), new StaticImage());
+        Add("image.provider", BehaviorPhase.Instantiate, new(ExactType: "ImageIdentifierWidget"), new ProviderImage(false));
+        Add("image.masked", BehaviorPhase.Instantiate, new(ExactType: "MaskedTextureWidget"), new ProviderImage(true));
+        Add("image.tableau", BehaviorPhase.Instantiate, new(ExactType: "BannerTableauWidget"), new RuntimeImage());
         Add("state.describe", BehaviorPhase.Describe, new(Capability: "preview-state"), new PreviewState());
         Add("visibility.value", BehaviorPhase.Describe, new(TrustedBaseType: "ValueBasedVisibilityWidget"), new ValueVisibility());
         Add("visibility.string", BehaviorPhase.Describe, new(TrustedBaseType: "StringBasedVisibilityWidget"), new StringVisibility());
@@ -183,6 +187,26 @@ public static class BannerlordBehaviorRules
     private sealed class Placeholder : IBehaviorHandler
     {
         public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) => [new ElementBlueprint(ElementKind.Placeholder, "Behavior is unavailable in preview.")];
+    }
+    private sealed class StaticImage : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) =>
+            [new ElementBlueprint(ElementKind.Image, Image: new(new(Value(input, "Sprite", "")),
+                Brush: Value(input, "Brush", ""), Stretch: Value(input, "Stretch", "Fill"), Color: Value(input, "Color", "")))];
+    }
+    private sealed class ProviderImage(bool masked) : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) =>
+            [new ElementBlueprint(ElementKind.Image, Image: new(new(Value(input, "ImageId", ""),
+                Value(input, "TextureProviderName", ""), Value(input, "AdditionalArgs", ""),
+                input.Values.GetValueOrDefault("Preview.ImageSprite")), Brush: Value(input, "Brush", ""),
+                Mask: input.Values.GetValueOrDefault("MaskSprite"), Masked: masked,
+                HideWhenNull: Boolean(input, "HideWhenNull"), Stretch: Value(input, "Stretch", "Fill"), Color: Value(input, "Color", "")))];
+    }
+    private sealed class RuntimeImage : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) =>
+            [new ElementBlueprint(ElementKind.Image, Image: new(new(Value(input, "BannerCodeText", ""), "Runtime.Tableau")))];
     }
     private sealed class Partial(string diagnostic) : IBehaviorHandler
     {

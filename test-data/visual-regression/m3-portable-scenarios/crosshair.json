@@ -1,0 +1,64 @@
+{
+  "SchemaVersion": 1,
+  "Id": "crosshair",
+  "PrefabIdentity": "modules/native/gui/prefabs/mission/crosshair.xml",
+  "CaptureProfile": {
+    "Id": "portable-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Portable expanded Native crosshair renderer fixture",
+  "DataState": "Explicit fixed bindings; one keyed item in each template list; no runtime scene textures",
+  "Bindings": {
+    "BottomArrowOpacity": "1",
+    "CrosshairAccuracy": "1",
+    "CrosshairScale": "1",
+    "CrosshairType": "0",
+    "IsHitMarkerVisible": "false",
+    "IsHumanoidHeadshot": "false",
+    "IsReloadPhasesVisible": "true",
+    "IsTargetInvalid": "false",
+    "IsVictimDead": "false",
+    "IsVisible": "true",
+    "LeftArrowOpacity": "1",
+    "Progress": "1",
+    "RelativeDurationToMaxDuration": "1",
+    "RightArrowOpacity": "1",
+    "TopArrowOpacity": "1"
+  },
+  "Lists": {
+    "Window > Widget > Widget > ListPanel": [
+      {
+        "__key": "sample-1",
+        "BottomArrowOpacity": "1",
+        "CrosshairAccuracy": "1",
+        "CrosshairScale": "1",
+        "CrosshairType": "0",
+        "IsHitMarkerVisible": "false",
+        "IsHumanoidHeadshot": "false",
+        "IsReloadPhasesVisible": "true",
+        "IsTargetInvalid": "false",
+        "IsVictimDead": "false",
+        "IsVisible": "true",
+        "LeftArrowOpacity": "1",
+        "Progress": "1",
+        "RelativeDurationToMaxDuration": "1",
+        "RightArrowOpacity": "1",
+        "TopArrowOpacity": "1"
+      }
+    ]
+  },
+  "WidgetStates": {},
+  "KeyBoundsSelectors": [
+    "Window"
+  ],
+  "ExpectedWarnings": [],
+  "Masks": [],
+  "BoundsTolerance": 0.5,
+  "BoundsToleranceReason": "Portable fixtures use Windows system fonts at 96 DPI; half a pixel accommodates text measurement rounding. Native installed-case bounds use zero tolerance."
+}

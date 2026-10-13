@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 
 namespace Bannerlord.XmlPreview.Rendering;
 
-public sealed class PrefabRenderContext
+public sealed partial class PrefabRenderContext
 {
     private const byte SignificantAlphaThreshold = 64;
     private const byte ContentCoreAlphaThreshold = 192;
@@ -181,6 +181,8 @@ public sealed class PrefabRenderContext
 
     internal string ResolveSnapshotValue(IReadOnlyDictionary<string, string> attributes, string key, string raw)
     {
+        var path = TryGetWidgetPath(attributes);
+        if (path is not null && _regressionOptions?.WidgetStates.GetValueOrDefault(path)?.ContainsKey(key) == true) return raw.StartsWith('@') ? ResolveBinding(raw) : raw;
         if (raw.StartsWith('@')) return ResolveBinding(raw);
         if (raw.StartsWith('!') && _constants.TryGetValue(raw[1..], out var constant)) return constant;
         if (TryGetResolvedWidgetProperty(attributes, key, out var property)) return property.GetDisplayValue();
@@ -1609,6 +1611,7 @@ public sealed class PrefabRenderContext
         {
             if (blueprint.Kind == ElementKind.Container) return new WidgetNode(node.Name, node.Attributes, node.Children).Render(this, parentSize);
             if (blueprint.Kind == ElementKind.Placeholder) return new FallbackNode(node.Name, node.Attributes, node.Children).Render(this, parentSize);
+            if (blueprint.Kind == ElementKind.Image && blueprint.Image is { } image) return RenderImage(node, parentSize, image);
             if (blueprint.Kind is ElementKind.Text or ElementKind.KeyGlyph)
             {
                 var attributes = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase) { ["Text"] = blueprint.Text ?? "" };
@@ -1767,7 +1770,11 @@ public sealed class PrefabRenderContext
             };
         }
 
-        return null;
+        if (string.IsNullOrWhiteSpace(spriteId)) return null;
+        var canvas = new Canvas();
+        canvas.Children.Add(new TextBlock { Text = "Missing asset: " + spriteId, Foreground = Brushes.Crimson, FontSize = 11 });
+        return new Border { BorderBrush = Brushes.Crimson, BorderThickness = new Thickness(1), Child = canvas,
+            ToolTip = spriteAsset.Note, IsHitTestVisible = false };
     }
 
     public Rect ResolveSpriteContentLayoutRect(string? spriteName, Size renderedSize)
@@ -2858,6 +2865,8 @@ public sealed class PrefabRenderContext
         }
 
         var spriteAsset = _assetCatalog.ResolveSpriteAsset(spriteName);
+        if (spriteAsset.ImageResolution is { Status: ImageResolutionStatus.Invalid } invalid)
+            throw new System.IO.InvalidDataException($"Sprite '{spriteName}': {invalid.Reason}");
         if (!string.IsNullOrWhiteSpace(spriteName))
         {
             _spriteAssetResolutionCache[spriteName] = spriteAsset;
@@ -2981,9 +2990,9 @@ public sealed class PrefabRenderContext
     private ImageSource? ResolveSpriteImage(string? spriteName)
     {
         var spriteAsset = ResolveSpriteAsset(spriteName);
-        return spriteAsset.HasImage
+        return spriteAsset.ImageResolution?.Image ?? (spriteAsset.HasImage
             ? _assetCatalog.GetSpriteImage(spriteAsset.MatchedKey)
-            : null;
+            : null);
     }
 
     private bool TryCreateBrushImageBrush(string? brushName, bool isDisabled, out Brush brush)
@@ -3457,7 +3466,7 @@ public sealed class PrefabRenderContext
     private bool TryCreateBrushFromCatalog(string? brushName, bool isDisabled, out Brush brush)
     {
         var visibleLayers = ResolveVisibleBrushLayers(brushName, isDisabled)
-            .Where(layer => TryResolveLayerColor(layer, out _))
+            .Where(layer => string.IsNullOrWhiteSpace(layer.SpriteName) && TryResolveLayerColor(layer, out _))
             .ToArray();
         if (visibleLayers.Length == 0)
         {

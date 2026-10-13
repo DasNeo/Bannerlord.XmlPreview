@@ -5,6 +5,16 @@ namespace Bannerlord.XmlPreview.Rendering;
 
 public static class PreviewElementDebugProperties
 {
+    public static readonly DependencyProperty ImageResolutionProperty = DependencyProperty.RegisterAttached(
+        "ImageResolution", typeof(Bannerlord.XmlPreview.Models.Assets.ImageResolution), typeof(PreviewElementDebugProperties), new PropertyMetadata(null));
+    public static Bannerlord.XmlPreview.Models.Assets.ImageResolution? GetImageResolution(DependencyObject element) =>
+        (Bannerlord.XmlPreview.Models.Assets.ImageResolution?)element.GetValue(ImageResolutionProperty);
+    public static void SetImageResolution(DependencyObject element, Bannerlord.XmlPreview.Models.Assets.ImageResolution value) => element.SetValue(ImageResolutionProperty, value);
+    public static readonly DependencyProperty MaskResolutionProperty = DependencyProperty.RegisterAttached(
+        "MaskResolution", typeof(Bannerlord.XmlPreview.Models.Assets.ImageResolution), typeof(PreviewElementDebugProperties), new PropertyMetadata(null));
+    public static Bannerlord.XmlPreview.Models.Assets.ImageResolution? GetMaskResolution(DependencyObject element) =>
+        (Bannerlord.XmlPreview.Models.Assets.ImageResolution?)element.GetValue(MaskResolutionProperty);
+    public static void SetMaskResolution(DependencyObject element, Bannerlord.XmlPreview.Models.Assets.ImageResolution value) => element.SetValue(MaskResolutionProperty, value);
     public static readonly DependencyProperty DebugInfoProperty =
         DependencyProperty.RegisterAttached(
             "DebugInfo",

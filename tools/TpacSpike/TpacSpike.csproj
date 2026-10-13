@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <ReaderRoot Condition="'$(ReaderRoot)' == ''">../../artifacts/m3-spike/GauntletUI-LSP/tpac-tool/TpacTool.Lib</ReaderRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Evaluation only: pinned source is fetched by run_tpac_spike.ps1, never shipped. -->
+    <Compile Include="$(ReaderRoot)/**/*.cs" Exclude="$(ReaderRoot)/obj/**/*.cs;$(ReaderRoot)/bin/**/*.cs;$(ReaderRoot)/Package/AssetManager.cs" />
+    <PackageReference Include="BCnEncoder.NET" Version="2.3.0" />
+    <PackageReference Include="lz4net" Version="1.0.15.93" />
+    <PackageReference Include="JetBrains.Annotations" Version="2021.3.0" />
+  </ItemGroup>
+</Project>

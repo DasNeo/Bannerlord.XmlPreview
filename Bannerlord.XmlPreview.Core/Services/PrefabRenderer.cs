@@ -75,13 +75,14 @@ public sealed class PrefabRenderer : IPrefabRenderer
         PrefabRenderContext context;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.CreateContext"))
         {
+            var assets = _assetCatalog.ForPrefab(document.SourcePath, options?.AssetModule);
             context = new PrefabRenderContext(
                 document.Constants,
                 document.PropertyMap,
                 document.ReferenceMap,
                 diagnostics,
-                _assetCatalog,
-                _brushMetricsProvider,
+                assets,
+                _brushMetricsProvider.ForAssets(assets),
                 _brushOverlayFeatureHandler,
                 _widgetTextSourceProvider,
                 _widgetDebugMetadataProvider,

@@ -48,6 +48,17 @@ C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview
 
 ## Technical regression
 
+Assets load directly from the installed module TPAC packages. Editable mod packages with the verified single-texture RDC layout use their RuntimeDataCache companion. Production setup requires no manual DDS export or cropped PNG directory. Provider images need explicit scenario data; unavailable runtime content remains visibly Partial.
+
+M3 image and asset acceptance:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_m3_validation.ps1 `
+  -BannerlordRoot "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord"
+```
+
+This runs focused image/pixel tests, nine portable renderer cases, installed package assertions, and all three M3 structural targets. The [M3 scenarios](test-data/visual-regression/m3-scenarios/README.md) explain explicit provider data, active asset module scope, diagnostics and runtime-only limits. `-PublishFidelity` updates the local fidelity matrix only after validation passes.
+
 Phase 9 checks six curated fixtures. `Complete` indicates success; timeouts, process failures, missing Diagnostics, `Partial`, and `Failed` produce a nonzero aggregate exit code. Per-fixture Diagnostics and `summary.md` are preserved even when validation fails.
 
 Both fixture scripts use the archived version at [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml) for the `land-management` fixture. Its provenance and dependencies are described in the [fixture documentation](fixtures/README.md).
@@ -67,6 +78,9 @@ Diagnostics include `CompletionStatus`, `TruncationReason`, `RootActual`, `Eleme
 - [Milestone plans](docs/implementation-plans/README.md)
 - [M0 completion report](docs/reports/m0-completion.md)
 - [M1 completion report](docs/reports/m1-completion.md): local and CI checks passed; screenshot comparisons are optional.
+- [M2 completion report](docs/reports/m2-completion.md): Behavior Graph and widget verification.
+- [M3 completion report](docs/reports/m3-completion.md): production TPAC/RDC assets, image behavior, acceptance and fidelity limits.
+- [Image fidelity matrix](docs/fidelity/images.md).
 - [Visual Regression workflow](test-data/visual-regression/README.md): nine scenarios, portable CI, Reference Packages, and CLI commands.
 
 Key entry points are `App.xaml.cs`, `ViewModels/MainWindowViewModel.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs`, and `Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`.

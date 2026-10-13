@@ -8,7 +8,8 @@ public sealed record SpriteAssetResolution(
     SpriteDefinition? SpriteDefinition,
     string? Note)
 {
-    public bool HasImage => !string.IsNullOrWhiteSpace(ImagePath);
+    public ImageResolution? ImageResolution { get; init; }
+    public bool HasImage => ImageResolution is not null ? ImageResolution.Status == ImageResolutionStatus.Resolved : !string.IsNullOrWhiteSpace(ImagePath);
 
     public bool UsesFallback =>
         Kind is SpriteAssetResolutionKind.SpriteDefinitionName or

@@ -1,0 +1,316 @@
+{
+  "SchemaVersion": 1,
+  "Id": "m3-land-management",
+  "PrefabIdentity": "fixtures/agricultureestate/gui/prefabs/landmanagement.xml",
+  "CaptureProfile": {
+    "Id": "m3-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Preserved AgricultureEstate prefab",
+  "DataState": "Adapter deterministic default data; all five mod sprites resolved from TPAC and companion RDC; clan_frame_small expected missing.",
+  "AssetModule": "AgricultureEstate",
+  "Bindings": {},
+  "WidgetStates": {},
+  "Lists": {},
+  "KeyBoundsSelectors": [
+    "Window"
+  ],
+  "ExpectedWarnings": [
+    {
+      "Code": "legacy.988deb3c89debad7",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LandManagementString' had no mock value. Preview generated 'Land Management'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.27d596a80bcc1632",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LedgerString' had no mock value. Preview generated 'Ledger'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.7562628e02e35774",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SettlementImageID' had no mock value. Preview generated 'Settlement Image I D'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.7637b1e5e8280881",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LandPlotsString' had no mock value. Preview generated 'Land Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.42871df0b67d6888",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@OwnedLandPlotsString' had no mock value. Preview generated 'Owned Land Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.71d29d012457f589",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@OwnedPlotsString' had no mock value. Preview generated 'Owned Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.13457ae00ca594f8",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@AvailableLandPlotsString' had no mock value. Preview generated 'Available Land Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.8ed273d1805e3e90",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@AvaliblePlotsString' had no mock value. Preview generated 'Avalible Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.e80fa859acc5c8d5",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@BuyString' had no mock value. Preview generated 'Buy'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.86cafe504e421b9b",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SellString' had no mock value. Preview generated 'Sell'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.52ccefb0a8b5b72e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@UndevLandPlotsString' had no mock value. Preview generated 'Undev Land Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.83780cad99fb15fb",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@OwnedUndevelopedPlotsString' had no mock value. Preview generated 'Owned Undeveloped Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.869f10930b2544aa",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@AvalibleUndevelopedPlotsString' had no mock value. Preview generated 'Avalible Undeveloped Plots'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.4ff7fa94d6fab158",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SlavesTitle' had no mock value. Preview generated 'Slaves'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.46d3f3607992defe",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CapacityText' had no mock value. Preview generated 'Capacity'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.4cd0755490226d3f",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SlaveCapacityString' had no mock value. Preview generated 'Slave Capacity'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.228e48a90fc3d0c6",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@ManageString' had no mock value. Preview generated 'Manage'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.7939eac790943e15",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SlaveDeclineTitleString' had no mock value. Preview generated 'Slave Decline'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.ef0d37294e048517",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SlaveDeclineString' had no mock value. Preview generated 'Slave Decline'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.10738da995a9c4c0",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@RevoltRiskTitleString' had no mock value. Preview generated 'Revolt Risk'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.e467dd5658773ed1",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@RevoltRiskString' had no mock value. Preview generated 'Revolt Risk'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.0c4130504f239b55",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LandUsageTitleString' had no mock value. Preview generated 'Land Usage'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.32034ee7b605ad93",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LandUsageString' had no mock value. Preview generated 'Land Usage'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.3138bcbe74b51890",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@BuySlavesTitleString' had no mock value. Preview generated 'Buy Slaves'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.d7280077e9ba0a65",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@BuySlavesButton' had no mock value. Preview generated 'Buy Slaves Button'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.c7dc0c150a1a8453",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@BuySlavesString' had no mock value. Preview generated 'Buy Slaves'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.1bce0322c72140c0",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@ProductionDetailsString' had no mock value. Preview generated 'Production Details'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.0a3c6d9d201784af",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@StockpileTitle' had no mock value. Preview generated 'Stockpile'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.59f4f1ba65836e72",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@StockpileCapacityString' had no mock value. Preview generated 'Stockpile Capacity'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.60acc02b5cf07c28",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SellToMarketTitleString' had no mock value. Preview generated 'Sell To Market'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.a42a1bfbdd0a9cbc",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SellToMarketButton' had no mock value. Preview generated 'Sell To Market Button'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.0660a085bef31ab7",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@SellToMarketString' had no mock value. Preview generated 'Sell To Market'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.0f09c90d0ac430e7",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CurrentProjectTitle' had no mock value. Preview generated 'Current Project'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.f6d6fb4b3a997234",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CurrentProjectString' had no mock value. Preview generated 'Current Project'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.6038429918f9999a",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CurrentProjectIconSting' had no mock value. Preview generated 'Current Project Icon Sting'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.67036497e1a95353",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CancelString' had no mock value. Preview generated 'Cancel'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.fd00df295082139b",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@ProgressTitle' had no mock value. Preview generated 'Progress'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.46760644c6fa1fb1",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CurrentProjecProgressString' had no mock value. Preview generated 'Current Projec Progress'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.ba9995a693a2ea7f",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@ProjectQueueString' had no mock value. Preview generated 'Project Queue'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.9787e1f4385d5a07",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@UpgradesTitle' had no mock value. Preview generated 'Upgrades'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.8f762da66bb85157",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@LandClearanceString' had no mock value. Preview generated 'Land Clearance'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.38b190fa31c4552a",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@UpgradeString' had no mock value. Preview generated 'Upgrade'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.07ac01627c215ad0",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@UpgradePatrolsString' had no mock value. Preview generated 'Upgrade Patrols'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.5a83baddd4f5ed77",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@UpgradeStorehouseString' had no mock value. Preview generated 'Upgrade Storehouse'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.7d07f6f3d6b1095a",
+      "WidgetIdOrPath": "$document",
+      "Message": "Binding '@CloseString' had no mock value. Preview generated 'Close'.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.3d6f83b6da76a4a7",
+      "WidgetIdOrPath": "$document",
+      "Message": "Sprite 'Settlement Image I D' is missing. No exact sprite or texture identity exists in the module dependency scope.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.31bc0372c2b97723",
+      "WidgetIdOrPath": "$document",
+      "Message": "Sprite 'ArmyManagement\\clan_frame_small' is missing. No exact sprite or texture identity exists in the module dependency scope.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    },
+    {
+      "Code": "legacy.53d14eaebf77f537",
+      "WidgetIdOrPath": "$document",
+      "Message": "Sprite 'Current Project Icon Sting' is missing. No exact sprite or texture identity exists in the module dependency scope.",
+      "Reason": "Exact installed scoped fixture diagnostic: Native loader limitations or documented missing assets, outside the selected image-family behavior. No warning-count allowance."
+    }
+  ],
+  "Masks": [],
+  "BoundsTolerance": 0
+}

@@ -4,6 +4,7 @@ namespace Bannerlord.XmlPreview.Core.Abstractions;
 
 public interface IBrushMetricsProvider
 {
+    IBrushMetricsProvider ForAssets(Bannerlord.XmlPreview.Interfaces.IAssetCatalog assets) => this;
     double? ResolveMetric(string? brushName, string? brushLayerName, string valueType);
 
     Thickness ResolveContentPadding(BrushPaddingRequest request);

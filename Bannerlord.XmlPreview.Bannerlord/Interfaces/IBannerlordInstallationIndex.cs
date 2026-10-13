@@ -16,4 +16,10 @@ public sealed record BannerlordInstallationSnapshot(
     IReadOnlyList<string> PrefabFiles,
     IReadOnlyList<string> BrushFiles,
     IReadOnlyList<string> SpriteDataFiles,
-    IReadOnlyList<string> AssemblyFiles);
+    IReadOnlyList<string> AssemblyFiles)
+{
+    public IReadOnlyList<BannerlordModule> Modules { get; init; } = [];
+}
+
+public sealed record BannerlordModule(string Id, string Directory, IReadOnlyList<string> Dependencies,
+    IReadOnlyList<string> Packages, string? MetadataError = null);

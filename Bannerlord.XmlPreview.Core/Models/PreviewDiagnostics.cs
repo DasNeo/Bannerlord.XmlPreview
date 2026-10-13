@@ -394,6 +394,13 @@ public sealed class PreviewDiagnostics
         }
 
         var lines = new List<string> { $"Status: {resolution.Kind}" };
+        if (resolution.ImageResolution is { } image)
+        {
+            lines.Add($"ImageStatus: {image.Status}; Module: {image.Module}; Texture: {image.Texture}; Format: {image.Format}");
+            lines.Add($"Payload: {image.PayloadPath}");
+            if (image.Crop is { } crop) lines.Add($"Crop: {crop.SheetX},{crop.SheetY},{crop.Width},{crop.Height}");
+            lines.AddRange(image.Attempts ?? []);
+        }
         if (resolution.SpriteDefinition is not null)
         {
             var sprite = resolution.SpriteDefinition;

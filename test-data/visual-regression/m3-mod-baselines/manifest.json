@@ -1,0 +1,30 @@
+{
+  "SchemaVersion": 1,
+  "GameVersion": "v1.4.7",
+  "ModuleVersion": "v1.4.7.3",
+  "CaptureProfile": {
+    "Id": "m3-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "GlobalPixelTolerance": null,
+  "Cases": {
+    "m3-land-management": {
+      "PrefabIdentity": "fixtures/agricultureestate/gui/prefabs/landmanagement.xml",
+      "ScenarioSha256": "2286ec7d98138967b7b92a8a66c7357ccfd5dd0fda773813cba3ca9dd8a8bb74",
+      "Scene": "Preserved AgricultureEstate prefab",
+      "DataState": "Adapter deterministic default data; all five mod sprites resolved from TPAC and companion RDC; clan_frame_small expected missing.",
+      "StructureFile": "m3-land-management.structure.json",
+      "StructureSha256": "929cafaa82496fafa0b41b11f82e1d2a585904737443fc28b0159397b2500562",
+      "LayoutFile": "m3-land-management.layout.json",
+      "LayoutSha256": "60f1f90847e509966ab91bad2960f3610a374e41fd82bf0b86702dd6dce79bdb",
+      "ReferencePng": null,
+      "ReferenceSha256": null
+    }
+  }
+}

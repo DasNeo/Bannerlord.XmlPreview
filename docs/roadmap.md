@@ -1,6 +1,6 @@
 # Bannerlord.XmlPreview Development Roadmap
 
-Status: 2026-10-12. M0 and M1 complete; automated structural, layout, behavior, asset and Diagnostics validation passed locally and in the supplied CI results. Screenshot comparison is optional. M2 can begin. See [M1 completion](./reports/m1-completion.md).
+Status: 2026-10-12. M0-M3 complete. M3 passed 151 tests, nine portable Native cases and all three installed image/asset structural targets. Optional in-game screenshot comparison remains skipped. M4 can begin. See [M3 completion and fidelity limits](./reports/m3-completion.md).
 
 ## Product direction
 

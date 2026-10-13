@@ -8,6 +8,7 @@ namespace Bannerlord.XmlPreview.Adapters.Bannerlord;
 
 public sealed class BannerlordBrushMetricsProvider : IBrushMetricsProvider
 {
+    public IBrushMetricsProvider ForAssets(IAssetCatalog assets) => new BannerlordBrushMetricsProvider(assets);
     private readonly IAssetCatalog _assetCatalog;
 
     public BannerlordBrushMetricsProvider(IAssetCatalog assetCatalog)

@@ -14,6 +14,8 @@ public sealed record SpriteDefinition(
     int? TopHeight = null,
     int? BottomHeight = null)
 {
+    public int SheetX { get; init; }
+    public int SheetY { get; init; }
     public bool IsNineRegion =>
         LeftWidth.HasValue &&
         RightWidth.HasValue &&

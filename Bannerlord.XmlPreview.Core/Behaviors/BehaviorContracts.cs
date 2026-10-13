@@ -6,7 +6,7 @@ public enum BehaviorPhase { Describe, Instantiate, Connect, PrepareLayout, Inspe
 public enum BehaviorSupport { Supported, Partial }
 public enum ConnectionRequirement { Required, Optional }
 public enum CollectionMerge { Replace, Append }
-public enum ElementKind { Generic, Container, Placeholder, Text, KeyGlyph }
+public enum ElementKind { Generic, Container, Placeholder, Text, KeyGlyph, Image }
 public enum LayoutIntent { CopyDimensions, ScrollViewport, Clip, ToggleSelection, Dropdown, RadialChildren, ScrollHandle, Fill, SortIndicator, TargetState, DelayedState, SliderFill, RangeValue, SetState }
 public readonly record struct RuleId(string Value) : IComparable<RuleId>
 {
@@ -41,7 +41,9 @@ public sealed record BehaviorRule(RuleId Id, BehaviorPhase Phase, MatcherCriteri
     ImmutableArray<RuleId> Before = default, ImmutableArray<RuleId> After = default);
 public abstract record BehaviorContribution(BehaviorPhase Phase);
 public sealed record DescriptionContribution(string Property, string Value, CollectionMerge Merge = CollectionMerge.Replace) : BehaviorContribution(BehaviorPhase.Describe);
-public sealed record ElementBlueprint(ElementKind Kind, string? Explanation = null, string? Text = null) : BehaviorContribution(BehaviorPhase.Instantiate);
+public sealed record ImageBlueprint(Bannerlord.XmlPreview.Models.Assets.ImageRequest Request, string? Brush = null,
+    string? Mask = null, bool Masked = false, bool HideWhenNull = false, string Stretch = "Fill", string? Color = null);
+public sealed record ElementBlueprint(ElementKind Kind, string? Explanation = null, string? Text = null, ImageBlueprint? Image = null) : BehaviorContribution(BehaviorPhase.Instantiate);
 public sealed record ConnectionContribution(string Role, WidgetId? Target, ConnectionRequirement Requirement, string? ScenarioExplanation = null, WidgetId? StateSource = null, string? StateValue = null) : BehaviorContribution(BehaviorPhase.Connect);
 public sealed record LayoutContribution(LayoutIntent Intent, WidgetId? Source = null, WidgetId? Target = null,
     string Axis = "None", double Padding = 0, string? Value = null, WidgetId? SecondaryTarget = null) : BehaviorContribution(BehaviorPhase.PrepareLayout);
