@@ -15,9 +15,11 @@ public sealed partial class PrefabRenderContext
     {
         var dynamicImage = !string.IsNullOrEmpty(blueprint.Request.Provider) || blueprint.Masked || blueprint.HideWhenNull || blueprint.Request.ScenarioSprite is not null;
         var attributes = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
+        // Image Color tints source pixels; it must not also paint the container background.
+        attributes.Remove("Color");
         if (dynamicImage)
         {
-            attributes.Remove("Brush"); attributes.Remove("Sprite"); attributes.Remove("Color");
+            attributes.Remove("Brush"); attributes.Remove("Sprite");
         }
         var rendered = new WidgetNode(node.Name, attributes, node.Children).Render(this, parentSize);
         var border = (Border)rendered.Element;
@@ -61,6 +63,22 @@ public sealed partial class PrefabRenderContext
             // Replace the generic sprite overlay to honor stretch and tint explicitly.
             foreach (var old in grid.Children.OfType<Image>().ToArray()) grid.Children.Remove(old);
             grid.Children.Insert(0, ImageElement(resolution.Image, blueprint.Stretch, blueprint.Color));
+        }
+        if (dynamicImage && resolution.Status == ImageResolutionStatus.Resolved && resolution.Image is not null &&
+            (UsesCoverChildren(node.Attributes, "WidthSizePolicy") || UsesCoverChildren(node.Attributes, "HeightSizePolicy")))
+        {
+            // Provider images arrive after container layout; include their intrinsic dimensions in content sizing.
+            var containerSize = ResolveElementRenderSize(border, new Size(0, 0));
+            var contentSize = new Size(Math.Max(resolution.Width, containerSize.Width), Math.Max(resolution.Height, containerSize.Height));
+            var canvas = (Canvas)rendered.ChildHost!;
+            var size = FinalizeCoverChildrenSize(border, node.Attributes, contentSize, () =>
+            {
+                RelayoutCanvasChildren(canvas, node.Children, ResolveElementRenderSize(border, parentSize));
+                var bounds = MeasureCanvasChildrenBounds(canvas);
+                return bounds.IsEmpty ? contentSize : new Size(
+                    Math.Max(contentSize.Width, bounds.Width), Math.Max(contentSize.Height, bounds.Height));
+            });
+            PreviewElementDebugProperties.SetSelectionBounds(border, new Rect(new Point(0, 0), size));
         }
         if (node.Attributes.TryGetValue("Brush.AlphaFactor", out var alpha))
             border.Opacity *= Math.Clamp(ResolveDouble(alpha, 1), 0, 1);
