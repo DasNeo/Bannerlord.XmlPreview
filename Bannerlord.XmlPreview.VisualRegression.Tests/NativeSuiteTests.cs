@@ -29,6 +29,30 @@ public sealed class NativeSuiteTests
         .Select(id => new object[] { id });
 
     [Theory]
+    [InlineData("m2-portable-baselines", "portable-scenarios")]
+    [InlineData("m3-portable-baselines", "m3-portable-scenarios")]
+    [InlineData("native-baselines", "scenarios")]
+    [InlineData("m3-native-baselines", "m3-scenarios")]
+    [InlineData("m3-mod-baselines", "m3-scenarios")]
+    public void AcceptedScenarioHashesMatchBothCheckoutLineEndings(string metadataDirectory, string scenarioDirectory)
+    {
+        var data = DataRoot();
+        var manifest = JsonSerializer.Deserialize<ReferenceManifest>(
+            File.ReadAllText(Path.Combine(data, metadataDirectory, "manifest.json")), ScenarioLoader.JsonOptions)!;
+        using var fixture = new RegressionFixture();
+        foreach (var (id, entry) in manifest.Cases)
+        {
+            var lf = File.ReadAllText(Path.Combine(data, scenarioDirectory, id + ".json"))
+                .Replace("\r\n", "\n", StringComparison.Ordinal);
+            foreach (var text in new[] { lf, lf.Replace("\n", "\r\n", StringComparison.Ordinal) })
+            {
+                File.WriteAllText(fixture.ScenarioPath, text);
+                Assert.Equal(entry.ScenarioSha256, ScenarioLoader.LoadWithHash(fixture.ScenarioPath).Sha256);
+            }
+        }
+    }
+
+    [Theory]
     [MemberData(nameof(Cases))]
     public async Task AllNinePortableNativeCasesUseRealRendererAndPassStructureOnly(string id)
     {

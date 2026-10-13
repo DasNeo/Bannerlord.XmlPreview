@@ -52,10 +52,12 @@ public static class ScenarioLoader
         var bytes = File.ReadAllBytes(path);
         using var stream = new MemoryStream(bytes);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
-        var scenario = JsonSerializer.Deserialize<PreviewScenario>(reader.ReadToEnd(), JsonOptions)
+        // Scenario identity uses UTF-8 text with LF endings, independent of checkout conventions.
+        var text = reader.ReadToEnd().Replace("\r\n", "\n", StringComparison.Ordinal);
+        var scenario = JsonSerializer.Deserialize<PreviewScenario>(text, JsonOptions)
             ?? throw new InvalidDataException("Scenario document is null.");
         Validate(scenario);
-        return (scenario, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)));
+        return (scenario, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text))));
     }
 
     public static void Validate(PreviewScenario scenario)
