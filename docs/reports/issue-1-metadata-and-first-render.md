@@ -1,6 +1,6 @@
 # LandManagement metadata and first-render optimization
 
-Further work for issue #1 on `feature/load-performance-improvement`, measured 2026-10-14. The previous region-decoding implementation is already on master. This change reduces metadata discovery work and adds an optional precompiled publication; **the maximum-one-second combined load/render target is still unmet**.
+Further work for issue #1 on `feature/load-performance-improvement`, measured 2026-10-14. The previous region-decoding implementation is already on master. This change reduces metadata discovery work and adds an optional precompiled publication. The user accepted the measured performance and withdrew the one-second target on 2026-10-14. The target comparisons below document the investigation; they no longer block completion. Independent WPF launches supply timings; allocations and peak memory come from the integration test host, as described below. This evidence and its limitations are accepted for completion.
 
 ## Changes
 
@@ -76,4 +76,4 @@ Publish separately with `dotnet publish Bannerlord.XmlPreview.csproj -p:PublishP
 
 Local raw evidence is outside the repository at `C:/Users/andre/Documents/ChatGPT/bannerlord-xml-preview/issue-1-further/`: `before`, `final-release`, `final-readytorun`, and `validation`. Earlier trial folders are exploratory evidence, not the final sample sets above. Raw files and publications are not committed.
 
-Remaining work is to profile first-render materialization and consider a versioned automatic sprite disk cache if another first-use reduction is required. Any such cache must separately report cache-population and cache-hit launches; it cannot establish a one-second maximum on first population without measurement.
+Optional future work is to profile first-render materialization and consider a versioned automatic sprite disk cache if another first-use reduction is required. Neither is required to complete issue #1 at the accepted performance. Any such cache must separately report cache-population and cache-hit launches; it cannot establish a one-second maximum on first population without measurement.

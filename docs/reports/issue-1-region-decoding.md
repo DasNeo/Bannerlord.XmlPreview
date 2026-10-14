@@ -2,7 +2,7 @@
 
 Measured 2026-10-14 on validation-host, Windows, .NET 10.0.5, Release configuration. Issue: https://github.com/DasNeo/Bannerlord.XmlPreview/issues/1.
 
-Direct sprite-region decoding substantially improves first load, but **does not meet a maximum of 1000 ms combined load and render**. Warm reloads are comfortably below that target. The implementation was subsequently committed in `1e6d19e`; issue #1 remains open. See the [further metadata and first-render investigation](issue-1-metadata-and-first-render.md) for the next optimization and optional ReadyToRun publication.
+Direct sprite-region decoding substantially improves first load, but **does not meet a maximum of 1000 ms combined load and render**. Warm reloads are comfortably below that target. The implementation was subsequently committed in `1e6d19e`. The user accepted the current performance and withdrew the one-second target on 2026-10-14. See the [further metadata and first-render investigation](issue-1-metadata-and-first-render.md) for the next optimization, optional ReadyToRun publication and final acceptance.
 
 ## Fresh WPF processes
 
