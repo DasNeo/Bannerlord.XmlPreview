@@ -47,14 +47,17 @@ public sealed class VisualRegressionReport
     public IReadOnlyList<DiagnosticDifference> DiagnosticDifferences { get; }
     public VisualRegressionArtifacts Artifacts { get; }
     public VisualRegressionTiming Timing { get; }
+    public PixelTolerance? AppliedPixelTolerance { get; private init; }
     public IReadOnlyList<DynamicMask> Masks { get; private init; } = Array.Empty<DynamicMask>();
 
     internal VisualRegressionReport WithFailureReason(string reason) =>
-        new(Mode, Outcome, Checks, reason, Metrics, DiagnosticDifferences, Artifacts, Timing) { Masks = Masks };
+        new(Mode, Outcome, Checks, reason, Metrics, DiagnosticDifferences, Artifacts, Timing) { Masks = Masks, AppliedPixelTolerance = AppliedPixelTolerance };
 
     internal VisualRegressionReport WithRunDetails(VisualRegressionArtifacts artifacts, VisualRegressionTiming timing,
         IReadOnlyList<DynamicMask> masks) => new(Mode, Outcome, Checks, FailureReason, Metrics, DiagnosticDifferences, artifacts, timing)
-        { Masks = Array.AsReadOnly(masks.ToArray()) };
+        { Masks = Array.AsReadOnly(masks.ToArray()), AppliedPixelTolerance = AppliedPixelTolerance };
+    internal VisualRegressionReport WithPixelTolerance(PixelTolerance? tolerance) =>
+        new(Mode, Outcome, Checks, FailureReason, Metrics, DiagnosticDifferences, Artifacts, Timing) { Masks = Masks, AppliedPixelTolerance = tolerance };
 
     public static VisualRegressionReport FromComparison(
         VisualRegressionMode mode,

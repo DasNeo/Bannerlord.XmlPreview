@@ -54,6 +54,7 @@ public sealed record BehaviorTrace(WidgetId Widget, ImmutableArray<RuleId> Selec
     ImmutableArray<PlannedContribution> Contributions, BehaviorSupport Support)
 {
     public ImmutableArray<BehaviorRuleTrace> Rules { get; init; } = [];
+    public Bannerlord.XmlPreview.Models.SourceLocation? Source { get; init; }
 }
 public sealed record BehaviorGraphSummary(int RuleCount, int MatchCount, int EdgeCount,
     ImmutableDictionary<BehaviorPhase, int> ContributionCounts, ImmutableDictionary<BehaviorSupport, int> SupportCounts,

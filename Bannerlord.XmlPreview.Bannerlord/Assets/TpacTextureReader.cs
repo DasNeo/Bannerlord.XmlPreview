@@ -131,6 +131,38 @@ public static class TpacTextureReader
         return texture with { Payload = new((long)offset, Size(actual, MaxPayload), Size(stored, MaxPayload), compression), PayloadPath = path };
     }
 
+    /// <summary>Decode only the blocks intersecting a sprite, then trim their aligned edges.</summary>
+    public static BitmapSource DecodeRegion(byte[] data, int width, int height, string format, int x, int y, int regionWidth, int regionHeight)
+    {
+        if (width <= 0 || height <= 0 || (long)width * height * 4 > 128L * 1024 * 1024 ||
+            x < 0 || y < 0 || regionWidth <= 0 || regionHeight <= 0 || (long)x + regionWidth > width || (long)y + regionHeight > height)
+            throw new InvalidDataException("Invalid texture dimensions or sprite region.");
+        var blockBytes = format.ToUpperInvariant() switch
+        {
+            "BC7" or "DXT5" => 16, "DXT1" or "BC4" => 8, "R8_UNORM" => 1,
+            _ => throw new NotSupportedException($"Unsupported texture format '{format}'.")
+        };
+        var blockSize = blockBytes == 1 ? 1 : 4;
+        var columns = (width + blockSize - 1) / blockSize;
+        var rows = (height + blockSize - 1) / blockSize;
+        if (data.Length < checked(columns * rows * blockBytes)) throw new InvalidDataException("Truncated texture pixels.");
+        var left = x / blockSize;
+        var top = y / blockSize;
+        var regionColumns = (x + regionWidth + blockSize - 1) / blockSize - left;
+        var regionRows = (y + regionHeight + blockSize - 1) / blockSize - top;
+        var packed = new byte[checked(regionColumns * regionRows * blockBytes)];
+        for (int row = 0; row < regionRows; row++)
+            Buffer.BlockCopy(data, ((top + row) * columns + left) * blockBytes,
+                packed, row * regionColumns * blockBytes, regionColumns * blockBytes);
+        var aligned = Decode(packed, Math.Min(regionColumns * blockSize, width - left * blockSize),
+            Math.Min(regionRows * blockSize, height - top * blockSize), format);
+        var pixels = new byte[checked(regionWidth * regionHeight * 4)];
+        aligned.CopyPixels(new System.Windows.Int32Rect(x % blockSize, y % blockSize, regionWidth, regionHeight), pixels, regionWidth * 4, 0);
+        var image = BitmapSource.Create(regionWidth, regionHeight, 96, 96, PixelFormats.Pbgra32, null, pixels, regionWidth * 4);
+        image.Freeze();
+        return image;
+    }
+
     public static BitmapSource Decode(byte[] data, int width, int height, string format)
     {
         if (width <= 0 || height <= 0 || (long)width * height * 4 > 128L * 1024 * 1024)

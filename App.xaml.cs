@@ -102,6 +102,9 @@ public partial class App : Application
         services.AddSingleton<IPrefabRenderer, PrefabRenderer>();
         services.AddSingleton<IFileDialogService, FileDialogService>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();
+        services.AddSingleton<ISourceNavigator, SourceNavigator>();
+        services.AddSingleton<Bannerlord.XmlPreview.VisualRegression.IScenarioRepository>(
+            new Bannerlord.XmlPreview.VisualRegression.ScenarioRepository(Bannerlord.XmlPreview.VisualRegression.ScenarioRepository.DefaultDirectory));
         services.AddSingleton<IDiagnosticsSnapshotWriter, DiagnosticsSnapshotWriter>();
         services.AddSingleton<ITemplateMockService, TemplateMockService>();
         services.AddSingleton<IPreviewTreeBuilder, PreviewTreeBuilder>();

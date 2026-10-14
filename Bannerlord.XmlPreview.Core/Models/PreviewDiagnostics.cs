@@ -43,6 +43,7 @@ public sealed class PreviewDiagnostics
     public IReadOnlyList<string> TruncationReasons => _truncationReasons;
 
     public IReadOnlyList<string> Messages => _messages;
+    public HashSet<string> Dependencies { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Bannerlord.XmlPreview.Core.Behaviors.BehaviorGraphSummary? BehaviorGraph { get; internal set; }
     public System.Collections.Immutable.ImmutableArray<Bannerlord.XmlPreview.Core.Behaviors.BehaviorTrace> BehaviorTrace { get; internal set; } = [];

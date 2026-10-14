@@ -19,6 +19,51 @@ namespace Bannerlord.XmlPreview.VisualRegression.Tests;
 public sealed class InstalledImageTests
 {
     [InstalledImageFact]
+    public void LandManagementLoadMeasurements()
+    {
+        var output = Environment.GetEnvironmentVariable("BANNERLORD_LOADING_ARTIFACTS");
+        if (output is null) return;
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var root = Environment.GetEnvironmentVariable("BANNERLORD_ROOT")!;
+            var repo = Path.GetFullPath(Path.Combine(NativeSuiteTests.DataRoot(), "../.."));
+            var results = new List<object>();
+            foreach (var path in new[] { Path.Combine(repo, "fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml"),
+                Path.Combine(root, "Modules/AgricultureEstate/GUI/Prefabs/LandManagement.xml") })
+            {
+                var (assets, loader, renderer) = EnvironmentFor(root);
+                for (int iteration = 0; iteration < 6; iteration++)
+                {
+                    var diagnostics = new PreviewDiagnostics();
+                    using var scope = diagnostics.BeginTimingScope();
+                    var allocated = GC.GetTotalAllocatedBytes(true);
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    var document = loader.Load(path, diagnostics);
+                    var loadMs = watch.Elapsed.TotalMilliseconds;
+                    watch.Restart();
+                    _ = renderer.Render(document, diagnostics);
+                    var renderMs = watch.Elapsed.TotalMilliseconds;
+                    Assert.NotEqual(RenderCompletionStatus.Failed, diagnostics.CompletionStatus);
+                    var decodeStatistics = ((BannerlordAssetCatalog)assets).DecodeStatistics;
+                    Assert.Equal(0, decodeStatistics.CachedAtlasBytes);
+                    Assert.True(decodeStatistics.DecodedPixelCount < decodeStatistics.FullAtlasPixelCount);
+                    Assert.InRange(decodeStatistics.CachedPayloadBytes, 0, 64L * 1024 * 1024);
+                    results.Add(new { Path = path, Iteration = iteration, LoadMs = loadMs, RenderMs = renderMs,
+                        CombinedMs = loadMs + renderMs, Nodes = Nodes(document.RootNode).Count(),
+                        AllocatedBytes = GC.GetTotalAllocatedBytes(true) - allocated,
+                        PeakWorkingSetBytes = System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64,
+                        DecodeStatistics = decodeStatistics,
+                        Phases = diagnostics.ToDisplayText() });
+                }
+            }
+            Directory.CreateDirectory(output);
+            File.WriteAllText(Path.Combine(output, $"loading-{Environment.ProcessId}.json"), JsonSerializer.Serialize(new
+            { Machine = Environment.MachineName, Runtime = Environment.Version.ToString(), Results = results }, new JsonSerializerOptions { WriteIndented = true }));
+            return 0;
+        });
+    }
+
+    [InstalledImageFact]
     public void ProductionCacheRecordsFirstLoadAndFiveWarmCrops()
     {
         var root = Environment.GetEnvironmentVariable("BANNERLORD_ROOT")!;

@@ -10,6 +10,9 @@ using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Models;
 using Bannerlord.XmlPreview.Services;
 using Bannerlord.XmlPreview.ViewModels.Mocks;
+using Bannerlord.XmlPreview.VisualRegression;
+using Bannerlord.XmlPreview.Rendering;
+using System.Collections.ObjectModel;
 
 namespace Bannerlord.XmlPreview.ViewModels;
 
@@ -35,13 +38,28 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
     private readonly IPrefabLoader _prefabLoader;
     private readonly IPrefabRenderer _prefabRenderer;
-    private readonly LatestLoadCoordinator<string, LoadedPrefab> _loadCoordinator;
+    private readonly LatestLoadCoordinator<LoadRequest, LoadedPrefab> _loadCoordinator;
+    private readonly IScenarioRepository _scenarios;
+    private readonly ISourceNavigator _navigator;
+    private readonly Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore _bindings;
+    private readonly IAssetCatalog _assets;
+    private readonly IPreviewDataSourceProvider _previewData;
+    private PreviewScenario? _activeScenario;
+    private PreviewScenario? _requestedScenario;
+    private string? _selectedScenarioId;
+    private string _scenarioName = "new-scenario";
+    private bool _scenarioDirty;
+    private bool _updatingScenarioSelection;
+    private long _reloadGeneration;
+    private long _cancelledReloads;
+    private string[] _changedDependencies = [];
+    private string? _requestedPrefabPath;
+    private bool _readScenarioFromDisk;
     private readonly RelayCommand _reloadCommand;
     private readonly IRootLayoutHints _rootLayoutHints;
     private string _bannerlordInstallPath = string.Empty;
     private PrefabDocument? _currentDocument;
     private string? _currentPrefabPath;
-    private string? _watchedPrefabPath;
     private string _diagnosticsText = string.Empty;
     private PreviewDiagnostics? _currentDiagnostics;
     private string _filePath = string.Empty;
@@ -62,7 +80,12 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         IDiagnosticsSnapshotWriter diagnosticsSnapshotWriter,
         IPreviewEnvironmentInitializer environmentInitializer,
         MockEditorViewModel mockEditor,
-        PreviewInspectorViewModel previewInspector)
+        PreviewInspectorViewModel previewInspector,
+        IScenarioRepository scenarios,
+        ISourceNavigator navigator,
+        Bannerlord.XmlPreview.Preview.Bannerlord.PreviewBindingStore bindings,
+        IAssetCatalog assets,
+        IPreviewDataSourceProvider previewData)
     {
         _prefabLoader = prefabLoader;
         _prefabRenderer = prefabRenderer;
@@ -72,7 +95,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         _rootLayoutHints = rootLayoutHints;
         _diagnosticsSnapshotWriter = diagnosticsSnapshotWriter;
         _environmentInitializer = environmentInitializer;
-        _loadCoordinator = new LatestLoadCoordinator<string, LoadedPrefab>(
+        _scenarios = scenarios; _navigator = navigator; _bindings = bindings; _assets = assets;
+        _previewData = previewData;
+        _loadCoordinator = new LatestLoadCoordinator<LoadRequest, LoadedPrefab>(
             LoadPrefabDocumentAsync,
             PublishLoadedPrefab,
             PublishLoadFailure);
@@ -92,23 +117,37 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         ApplyBannerlordInstallCommand = _applyBannerlordInstallCommand;
         ApplyPreviewSizeCommand = _applyPreviewSizeCommand;
 
-        _fileWatcherService.FileChanged += FileWatcherServiceOnFileChanged;
-        MockEditor.Changed += (_, _) => ReRenderCurrentDocument();
+        _fileWatcherService.DependenciesChanged += FileWatcherServiceOnFileChanged;
+        MockEditor.Changed += MockEditorChanged;
+        RefreshScenarios();
+        CreateScenarioCommand = new RelayCommand(() => ScenarioOperation(CreateScenario));
+        SaveScenarioCommand = new RelayCommand(() => ScenarioOperation(SaveScenario));
+        CloneScenarioCommand = new RelayCommand(() => ScenarioOperation(() => { RequireSavedScenario(); SelectScenario(_scenarios.Clone(_activeScenario!.Id, ScenarioName)); }));
+        RenameScenarioCommand = new RelayCommand(() => ScenarioOperation(() => { RequireSavedScenario(); SelectScenario(_scenarios.Rename(_activeScenario!.Id, ScenarioName)); }));
+        DeleteScenarioCommand = new RelayCommand(() => ScenarioOperation(() => { RequireSavedScenario(); _scenarios.Delete(_activeScenario!.Id); SelectScenario(null); }));
+        EditScenarioCommand = new RelayCommand(() => ScenarioOperation(() => { RequireSavedScenario(); _navigator.Open(new(_scenarios.PathFor(_activeScenario!.Id), 1)); }));
+        OpenSourceCommand = new RelayCommand(() => ScenarioOperation(() => _navigator.Open(SelectedSource ?? new(_currentPrefabPath ?? throw new InvalidOperationException("Open a prefab first."), 1))));
+        CopySourceCommand = new RelayCommand(() => ScenarioOperation(() => _navigator.CopyPath(SelectedSource ?? new(_currentPrefabPath ?? throw new InvalidOperationException("Open a prefab first."), 1))));
+        ShowComparisonCommand = new RelayCommand(() => ScenarioOperation(ShowComparison));
+        OpenComparisonReportCommand = new RelayCommand(() => ScenarioOperation(OpenComparisonReport));
+        ShowBehaviorTraceCommand = new RelayCommand(() => ScenarioOperation(ShowBehaviorTrace));
     }
 
     #region Events
 
-    private void FileWatcherServiceOnFileChanged(object? sender, FileInfo e)
+    private void FileWatcherServiceOnFileChanged(object? sender, IReadOnlyList<string> paths)
     {
-        if (!string.Equals(e.FullName, _watchedPrefabPath, StringComparison.OrdinalIgnoreCase)) return;
-
-        if (_dispatcher.CheckAccess())
+        void Reload()
         {
+            if (_disposed) return;
+            _changedDependencies = paths.ToArray();
+            _assets.Invalidate();
+            _prefabLoader.Invalidate();
+            if (_requestedScenario is not null && paths.Contains(_scenarios.PathFor(_requestedScenario.Id), StringComparer.OrdinalIgnoreCase))
+                _readScenarioFromDisk = true;
             ReloadPrefab();
-            return;
         }
-
-        _dispatcher.BeginInvoke(ReloadPrefab);
+        if (_dispatcher.CheckAccess()) Reload(); else _dispatcher.BeginInvoke(Reload);
     }
 
     #endregion
@@ -124,6 +163,33 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     public ICommand ApplyBannerlordInstallCommand { get; }
 
     public ICommand ApplyPreviewSizeCommand { get; }
+    public ICommand CreateScenarioCommand { get; }
+    public ICommand SaveScenarioCommand { get; }
+    public ICommand CloneScenarioCommand { get; }
+    public ICommand RenameScenarioCommand { get; }
+    public ICommand DeleteScenarioCommand { get; }
+    public ICommand EditScenarioCommand { get; }
+    public ICommand OpenSourceCommand { get; }
+    public ICommand CopySourceCommand { get; }
+    public ICommand ShowComparisonCommand { get; }
+    public ICommand OpenComparisonReportCommand { get; }
+    public ICommand ShowBehaviorTraceCommand { get; }
+    public ObservableCollection<AuthoringDiagnosticViewModel> AuthoringDiagnostics { get; } = [];
+    public ObservableCollection<string> ScenarioIds { get; } = [];
+    public string ScenarioName { get => _scenarioName; set => SetProperty(ref _scenarioName, value); }
+    public bool ScenarioDirty { get => _scenarioDirty; private set { SetProperty(ref _scenarioDirty, value); OnPropertyChanged(nameof(ScenarioStatus)); } }
+    public string ScenarioStatus => _activeScenario is null ? "Interactive (unsaved)" : $"{_activeScenario.Id}, schema {_activeScenario.SchemaVersion} — {(ScenarioDirty ? "Unsaved changes" : "Saved")}";
+    public string? SelectedScenarioId
+    {
+        get => _selectedScenarioId;
+        set
+        {
+            if (_updatingScenarioSelection || value == _selectedScenarioId) return;
+            ScenarioOperation(() => { if (ScenarioDirty) throw new InvalidOperationException("Save the active scenario before switching."); SelectScenario(value is null ? null : _scenarios.Load(value)); });
+            OnPropertyChanged();
+        }
+    }
+    public SourceLocation? SelectedSource { get; set; }
 
     #endregion
 
@@ -256,7 +322,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
     private bool CanReloadPrefab()
     {
-        return !string.IsNullOrWhiteSpace(_currentPrefabPath);
+        return !string.IsNullOrWhiteSpace(_requestedPrefabPath ?? _currentPrefabPath);
     }
 
     private bool CanApplyBannerlordInstall()
@@ -271,7 +337,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void ReloadPrefab()
     {
-        if (!string.IsNullOrWhiteSpace(_currentPrefabPath)) _ = LoadPrefabAsync(_currentPrefabPath);
+        var path = _requestedPrefabPath ?? _currentPrefabPath;
+        if (_requestedScenario is not null && !ScenarioDirty) _readScenarioFromDisk = true;
+        if (!string.IsNullOrWhiteSpace(path)) _ = LoadPrefabAsync(path);
     }
 
     private void BrowseBannerlordInstall()
@@ -320,12 +388,20 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        _rootLayoutHints.PreviewSize = requestedSize;
+        if (_activeScenario is not null)
+        {
+            if (requestedSize.Width != Math.Truncate(requestedSize.Width) || requestedSize.Height != Math.Truncate(requestedSize.Height))
+            { StatusText = "Scenario resolution requires whole pixel dimensions."; return; }
+            var draft = _requestedScenario ?? _activeScenario;
+            _requestedScenario = draft with { CaptureProfile = draft.CaptureProfile with { Width = (int)requestedSize.Width, Height = (int)requestedSize.Height } };
+            ScenarioDirty = true;
+        }
+        else _rootLayoutHints.PreviewSize = requestedSize;
         PreviewWidth = FormatDimension(requestedSize.Width);
         PreviewHeight = FormatDimension(requestedSize.Height);
 
         if (_currentDocument is not null)
-            ReRenderCurrentDocument();
+            _ = LoadPrefabAsync(_currentDocument.SourcePath);
         else
             StatusText = $"Preview size set to {FormatSize(requestedSize)}";
     }
@@ -338,7 +414,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        SwitchWatchedFile(path);
+        if (ScenarioDirty) { StatusText = "Save the active scenario before opening another prefab."; return; }
+        _requestedPrefabPath = Path.GetFullPath(path);
+        _requestedScenario = null;
         await LoadPrefabAsync(path);
     }
 
@@ -352,11 +430,19 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
         IsPreviewStale = PreviewContent is not null;
         StatusText = $"Loading {Path.GetFileName(path)}..." + (IsPreviewStale ? " Last Good Preview is stale." : "");
-        await _loadCoordinator.RunAsync(path);
+        var generation = ++_reloadGeneration;
+        var request = new LoadRequest(path, _requestedScenario, _readScenarioFromDisk, ScenarioDirty);
+        _readScenarioFromDisk = false;
+        await _loadCoordinator.RunAsync(request);
+        if (generation != _reloadGeneration)
+        {
+            _cancelledReloads++;
+            Debug.WriteLine($"Reload generation {generation} cancelled by {_reloadGeneration}.");
+        }
         _reloadCommand.RaiseCanExecuteChanged();
     }
 
-    private Task<LoadedPrefab> LoadPrefabDocumentAsync(string path, CancellationToken cancellationToken)
+    private Task<LoadedPrefab> LoadPrefabDocumentAsync(LoadRequest request, CancellationToken cancellationToken)
     {
         return Task.Run(
             () =>
@@ -364,88 +450,88 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
                 cancellationToken.ThrowIfCancellationRequested();
                 var diagnostics = new PreviewDiagnostics();
                 using var diagnosticsTimingScope = diagnostics.BeginTimingScope();
-                return new LoadedPrefab(_prefabLoader.Load(path, diagnostics, cancellationToken), diagnostics);
+                PrefabDocument? document = null;
+                try
+                {
+                    document = _prefabLoader.Load(request.Path, diagnostics, cancellationToken);
+                    var scenario = request.Scenario;
+                    if (request.ReadScenarioFromDisk && scenario is not null)
+                    {
+                        if (request.Dirty) throw new InvalidOperationException("Scenario changed externally while it has unsaved changes. Save the active scenario before reloading it.");
+                        scenario = _scenarios.Load(scenario.Id);
+                    }
+                    if (scenario is not null) _ = ScenarioApplication.Apply(document, scenario);
+                    return new LoadedPrefab(document, diagnostics, scenario);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception exception) { throw new PreviewLoadException(exception, diagnostics, document); }
             },
             cancellationToken);
     }
 
-    private void PublishLoadedPrefab(string path, LoadedPrefab loadedPrefab)
+    private void PublishLoadedPrefab(LoadRequest request, LoadedPrefab loadedPrefab)
     {
+        var scenario = loadedPrefab.Scenario;
+        var candidate = RenderCandidate(loadedPrefab.Document, loadedPrefab.Diagnostics, scenario);
+        var dependencies = loadedPrefab.Document.Dependencies.Concat(loadedPrefab.Diagnostics.Dependencies).Append(request.Path);
+        if (scenario is not null) dependencies = dependencies.Append(_scenarios.PathFor(scenario.Id));
+        _fileWatcherService.ReplaceDependencies(dependencies);
+        // Commit all preview state only after loading, rendering and watcher preparation succeed.
         _currentDocument = loadedPrefab.Document;
         _currentDiagnostics = loadedPrefab.Diagnostics;
-        using (loadedPrefab.Diagnostics.MeasurePhase("MainWindow.Load.MockEditor"))
-            MockEditor.Load(loadedPrefab.Document);
-        using (loadedPrefab.Diagnostics.BeginTimingScope())
-            RenderPreview(loadedPrefab.Document, loadedPrefab.Diagnostics);
-        FilePath = path;
-        _currentPrefabPath = path;
-        Title = $"{DefaultWindowTitle} - {Path.GetFileName(path)}";
-        if (!IsPreviewStale && loadedPrefab.Diagnostics.CompletionStatus != RenderCompletionStatus.Failed) StatusText = $"Loaded {Path.GetFileName(path)}";
+        _activeScenario = scenario;
+        _requestedScenario = scenario;
+        if (scenario is not null) _rootLayoutHints.PreviewSize = new(scenario.CaptureProfile.Width, scenario.CaptureProfile.Height);
+        _bindings.Replace(scenario is null ? _bindings.Capture().Bindings : scenario.Bindings);
+        MockEditor.Load(loadedPrefab.Document, scenario);
+        PreviewContent = candidate;
+        SelectedSource = null;
+        PreviewInspector.Attach(candidate);
+        IsPreviewStale = false;
+        _selectedScenarioId = scenario?.Id;
+        ScenarioDirty = request.Dirty && !request.ReadScenarioFromDisk;
+        PreviewWidth = FormatDimension(_rootLayoutHints.PreviewSize.Width);
+        PreviewHeight = FormatDimension(_rootLayoutHints.PreviewSize.Height);
+        OnPropertyChanged(nameof(SelectedScenarioId)); OnPropertyChanged(nameof(ScenarioStatus));
+        FilePath = request.Path;
+        _currentPrefabPath = request.Path;
+        _requestedPrefabPath = request.Path;
+        Title = $"{DefaultWindowTitle} - {Path.GetFileName(request.Path)}";
+        DiagnosticsText = AuthoringDiagnosticText(loadedPrefab.Diagnostics);
+        PopulateDiagnosticSources(loadedPrefab.Diagnostics, loadedPrefab.Document, new(request.Path, 1));
+        StatusText = $"Loaded {Path.GetFileName(request.Path)}";
     }
 
-    private void PublishLoadFailure(string path, Exception exception)
+    private void PublishLoadFailure(LoadRequest request, Exception exception)
     {
-        _currentDocument = null;
-        _currentDiagnostics = new PreviewDiagnostics();
+        _currentDiagnostics = exception is PreviewLoadException failure ? failure.Diagnostics : new PreviewDiagnostics();
         _currentDiagnostics.MarkFailed($"Load failed: {exception.Message}");
         IsPreviewStale = PreviewContent is not null;
-        DiagnosticsText = $"{_currentDiagnostics.ToDisplayText()}{Environment.NewLine}{Environment.NewLine}{exception}";
-        MockEditor.Clear();
-        PreviewInspector.Reset("No element selected because loading failed.");
-        FilePath = path;
-        _currentPrefabPath = path;
-        Title = DefaultWindowTitle;
+        DiagnosticsText = $"{AuthoringDiagnosticText(_currentDiagnostics)}{Environment.NewLine}Stale reason: {exception.Message}{Environment.NewLine}{exception}";
+        FilePath = request.Path;
+        if (exception.GetBaseException() is System.Xml.XmlException xml) SelectedSource = new(!string.IsNullOrEmpty(xml.SourceUri) && Uri.TryCreate(xml.SourceUri, UriKind.Absolute, out var uri) && uri.IsFile ? uri.LocalPath : request.Path, xml.LineNumber, xml.LinePosition);
+        else if (exception.GetBaseException() is System.Text.Json.JsonException json && request.Scenario is not null)
+            SelectedSource = new(_scenarios.PathFor(request.Scenario.Id), (int)(json.LineNumber ?? 0) + 1);
+        else SelectedSource = new(request.Path, 1);
+        PopulateDiagnosticSources(_currentDiagnostics, exception is PreviewLoadException loadFailure ? loadFailure.Document ?? _currentDocument : _currentDocument, SelectedSource);
+        // With no Last Good Preview, watching the requested root permits automatic recovery.
+        if (_currentDocument is null) _fileWatcherService.ReplaceDependencies([request.Path]);
         StatusText = IsPreviewStale ? "Load failed. Last Good Preview is stale." : "Load failed.";
-    }
-
-    private void SwitchWatchedFile(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        if (string.Equals(_watchedPrefabPath, fullPath, StringComparison.OrdinalIgnoreCase)) return;
-
-        if (!string.IsNullOrWhiteSpace(_watchedPrefabPath))
-            _fileWatcherService.Stop(new FileInfo(_watchedPrefabPath));
-
-        _fileWatcherService.Start(new FileInfo(fullPath));
-        _watchedPrefabPath = fullPath;
-    }
-
-    private void ReRenderCurrentDocument()
-    {
-        if (_currentDocument is null) return;
-
-        var diagnostics = new PreviewDiagnostics();
-        RenderPreview(_currentDocument, diagnostics);
-        if (!IsPreviewStale && diagnostics.CompletionStatus != RenderCompletionStatus.Failed) StatusText =
-            $"Updated preview for {Path.GetFileName(_currentDocument.SourcePath)} ({FormatSize(_rootLayoutHints.PreviewSize)})";
     }
 
     private bool _isPreviewStale;
     public bool IsPreviewStale { get => _isPreviewStale; private set => SetProperty(ref _isPreviewStale, value); }
 
-    private void RenderPreview(PrefabDocument document, PreviewDiagnostics diagnostics)
+    private FrameworkElement RenderCandidate(PrefabDocument document, PreviewDiagnostics diagnostics, PreviewScenario? scenario)
     {
-        _currentDiagnostics = diagnostics;
         try
         {
-            FrameworkElement candidate;
-            using (diagnostics.MeasurePhase("MainWindow.Render.Renderer"))
-                candidate = _prefabRenderer.Render(document, diagnostics);
-            PreviewContent = candidate;
-            IsPreviewStale = false;
+            var candidateDocument = scenario is null ? document : ScenarioApplication.Apply(document, scenario);
+            var candidate = _prefabRenderer.Render(candidateDocument, diagnostics, scenario is null ? null : ScenarioApplication.Options(scenario));
+            if (diagnostics.CompletionStatus == RenderCompletionStatus.Failed) throw new InvalidDataException("Render failed validation.");
+            return candidate;
         }
-        catch (Exception exception)
-        {
-            IsPreviewStale = PreviewContent is not null;
-            diagnostics.MarkFailed(exception is OperationCanceledException ? "Render cancelled." : exception.Message);
-            DiagnosticsText = diagnostics.ToDisplayText();
-            StatusText = IsPreviewStale ? "Last Good Preview is stale: render failed or was cancelled." : "Render failed.";
-            return;
-        }
-        using (diagnostics.MeasurePhase("MainWindow.Render.PreviewInspector"))
-            PreviewInspector.Attach(PreviewContent);
-        using (diagnostics.MeasurePhase("MainWindow.Render.DiagnosticsText"))
-            DiagnosticsText = diagnostics.ToDisplayText();
+        catch (Exception exception) { throw new PreviewLoadException(exception, diagnostics, document); }
     }
 
     private void StartEnvironmentWarmUp()
@@ -496,6 +582,122 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         return $"{FormatDimension(size.Width)} x {FormatDimension(size.Height)}";
     }
 
+    private void ScenarioOperation(Action action)
+    {
+        try { action(); }
+        catch (Exception exception) { StatusText = exception.Message; DiagnosticsText = $"Authoring error: {exception.Message}\n" + DiagnosticsText; }
+    }
+    private void RefreshScenarios()
+    {
+        _updatingScenarioSelection = true;
+        try { ScenarioIds.Clear(); foreach (var id in _scenarios.List()) ScenarioIds.Add(id); }
+        finally { _updatingScenarioSelection = false; }
+    }
+    private void SelectScenario(PreviewScenario? scenario)
+    {
+        if (_currentDocument is null) throw new InvalidOperationException("Open a prefab before selecting a scenario.");
+        if (scenario is not null && StableWidgetId.CanonicalPrefab(scenario.PrefabIdentity) != StableWidgetId.CanonicalPrefab(_currentDocument.PrefabIdentity ?? Path.GetFileName(_currentDocument.SourcePath)))
+            throw new InvalidDataException("Scenario belongs to another prefab.");
+        _requestedScenario = scenario;
+        RefreshScenarios();
+        _ = LoadPrefabAsync(_currentDocument.SourcePath);
+    }
+    private void RequireSavedScenario()
+    {
+        if (_activeScenario is null) throw new InvalidOperationException("Create or select a scenario first.");
+        if (ScenarioDirty) throw new InvalidOperationException("Save the active scenario first.");
+    }
+    private void CreateScenario()
+    {
+        if (_currentDocument is null) throw new InvalidOperationException("Open a prefab first.");
+        if (ScenarioDirty) throw new InvalidOperationException("Save the active scenario first.");
+        var scenario = new PreviewScenario
+        {
+            Id = ScenarioName, PrefabIdentity = _currentDocument.PrefabIdentity ?? Path.GetFileName(_currentDocument.SourcePath),
+            CaptureProfile = new("authoring", (int)_rootLayoutHints.PreviewSize.Width, (int)_rootLayoutHints.PreviewSize.Height),
+            Scene = "Authoring preview", DataState = "Interactive values",
+            Bindings = new(_bindings.Capture().Bindings, StringComparer.OrdinalIgnoreCase), Lists = MockEditor.CaptureLists(),
+            OptionalConnectionExplanations = new(_previewData.CaptureSnapshot(_currentDocument.RootNode).OptionalConnectionExplanations, StringComparer.Ordinal)
+        };
+        SelectScenario(_scenarios.Create(scenario));
+    }
+    private void SaveScenario()
+    {
+        if (_activeScenario is null) { CreateScenario(); return; }
+        _scenarios.Save(_requestedScenario ?? _activeScenario);
+        ScenarioDirty = false;
+        StatusText = $"Saved {_activeScenario.Id}";
+    }
+    private void MockEditorChanged(object? sender, EventArgs e)
+    {
+        if (_activeScenario is not null)
+        {
+            var draft = _requestedScenario ?? _activeScenario;
+            _requestedScenario = draft with { Bindings = new(_bindings.Capture().Bindings, StringComparer.OrdinalIgnoreCase), Lists = MockEditor.CaptureLists() };
+            ScenarioDirty = true;
+        }
+        if (_currentDocument is not null) _ = LoadPrefabAsync(_currentDocument.SourcePath);
+    }
+    private string AuthoringDiagnosticText(PreviewDiagnostics diagnostics) =>
+        $"Preview Scenario: {ScenarioStatus}\nReload generation: {_reloadGeneration}; cancelled obsolete reloads: {_cancelledReloads}\nChanged dependencies: {string.Join(", ", _changedDependencies)}\nSource: {SelectedSource?.FilePath ?? _currentDocument?.SourcePath}\n" + diagnostics.ToDisplayText();
+    private void PopulateDiagnosticSources(PreviewDiagnostics diagnostics, PrefabDocument? document, SourceLocation fallback)
+    {
+        AuthoringDiagnostics.Clear();
+        foreach (var message in diagnostics.Messages)
+        {
+            var source = document?.SourceMap.OrderByDescending(pair => pair.Key.Length)
+                .FirstOrDefault(pair => message.Contains(pair.Key, StringComparison.Ordinal)).Value ?? fallback;
+            AuthoringDiagnostics.Add(new(message, source, _navigator, ScenarioOperation));
+        }
+    }
+    private void ShowBehaviorTrace()
+    {
+        if (_currentDocument is null) throw new InvalidOperationException("Open a prefab first.");
+        var diagnostics = IsPreviewStale && _currentDiagnostics is { } failed && !failed.BehaviorTrace.IsEmpty ? failed : new PreviewDiagnostics();
+        var scenario = _activeScenario;
+        var options = scenario is null ? new RegressionRenderOptions(_currentDocument.PrefabIdentity ?? Path.GetFileName(_currentDocument.SourcePath),
+            _bindings.Capture().Bindings, new Dictionary<string, IReadOnlyDictionary<string, string>>(), []) { TraceBehaviors = true }
+            : ScenarioApplication.Options(scenario) with { TraceBehaviors = true };
+        if (diagnostics.BehaviorTrace.IsEmpty)
+        {
+            try { _ = _prefabRenderer.Render(scenario is null ? _currentDocument : ScenarioApplication.Apply(_currentDocument, scenario), diagnostics, options); }
+            catch when (!diagnostics.BehaviorTrace.IsEmpty) { }
+        }
+        var traceText = System.Text.Json.JsonSerializer.Serialize(diagnostics.BehaviorTrace, ScenarioLoader.JsonOptions);
+        var text = new System.Windows.Controls.TextBox { Text = traceText, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto };
+        new Window { Title = "Behavior Trace", Width = 900, Height = 700, Content = text, Owner = Application.Current?.MainWindow }.Show();
+    }
+    private void ShowComparison()
+    {
+        if (PreviewContent is null || _activeScenario is null) throw new InvalidOperationException("Select a persistent scenario and load a preview first.");
+        if (IsPreviewStale) throw new InvalidOperationException("The preview is stale. Complete a successful reload before comparing the current preview.");
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Reference screenshot (*.png)|*.png", Title = "Open reference for the active scenario" };
+        if (dialog.ShowDialog() != true) return;
+        var comparison = ComparisonPresenter.Compare(dialog.FileName, PreviewContent, _activeScenario, _currentDiagnostics?.Layout);
+        var window = new ComparisonWindow(comparison, _activeScenario, bounds =>
+        {
+            if (_currentDocument?.SourceMap.GetValueOrDefault(bounds.ExpandedPath) is { } source)
+            { SelectedSource = source; PreviewInspector.SelectSource(source); }
+        });
+        window.Owner = Application.Current?.MainWindow;
+        window.Show();
+        DiagnosticsText = $"Image comparison: {comparison.Summary}\n" + AuthoringDiagnosticText(_currentDiagnostics!);
+    }
+    private void OpenComparisonReport()
+    {
+        RequireSavedScenario();
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Visual Regression report (*.json)|*.json", Title = "Open comparison report for the active scenario" };
+        if (dialog.ShowDialog() != true) return;
+        var comparison = ComparisonPresenter.LoadArtifacts(dialog.FileName, _scenarios.PathFor(_activeScenario!.Id));
+        new ComparisonWindow(comparison, _activeScenario, bounds =>
+        {
+            if (_currentDocument?.SourceMap.GetValueOrDefault(bounds.ExpandedPath) is { } source)
+            { SelectedSource = source; PreviewInspector.SelectSource(source); }
+        }) { Owner = Application.Current?.MainWindow }.Show();
+        DiagnosticsText = $"Visual comparison: {comparison.Summary}\n" + AuthoringDiagnosticText(_currentDiagnostics!);
+    }
+
     private static string FormatDimension(double value)
     {
         return value.ToString("0.##", CultureInfo.InvariantCulture);
@@ -505,13 +707,20 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _fileWatcherService.FileChanged -= FileWatcherServiceOnFileChanged;
-        if (!string.IsNullOrWhiteSpace(_watchedPrefabPath))
-            _fileWatcherService.Stop(new FileInfo(_watchedPrefabPath));
+        _fileWatcherService.DependenciesChanged -= FileWatcherServiceOnFileChanged;
+        MockEditor.Changed -= MockEditorChanged;
+        _fileWatcherService.ReplaceDependencies([]);
         _loadCoordinator.Dispose();
     }
 
-    private sealed record LoadedPrefab(PrefabDocument Document, PreviewDiagnostics Diagnostics);
+    private sealed record LoadedPrefab(PrefabDocument Document, PreviewDiagnostics Diagnostics, PreviewScenario? Scenario);
+    private sealed record LoadRequest(string Path, PreviewScenario? Scenario, bool ReadScenarioFromDisk = false, bool Dirty = false);
+    private sealed class PreviewLoadException(Exception inner, PreviewDiagnostics diagnostics, PrefabDocument? document)
+        : Exception(inner.Message, inner)
+    {
+        public PreviewDiagnostics Diagnostics { get; } = diagnostics;
+        public PrefabDocument? Document { get; } = document;
+    }
 
     #endregion
 }

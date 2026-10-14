@@ -17,6 +17,13 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.PreviewInspector.SelectPreviewTreeNode(e.NewValue as PreviewTreeNodeViewModel);
+            if (e.NewValue is PreviewTreeNodeViewModel node)
+                viewModel.SelectedSource = Bannerlord.XmlPreview.Rendering.PreviewElementDebugProperties.GetSourceLocation(node.Element);
         }
+    }
+    private void PreviewTreeOnDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && viewModel.SelectedSource is not null)
+            viewModel.OpenSourceCommand.Execute(null);
     }
 }

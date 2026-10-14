@@ -11,4 +11,6 @@ public sealed record PrefabDocument(
     PrefabWidgetReferenceMap ReferenceMap)
 {
     public string? PrefabIdentity { get; init; }
+    public IReadOnlySet<string> Dependencies { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, SourceLocation> SourceMap { get; init; } = new Dictionary<string, SourceLocation>(StringComparer.Ordinal);
 }

@@ -2,6 +2,7 @@ namespace Bannerlord.XmlPreview.Core.Abstractions;
 
 public interface IPrefabReferenceResolver
 {
+    void Invalidate() { }
     string GetPrefabIdentity(string sourcePrefabPath) => System.IO.Path.GetFileName(sourcePrefabPath);
 
     PrefabReferenceResolveResult Resolve(string sourcePrefabPath, string referenceName);

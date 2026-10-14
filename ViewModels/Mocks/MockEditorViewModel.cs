@@ -42,14 +42,14 @@ public sealed class MockEditorViewModel : ViewModelBase
 
     public event EventHandler? Changed;
 
-    public void Load(PrefabDocument document)
+    public void Load(PrefabDocument document, Bannerlord.XmlPreview.VisualRegression.PreviewScenario? scenario = null)
     {
         _isPopulating = true;
         try
         {
             _currentSourcePath = document.SourcePath;
             PopulateBindings(document);
-            PopulateListMocks(document);
+            PopulateListMocks(document, scenario);
         }
         finally
         {
@@ -84,7 +84,7 @@ public sealed class MockEditorViewModel : ViewModelBase
         }
     }
 
-    private void PopulateListMocks(PrefabDocument document)
+    private void PopulateListMocks(PrefabDocument document, Bannerlord.XmlPreview.VisualRegression.PreviewScenario? scenario)
     {
         Mocks.Clear();
         _definitions.Clear();
@@ -92,6 +92,15 @@ public sealed class MockEditorViewModel : ViewModelBase
         foreach (var definition in _templateMockService.Discover(document))
         {
             var items = _templateMockService.PrepareItems(document.SourcePath, definition);
+            var path = definition.Node.Attributes.GetValueOrDefault(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, definition.Node.Name);
+            if (scenario is not null)
+                items = scenario.Lists.TryGetValue(path, out var rows) ? rows.Cast<IReadOnlyDictionary<string, string>>().ToArray() : [];
+            items = items.Select((row, index) =>
+            {
+                var copy = new Dictionary<string, string>(row, StringComparer.OrdinalIgnoreCase);
+                copy.TryAdd("__key", index.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                return (IReadOnlyDictionary<string, string>)copy;
+            }).ToArray();
             var mock = new EditableListMockViewModel(
                 definition.TargetKey,
                 definition.DisplayName,
@@ -114,6 +123,10 @@ public sealed class MockEditorViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(BindingsFilter)) BindingsView.Refresh();
         Changed?.Invoke(this, EventArgs.Empty);
     }
+
+    public Dictionary<string, List<Dictionary<string, string>>> CaptureLists() => Mocks.ToDictionary(
+        mock => mock.TargetNode.Attributes.GetValueOrDefault(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, mock.TargetNode.Name),
+        mock => mock.CreateSnapshot().Select(row => new Dictionary<string, string>(row, StringComparer.OrdinalIgnoreCase)).ToList(), StringComparer.Ordinal);
 
     private void OnListMockChanged(EditableListMockViewModel mock)
     {

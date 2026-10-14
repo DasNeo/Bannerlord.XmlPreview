@@ -42,6 +42,7 @@
 
     <ItemGroup>
         <ProjectReference Include="Bannerlord.XmlPreview.Core\Bannerlord.XmlPreview.Core.csproj"/>
+        <ProjectReference Include="Bannerlord.XmlPreview.VisualRegression\Bannerlord.XmlPreview.VisualRegression.csproj"/>
         <ProjectReference Include="Bannerlord.XmlPreview.Bannerlord\Bannerlord.XmlPreview.Bannerlord.csproj"/>
     </ItemGroup>
 </Project>

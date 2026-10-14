@@ -12,7 +12,9 @@ public sealed record RegressionRenderOptions(
     IReadOnlyList<string> KeyBoundsSelectors)
 {
     public string? AssetModule { get; init; }
+    public Size? PreviewSize { get; init; }
     public bool TraceBehaviors { get; init; }
+    public IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>? Lists { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public IReadOnlyDictionary<string, string> OptionalConnectionExplanations { get; init; } = new Dictionary<string, string>();
 }

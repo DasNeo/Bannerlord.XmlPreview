@@ -17,6 +17,8 @@ public sealed class PreviewTreeNodeViewModel : ViewModelBase
     public string Label { get; }
 
     public FrameworkElement Element { get; }
+    public Bannerlord.XmlPreview.Models.SourceLocation? Source => Bannerlord.XmlPreview.Rendering.PreviewElementDebugProperties.GetSourceLocation(Element);
+    public string SourceLabel => Source is { } source ? $"{source.FilePath}:{source.Line}:{source.Column}" : "Source location unavailable";
 
     public ObservableCollection<PreviewTreeNodeViewModel> Children { get; } = [];
 

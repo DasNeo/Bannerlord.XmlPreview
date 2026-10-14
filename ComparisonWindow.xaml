@@ -1,0 +1,30 @@
+<Window x:Class="Bannerlord.XmlPreview.ComparisonWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Visual Comparison" Width="1200" Height="800" Background="#16181D" Foreground="#D7E0EA">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock x:Name="Metadata" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            <WrapPanel Margin="0,0,0,8">
+                <ComboBox x:Name="Mode" Width="160" SelectionChanged="ModeChanged">
+                    <ComboBoxItem Content="Side-by-side"/><ComboBoxItem Content="Reference"/>
+                    <ComboBoxItem Content="Actual"/><ComboBoxItem Content="Overlay"/><ComboBoxItem Content="Diff"/>
+                </ComboBox>
+                <TextBlock Text="Zoom" Margin="16,0,8,0" VerticalAlignment="Center"/>
+                <Slider x:Name="Zoom" Width="200" Minimum="0.025" Maximum="4" Value="1" ValueChanged="ZoomChanged"/>
+            </WrapPanel>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <TextBlock Text="Differences mapped to Key Bounds — select to locate the widget"/>
+            <ListBox x:Name="Differences" MaxHeight="130" DisplayMemberPath="ExpandedPath" SelectionChanged="DifferenceSelected"/>
+        </StackPanel>
+        <!-- A single viewport and scale keep pan and zoom synchronized in both images. -->
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="Images" Orientation="Horizontal">
+                <StackPanel.LayoutTransform><ScaleTransform x:Name="ImageScale"/></StackPanel.LayoutTransform>
+                <Image x:Name="First" Stretch="None" VerticalAlignment="Top"/>
+                <Image x:Name="Second" Stretch="None" VerticalAlignment="Top" Margin="16,0,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

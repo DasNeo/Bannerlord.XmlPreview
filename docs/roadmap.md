@@ -1,6 +1,6 @@
 # Bannerlord.XmlPreview Development Roadmap
 
-Status: 2026-10-12. M0-M3 complete. M3 passed 151 tests, nine portable Native cases and all three installed image/asset structural targets. Optional in-game screenshot comparison remains skipped. M4 can begin. See [M3 completion and fidelity limits](./reports/m3-completion.md).
+Status: 2026-10-13. M0-M3 complete. M4 authoring implementation and automated acceptance are complete; manual WPF/external-editor smoke acceptance remains pending after the user stopped Computer Use. See [M4 implementation and acceptance](./reports/m4-implementation.md) and [M3 fidelity limits](./reports/m3-completion.md). Optional in-game screenshot comparison remains skipped.
 
 ## Product direction
 

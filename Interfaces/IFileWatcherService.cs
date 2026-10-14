@@ -5,6 +5,8 @@ namespace Bannerlord.XmlPreview.Interfaces;
 
 public interface IFileWatcherService
 {
+    event EventHandler<IReadOnlyList<string>> DependenciesChanged;
+    void ReplaceDependencies(IEnumerable<string> paths);
     /// <summary>
     /// Gets fired when the file watched is changed
     /// </summary>

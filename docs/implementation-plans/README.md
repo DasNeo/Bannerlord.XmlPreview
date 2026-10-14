@@ -1,6 +1,6 @@
 # Milestone Implementation Plans
 
-Status: M0 complete and reverified 2026-10-04; M1-M3 complete 2026-10-12; M4 proposed.
+Status: M0 complete and reverified 2026-10-04; M1-M3 complete 2026-10-12; M4 implemented and automated checks pass, with manual smoke acceptance pending 2026-10-13. See [M4 evidence](../reports/m4-implementation.md).
 
 These plans turn the [development roadmap](../roadmap.md) into executable work packages. They preserve the terminology in [GLOSSARY.md](../../GLOSSARY.md) and the execution boundary in [ADR 0001](../adr/0001-do-not-execute-mod-code-widgets.md).
 

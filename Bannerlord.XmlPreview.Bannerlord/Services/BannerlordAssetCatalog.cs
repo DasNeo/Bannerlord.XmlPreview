@@ -14,10 +14,25 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
     private readonly IAppSettingsService settings;
     private readonly IBannerlordInstallationIndex index;
     private readonly TpacAtlasStore atlases;
+    public AtlasDecodeStatistics DecodeStatistics => atlases.Statistics;
     private readonly ConditionalWeakTable<BannerlordInstallationSnapshot, ConcurrentDictionary<string, Lazy<Snapshot>>> scopes;
     private readonly string? prefab;
     private readonly string? pngOverrideRoot;
     private string? assetModule;
+    private readonly ConcurrentDictionary<string, byte> usedFiles = new(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyCollection<string> Dependencies
+    {
+        get
+        {
+            var installation = index.GetSnapshot(settings.BannerlordInstallRoot);
+            var order = GetSnapshot().Order;
+            return installation.BrushFiles.Concat(installation.SpriteDataFiles)
+                .Where(path => order.Any(module => path.StartsWith(module.Directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+                .Concat(order.Select(module => Path.Combine(module.Directory, "SubModule.xml")))
+                .Concat(usedFiles.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+    }
+    public void Invalidate() { index.Invalidate(); scopes.Clear(); atlases.Invalidate(); }
     public BannerlordAssetCatalog(IAppSettingsService settingsService, IBannerlordInstallationIndex installationIndex)
         : this(settingsService, installationIndex, new TpacAtlasStore(), null, null) { }
     public BannerlordAssetCatalog(IAppSettingsService settingsService, IBannerlordInstallationIndex installationIndex,
@@ -85,6 +100,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
                 var path = Path.GetFullPath(Path.Combine(root, name + ".png"));
                 if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Image identity leaves override directory.");
                 attempts.Add("Explicit PNG override: " + path);
+                usedFiles[path] = 0;
                 if (File.Exists(path))
                 {
                     failure = ImageFailureKind.CorruptPayload;
@@ -100,6 +116,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
             foreach (var module in data.Order)
             foreach (var package in module.Packages.OrderBy(p => Path.GetFileName(p).Equals("gauntlet_ui.tpac", StringComparison.OrdinalIgnoreCase) ? 0 : 1))
             {
+                usedFiles[package] = 0;
                 attempts.Add(module.Id + ": " + package + " / " + textureName);
                 failure = ImageFailureKind.InvalidMetadata;
                 var matches = atlases.Textures(package).Where(t => t.Name.Equals(textureName, StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -117,6 +134,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
                     throw new InvalidDataException("Sprite crop lies outside its atlas.");
                 failure = ImageFailureKind.CorruptPayload;
                 var image = atlases.Crop(texture, crop.SheetX, crop.SheetY, crop.Width, crop.Height);
+                if (texture.PayloadPath is { } payloadPath) usedFiles[payloadPath] = 0;
                 return new(request, ImageResolutionStatus.Resolved, image, module.Id, package, texture.Name, texture.Format, crop, Attempts: attempts) { PayloadPath = texture.PayloadPath ?? package };
             }
             return new(request, ImageResolutionStatus.Missing, null, Reason: sprite is null ? "No exact sprite or texture identity exists in the module dependency scope." : "Sprite metadata exists but its atlas texture is missing.", Attempts: attempts);

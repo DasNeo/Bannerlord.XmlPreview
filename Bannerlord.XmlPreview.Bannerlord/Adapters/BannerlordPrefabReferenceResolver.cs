@@ -11,6 +11,7 @@ public sealed class BannerlordPrefabReferenceResolver : IPrefabReferenceResolver
     private readonly object _sync = new();
     private string? _indexedInstallRoot;
     private Dictionary<string, List<PrefabReferenceCandidate>> _index = new(StringComparer.OrdinalIgnoreCase);
+    public void Invalidate() { lock (_sync) { _indexedInstallRoot = null; _index.Clear(); } }
 
     public BannerlordPrefabReferenceResolver(
         IAppSettingsService appSettingsService,
@@ -44,6 +45,9 @@ public sealed class BannerlordPrefabReferenceResolver : IPrefabReferenceResolver
                 PrefabReferenceResolveKind.NotFound);
         }
 
+        var sibling = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(sourcePrefabPath))!, referenceName + ".xml");
+        if (!referenceName.Contains('/') && !referenceName.Contains('\\') && File.Exists(sibling))
+            return new(referenceName, sibling, [sibling], PrefabReferenceResolveKind.SameDirectory);
         var candidates = GetCandidates(referenceName);
         if (candidates.Count == 0)
         {
