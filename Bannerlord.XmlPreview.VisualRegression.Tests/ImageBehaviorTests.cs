@@ -17,6 +17,30 @@ namespace Bannerlord.XmlPreview.VisualRegression.Tests;
 
 public sealed class ImageBehaviorTests
 {
+    [Fact]
+    public void AlphaBoundsAreIdenticalForPremultipliedAndOtherPixelFormats()
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var pixels = new byte[4 * 3 * 4];
+            pixels[(1 * 4 + 1) * 4 + 3] = 128;
+            pixels[(1 * 4 + 2) * 4 + 3] = 255;
+            var source = BitmapSource.Create(4, 3, 96, 96, PixelFormats.Bgra32, null, pixels, 16);
+            foreach (var format in new[] { PixelFormats.Bgra32, PixelFormats.Pbgra32, PixelFormats.Rgba64 })
+            {
+                var image = new FormatConvertedBitmap(source, format, null, 0);
+                image.Freeze();
+                var assets = new Images { SourceImage = image };
+                var context = new PrefabRenderContext(new Dictionary<string, string>(), PrefabWidgetPropertyMap.Empty,
+                    PrefabWidgetReferenceMap.Empty, new PreviewDiagnostics(), assets, new BannerlordBrushMetricsProvider(assets),
+                    new BannerlordBrushOverlayFeatureHandler(), new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider());
+                Assert.Equal(new Rect(10, 10, 20, 10), context.ResolveSpriteSelectionRect("source", new Size(40, 30)));
+                Assert.Equal(new Rect(0, 10, 40, 10), context.ResolveSpriteContentLayoutRect("source", new Size(40, 30)));
+            }
+            return 0;
+        });
+    }
+
     [Theory]
     [InlineData("CoverChildren", "Fixed")]
     [InlineData("Fixed", "CoverChildren")]
@@ -215,13 +239,14 @@ public sealed class ImageBehaviorTests
 
     private sealed class Images : IAssetCatalog
     {
+        public BitmapSource? SourceImage { get; init; }
         public Task WarmUpAsync(CancellationToken token = default) => Task.CompletedTask;
         public Task WarmUpAssetsAsync(IReadOnlyCollection<string> brushes, IReadOnlyCollection<string> sprites, CancellationToken token = default) => Task.CompletedTask;
         public BrushDefinition? FindBrush(string? name) => null;
         public SpriteDefinition? FindSprite(string? name) => name is "source" or "mask" ? new(name, "fixture", "Sprite", name, "fixture", 1, 2, 1) : null;
         public ImageSource? GetSpriteImage(string? name) => name switch
         {
-            "source" => Bitmap([255, 255, 255, 255, 255, 255, 255, 255]),
+            "source" => SourceImage ?? Bitmap([255, 255, 255, 255, 255, 255, 255, 255]),
             "mask" => Bitmap([255, 255, 255, 255, 0, 0, 0, 0]),
             "mask-r8" => Bitmap([255, 255, 255, 255, 0, 0, 0, 255]), _ => null
         };
