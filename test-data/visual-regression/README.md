@@ -57,10 +57,10 @@ The initial profile is 1920 x 1080, UI scale 1, English, sRGB, black composition
 
 Current scenarios use artificial Sample values and one keyed item per list; they are structural fixtures, not ready-made gameplay states. After capture, adapt the three Native scenarios deliberately to reproduce the actual text, list contents, selections and state, then regenerate and explicitly accept their structural expectations. Retain all nine structural passes. Document changing backgrounds, characters or other scene content as named masks with reasons and integer bounds. Masks cannot cover the entire image or hide the UI being tested. No component capture harness is required.
 
-Place them under `docs/evidence/m1/references/samples/<case-id>/1.png` through `5.png`, using only the three subfolders `options`, `conversation` and `single-query-popup`. The calibration root must contain only these sample folders. Notes files are permitted; each folder must contain exactly five PNGs. Then:
+From the repository root, place them under `artifacts/m1/references/samples/<case-id>/1.png` through `5.png`, using only the three subfolders `options`, `conversation` and `single-query-popup`. The calibration root must contain only these sample folders. Notes files are permitted; each folder must contain exactly five PNGs. Then:
 
 ```powershell
-$references = 'docs/evidence/m1/references'
+$references = 'artifacts/m1/references'
 $cli = 'Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.dll'
 dotnet $cli calibrate --samples "$references/samples" --scenarios test-data/visual-regression/scenarios --output "$references/calibration.json"
 ```
