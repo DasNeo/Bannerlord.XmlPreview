@@ -1,7 +1,8 @@
 param(
     [string]$BannerlordRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord',
     [string]$OutputRoot = (Join-Path $PSScriptRoot '../artifacts/issue-1/reproduce'),
-    [ValidateRange(5, 100)][int]$Processes = 5
+    [ValidateRange(5, 100)][int]$Processes = 5,
+    [switch]$ReadyToRun
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -20,6 +21,14 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Warm measurements failed.' }
     }
     $app = Join-Path $repo 'bin/Release/net10.0-windows/Bannerlord.XmlPreview.exe'
+    if ($ReadyToRun) {
+        $publication = Join-Path $OutputRoot 'published'
+        dotnet publish Bannerlord.XmlPreview.csproj -p:PublishProfile=LoadPerformance -o $publication -m:1
+        if ($LASTEXITCODE -ne 0) { throw 'ReadyToRun publication failed.' }
+        $app = Join-Path $publication 'Bannerlord.XmlPreview.exe'
+    }
+    # Warm measurements above use the regular test host. Only these independent
+    # WPF app measurements use the publication when -ReadyToRun is specified.
     foreach ($variant in @('preserved', 'installed')) {
         $prefab = if ($variant -eq 'preserved') { Join-Path $repo 'fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml' }
             else { Join-Path $BannerlordRoot 'Modules/AgricultureEstate/GUI/Prefabs/LandManagement.xml' }

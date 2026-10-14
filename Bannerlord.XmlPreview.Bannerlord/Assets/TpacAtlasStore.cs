@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Windows.Media.Imaging;
+using Bannerlord.XmlPreview.Models;
 
 namespace Bannerlord.XmlPreview.Assets;
 
@@ -41,7 +42,11 @@ public sealed class TpacAtlasStore(long capacityBytes = 128L * 1024 * 1024, long
         }
     }
     public IReadOnlyList<TpacTexture> Textures(string package) => packages.GetOrAdd(package,
-        path => new(() => TpacTextureReader.Read(path), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        path => new(() =>
+        {
+            using var timing = PreviewDiagnostics.MeasureCurrentPhase("Assets.ReadPackageMetadata");
+            return TpacTextureReader.Read(path);
+        }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 
     public BitmapSource Atlas(TpacTexture texture)
     {
@@ -87,7 +92,10 @@ public sealed class TpacAtlasStore(long capacityBytes = 128L * 1024 * 1024, long
                 cropLru.AddFirst(hit.Node);
                 return hit.Image;
             }
-            var image = TpacTextureReader.DecodeRegion(Payload(texture), texture.Width, texture.Height, texture.Format, x, y, width, height);
+            var payload = Payload(texture);
+            BitmapSource image;
+            using (PreviewDiagnostics.MeasureCurrentPhase("Assets.DecodeRegion." + texture.Format))
+                image = TpacTextureReader.DecodeRegion(payload, texture.Width, texture.Height, texture.Format, x, y, width, height);
             DecodeCount++;
             var blockSize = texture.Format.Equals("R8_UNORM", StringComparison.OrdinalIgnoreCase) ? 1 : 4;
             DecodedPixelCount += (long)((x + width + blockSize - 1) / blockSize - x / blockSize) * blockSize *
@@ -118,7 +126,9 @@ public sealed class TpacAtlasStore(long capacityBytes = 128L * 1024 * 1024, long
             payloadLru.Remove(hit.Node); payloadLru.AddFirst(hit.Node);
             return hit.Data;
         }
-        var data = TpacTextureReader.Load(texture);
+        byte[] data;
+        using (PreviewDiagnostics.MeasureCurrentPhase("Assets.LoadPayload"))
+            data = TpacTextureReader.Load(texture);
         PayloadLoadCount++;
         if (data.LongLength <= payloadCapacityBytes)
         {

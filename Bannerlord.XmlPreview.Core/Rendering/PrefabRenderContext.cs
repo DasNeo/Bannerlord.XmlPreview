@@ -3237,7 +3237,8 @@ public sealed partial class PrefabRenderContext
         if (width <= 0 || height <= 0)
             return new SpritePixelBounds(null, null);
 
-        var normalized = bitmapSource.Format == PixelFormats.Bgra32
+        // Bounds depend only on alpha, which is identical in BGRA and premultiplied BGRA.
+        var normalized = bitmapSource.Format == PixelFormats.Bgra32 || bitmapSource.Format == PixelFormats.Pbgra32
             ? bitmapSource
             : new FormatConvertedBitmap(bitmapSource, PixelFormats.Bgra32, null, 0);
         var stride = width * 4;

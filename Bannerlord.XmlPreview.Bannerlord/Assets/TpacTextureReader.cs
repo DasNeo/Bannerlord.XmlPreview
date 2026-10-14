@@ -28,6 +28,8 @@ public static class TpacTextureReader
         var version = reader.ReadUInt32();
         if (version is not (1 or 2)) throw new NotSupportedException($"Unsupported TPAC version {version}.");
         var packageGuid = new Guid(Bytes(reader, 16));
+        // A package has one companion path, shared by all its texture records.
+        var companionPath = new Lazy<string?>(() => FindCompanion(path, packageGuid));
         var count = Count(reader);
         Skip(reader, 8);
         var textures = new List<TpacTexture>();
@@ -46,7 +48,7 @@ public static class TpacTextureReader
             if (type == TextureType)
             {
                 Skip(reader, 24); // metadata version, material Guid, flags
-                _ = Text(reader); // source
+                SkipText(reader); // unused source path
                 sourceChecksum = reader.ReadUInt64();
                 Skip(reader, 5); // bool, reserved
                 Strings(reader);
@@ -57,7 +59,7 @@ public static class TpacTextureReader
                 format = Text(reader);
                 if (file.Position > end) throw new InvalidDataException("Texture metadata exceeds declared bounds.");
             }
-            file.Position = end;
+            Skip(reader, end - file.Position);
             Skip(reader, 8);
             var segments = Count(reader);
             TpacPayload? payload = null;
@@ -82,7 +84,8 @@ public static class TpacTextureReader
             if (type == TextureType)
             {
                 var texture = new TpacTexture(path, name, width, height, format, payload);
-                if (payload is null) texture = WithCompanion(texture, packageGuid, assetGuid, sourceChecksum);
+                if (payload is null && companionPath.Value is { } companion)
+                    texture = WithCompanion(texture, companion, assetGuid, sourceChecksum);
                 textures.Add(texture);
             }
         }
@@ -107,13 +110,17 @@ public static class TpacTextureReader
         return decoded;
     }
 
-    private static TpacTexture WithCompanion(TpacTexture texture, Guid package, Guid asset, ulong sourceChecksum)
+    private static string? FindCompanion(string packagePath, Guid package)
     {
-        var directory = new DirectoryInfo(Path.GetDirectoryName(texture.Package)!);
+        var directory = new DirectoryInfo(Path.GetDirectoryName(packagePath)!);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SubModule.xml"))) directory = directory.Parent;
-        if (directory is null) return texture;
+        if (directory is null) return null;
         var path = Path.Combine(directory.FullName, "RuntimeDataCache", package.ToString("D").ToUpperInvariant() + ".rdc");
-        if (!File.Exists(path)) return texture;
+        return File.Exists(path) ? path : null;
+    }
+
+    private static TpacTexture WithCompanion(TpacTexture texture, string path, Guid asset, ulong sourceChecksum)
+    {
         using var file = File.OpenRead(path);
         using var reader = new BinaryReader(file);
         if (reader.ReadUInt32() != 0x30434452 || reader.ReadUInt32() != 0)
@@ -196,7 +203,8 @@ public static class TpacTextureReader
     private static int Size(ulong value, int limit) => value <= (ulong)limit ? (int)value : throw new InvalidDataException("TPAC field exceeds size limit.");
     private static int Count(BinaryReader reader) => Size(reader.ReadUInt32(), 100000);
     private static string Text(BinaryReader reader) => Encoding.UTF8.GetString(Bytes(reader, Size(reader.ReadUInt32(), 1024 * 1024)));
-    private static void Strings(BinaryReader reader) { var count = Count(reader); for (int i = 0; i < count; i++) _ = Text(reader); }
+    private static void SkipText(BinaryReader reader) => Skip(reader, Size(reader.ReadUInt32(), 1024 * 1024));
+    private static void Strings(BinaryReader reader) { var count = Count(reader); for (int i = 0; i < count; i++) SkipText(reader); }
     private static byte[] Bytes(BinaryReader reader, int count)
     {
         var result = reader.ReadBytes(count);
@@ -205,7 +213,14 @@ public static class TpacTextureReader
     private static void Skip(BinaryReader reader, long count)
     {
         var end = checked(reader.BaseStream.Position + count);
-        if (end > reader.BaseStream.Length) throw new InvalidDataException("Truncated TPAC data.");
-        reader.BaseStream.Position = end;
+        if (count < 0 || end > reader.BaseStream.Length) throw new InvalidDataException("Truncated TPAC data.");
+        // Seeking for every small reserved field discards FileStream's read buffer.
+        // Consume nearby bytes sequentially; still seek over large metadata/payload ranges.
+        if (count <= 256)
+        {
+            Span<byte> scratch = stackalloc byte[256];
+            reader.BaseStream.ReadExactly(scratch[..(int)count]);
+        }
+        else reader.BaseStream.Position = end;
     }
 }
