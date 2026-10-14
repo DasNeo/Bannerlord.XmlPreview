@@ -3,165 +3,103 @@ using Bannerlord.XmlPreview.Interfaces;
 
 namespace Bannerlord.XmlPreview.Services;
 
+/// <summary>One debounce window for the complete dependency set, including atomic editor saves.</summary>
 public sealed class FileWatcherService : IFileWatcherService, IDisposable
 {
-    private static readonly TimeSpan DebounceDelay = TimeSpan.FromMilliseconds(200);
     private readonly object _sync = new();
-    private readonly Dictionary<FileSystemWatcher, WatchRegistration> _registrations = [];
-    private int _nextRegistrationId;
+    private readonly Dictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _paths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _pending = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Func<CancellationToken, Task> _delay;
+    private CancellationTokenSource? _debounce;
     private bool _disposed;
-    
+    public FileWatcherService() : this(token => Task.Delay(250, token)) { }
+    public FileWatcherService(Func<CancellationToken, Task> delay) => _delay = delay;
     public event EventHandler<FileInfo>? FileChanged;
-
-    public int Start(FileInfo file)
+    public event EventHandler<IReadOnlyList<string>>? DependenciesChanged;
+    public void ReplaceDependencies(IEnumerable<string> paths)
     {
-        if (string.IsNullOrWhiteSpace(file.DirectoryName))
-        {
-            throw new InvalidOperationException("The watched file must have a directory.");
-        }
-
-        var fullPath = Path.GetFullPath(file.FullName);
+        var replacement = paths.Select(Path.GetFullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
         lock (_sync)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_registrations.Values.Any(registration =>
-                    string.Equals(registration.FilePath, fullPath, StringComparison.OrdinalIgnoreCase)))
-                return -1;
-
-            var watcher = new FileSystemWatcher(file.DirectoryName, file.Name)
+            var directories = replacement.Select(path => ExistingDirectory(Path.GetDirectoryName(path)!)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var added = new Dictionary<string, FileSystemWatcher>(StringComparer.OrdinalIgnoreCase);
+            try
             {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName
-            };
-            watcher.Changed += WatcherOnChanged;
-            watcher.Renamed += WatcherOnRenamed;
-            var registration = new WatchRegistration(++_nextRegistrationId, fullPath);
-            _registrations[watcher] = registration;
-            watcher.EnableRaisingEvents = true;
-            return registration.Id;
-        }
-    }
-
-    public void Stop(FileInfo file)
-    {
-        FileSystemWatcher? watcher;
-        WatchRegistration? registration;
-        var fullPath = Path.GetFullPath(file.FullName);
-        lock (_sync)
-        {
-            watcher = _registrations
-                .FirstOrDefault(entry =>
-                    string.Equals(entry.Value.FilePath, fullPath, StringComparison.OrdinalIgnoreCase))
-                .Key;
-            if (watcher is null || !_registrations.Remove(watcher, out registration))
-                return;
-        }
-
-        DisposeRegistration(watcher, registration);
-    }
-
-    private void WatcherOnChanged(object sender, FileSystemEventArgs e)
-    {
-        if (sender is FileSystemWatcher watcher) ScheduleNotification(watcher);
-    }
-
-    private void WatcherOnRenamed(object sender, RenamedEventArgs e)
-    {
-        if (sender is FileSystemWatcher watcher) ScheduleNotification(watcher);
-    }
-
-    private void ScheduleNotification(FileSystemWatcher watcher)
-    {
-        CancellationTokenSource cancellation;
-        CancellationToken token;
-        string filePath;
-        lock (_sync)
-        {
-            if (_disposed || !_registrations.TryGetValue(watcher, out var registration))
-                return;
-
-            TryCancel(registration.PendingNotification);
-            cancellation = new CancellationTokenSource();
-            token = cancellation.Token;
-            registration.PendingNotification = cancellation;
-            filePath = registration.FilePath;
-        }
-
-        _ = RaiseNotificationAfterDebounceAsync(watcher, filePath, cancellation, token);
-    }
-
-    private async Task RaiseNotificationAfterDebounceAsync(
-        FileSystemWatcher watcher,
-        string filePath,
-        CancellationTokenSource cancellation,
-        CancellationToken token)
-    {
-        try
-        {
-            await Task.Delay(DebounceDelay, token).ConfigureAwait(false);
-            lock (_sync)
-            {
-                if (_disposed ||
-                    !_registrations.TryGetValue(watcher, out var registration) ||
-                    !ReferenceEquals(registration.PendingNotification, cancellation))
-                    return;
-
-                registration.PendingNotification = null;
+                foreach (var directory in directories.Except(_watchers.Keys, StringComparer.OrdinalIgnoreCase))
+                {
+                    var watcher = new FileSystemWatcher(directory)
+                    {
+                        IncludeSubdirectories = true,
+                        NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName | NotifyFilters.DirectoryName
+                    };
+                    watcher.Changed += OnChanged; watcher.Created += OnChanged; watcher.Deleted += OnChanged;
+                    watcher.Renamed += OnRenamed; watcher.Error += OnError;
+                    added[directory] = watcher;
+                    watcher.EnableRaisingEvents = true;
+                }
             }
-
-            FileChanged?.Invoke(this, new FileInfo(filePath));
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            cancellation.Dispose();
+            catch { foreach (var watcher in added.Values) watcher.Dispose(); throw; }
+            foreach (var directory in _watchers.Keys.Except(directories, StringComparer.OrdinalIgnoreCase).ToArray())
+            { _watchers[directory].Dispose(); _watchers.Remove(directory); }
+            foreach (var pair in added) _watchers.Add(pair.Key, pair.Value);
+            _paths = replacement;
+            _pending.IntersectWith(replacement);
         }
     }
-
-    public void Dispose()
+    private static string ExistingDirectory(string directory)
     {
-        KeyValuePair<FileSystemWatcher, WatchRegistration>[] registrations;
+        while (!Directory.Exists(directory)) directory = Path.GetDirectoryName(directory)
+            ?? throw new DirectoryNotFoundException("No parent directory exists for the dependency.");
+        return directory;
+    }
+    public int Start(FileInfo file) { lock (_sync) ReplaceDependencies(_paths.Append(file.FullName)); return 0; }
+    public void Stop(FileInfo file) { lock (_sync) ReplaceDependencies(_paths.Where(path => !path.Equals(file.FullName, StringComparison.OrdinalIgnoreCase))); }
+    private void OnChanged(object sender, FileSystemEventArgs e) => NotifyChanged([e.FullPath]);
+    private void OnRenamed(object sender, RenamedEventArgs e) => NotifyChanged([e.OldFullPath, e.FullPath]);
+    private void OnError(object sender, ErrorEventArgs e) { lock (_sync) NotifyChanged(_paths.ToArray()); }
+    public void NotifyChanged(IEnumerable<string> changedPaths)
+    {
         lock (_sync)
         {
             if (_disposed) return;
-            _disposed = true;
-            registrations = _registrations.ToArray();
-            _registrations.Clear();
+            foreach (var path in changedPaths.Select(Path.GetFullPath))
+                foreach (var dependency in _paths.Where(p => p.Equals(path, StringComparison.OrdinalIgnoreCase) || p.StartsWith(path + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+                    _pending.Add(dependency);
+            if (_pending.Count == 0) return;
+            _debounce?.Cancel();
+            var cancellation = new CancellationTokenSource();
+            _debounce = cancellation;
+            _ = FlushAsync(cancellation);
         }
-
-        foreach (var (watcher, registration) in registrations)
-            DisposeRegistration(watcher, registration);
     }
-
-    private void DisposeRegistration(
-        FileSystemWatcher watcher,
-        WatchRegistration registration)
+    private async Task FlushAsync(CancellationTokenSource cancellation)
     {
-        TryCancel(registration.PendingNotification);
-        watcher.EnableRaisingEvents = false;
-        watcher.Changed -= WatcherOnChanged;
-        watcher.Renamed -= WatcherOnRenamed;
-        watcher.Dispose();
-    }
-
-    private static void TryCancel(CancellationTokenSource? cancellation)
-    {
-        if (cancellation is null) return;
         try
         {
-            cancellation.Cancel();
+            await _delay(cancellation.Token).ConfigureAwait(false);
+            lock (_sync)
+            {
+                if (_disposed || cancellation.IsCancellationRequested || _debounce != cancellation) return;
+                var batch = _pending.Order(StringComparer.OrdinalIgnoreCase).ToArray();
+                _pending.Clear(); _debounce = null;
+                if (batch.Length == 0) return;
+                DependenciesChanged?.Invoke(this, batch);
+                foreach (var path in batch) FileChanged?.Invoke(this, new FileInfo(path));
+            }
         }
-        catch (ObjectDisposedException)
-        {
-            // The debounce task completed concurrently.
-        }
+        catch (OperationCanceledException) { }
+        finally { cancellation.Dispose(); }
     }
-
-    private sealed class WatchRegistration(int id, string filePath)
+    public void Dispose()
     {
-        public int Id { get; } = id;
-        public string FilePath { get; } = filePath;
-        public CancellationTokenSource? PendingNotification { get; set; }
+        lock (_sync)
+        {
+            if (_disposed) return;
+            _disposed = true; _debounce?.Cancel(); _debounce = null;
+            foreach (var watcher in _watchers.Values) watcher.Dispose();
+            _watchers.Clear(); _pending.Clear();
+        }
     }
 }

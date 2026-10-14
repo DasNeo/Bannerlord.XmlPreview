@@ -58,6 +58,7 @@ public sealed class EditableListMockViewModel : ViewModelBase
             static key => key,
             key => _defaultValue(key),
             StringComparer.OrdinalIgnoreCase);
+        values["__key"] = Guid.NewGuid().ToString("N");
         Items.Add(CreateItem(values));
         RefreshItemNumbers();
         _changed(this);

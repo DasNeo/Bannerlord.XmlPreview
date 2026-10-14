@@ -32,7 +32,23 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
+
+                <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+                    <TextBlock Text="Scenario" Foreground="#E7E1D1" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Width="170" ItemsSource="{Binding ScenarioIds}" SelectedItem="{Binding SelectedScenarioId}" Margin="0,0,8,0"/>
+                    <TextBox Width="140" Text="{Binding ScenarioName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Identity for Create, Clone, Rename" Margin="0,0,8,0"/>
+                    <Button Content="Create" Command="{Binding CreateScenarioCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Save" Command="{Binding SaveScenarioCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Clone" Command="{Binding CloneScenarioCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Rename" Command="{Binding RenameScenarioCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Delete" Command="{Binding DeleteScenarioCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Edit Scenario" Command="{Binding EditScenarioCommand}" Margin="0,0,8,0" ToolTip="Opens BANNERLORD_PREVIEW_EDITOR with --goto; otherwise copies the scenario file location."/>
+                    <Button Content="Compare Reference" Command="{Binding ShowComparisonCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Open Comparison Report" Command="{Binding OpenComparisonReportCommand}" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding ScenarioStatus}" Foreground="#E7E1D1" VerticalAlignment="Center"/>
+                </WrapPanel>
 
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
@@ -195,6 +211,7 @@
                                        Text="Node Tree" />
 
                             <TreeView Grid.Row="1"
+                                      MouseDoubleClick="PreviewTreeOnDoubleClick"
                                       Padding="4"
                                       Background="#13161B"
                                       BorderThickness="0"
@@ -206,6 +223,7 @@
                                     <HierarchicalDataTemplate DataType="{x:Type viewModels:PreviewTreeNodeViewModel}"
                                                               ItemsSource="{Binding Children}">
                                         <TextBlock Text="{Binding Label}"
+                                                   ToolTip="{Binding SourceLabel}"
                                                    TextWrapping="Wrap" />
                                     </HierarchicalDataTemplate>
                                 </TreeView.Resources>
@@ -259,6 +277,19 @@
                         Header="Diagnostics"
                         VirtualizingPanel.IsVirtualizing="True"
                         Style="{StaticResource MaterialDesignExpander}">
+                        <StackPanel>
+                        <WrapPanel Margin="0,0,0,8">
+                            <Button Content="Open Source" Command="{Binding OpenSourceCommand}" Margin="0,0,8,0" ToolTip="Opens BANNERLORD_PREVIEW_EDITOR with --goto; otherwise copies file:line:column."/>
+                            <Button Content="Copy Location" Command="{Binding CopySourceCommand}"/>
+                            <Button Content="Behavior Trace" Command="{Binding ShowBehaviorTraceCommand}" Margin="8,0,0,0"/>
+                        </WrapPanel>
+                        <ItemsControl ItemsSource="{Binding AuthoringDiagnostics}">
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <Button Command="{Binding OpenCommand}" HorizontalContentAlignment="Left" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap"/>
+                                </Button>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
                         <TextBox Text="{Binding DiagnosticsText}"
                                  IsReadOnly="True"
                                  BorderThickness="0"
@@ -268,6 +299,7 @@
                                  AcceptsReturn="True"
                                  VerticalScrollBarVisibility="Auto"
                                  HorizontalScrollBarVisibility="Disabled" />
+                        </StackPanel>
                     </Expander>
                     <Expander Header="Mocks"
                               VirtualizingPanel.IsVirtualizing="True"

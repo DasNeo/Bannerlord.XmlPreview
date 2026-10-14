@@ -65,7 +65,9 @@ public static class ScenarioLoader
         if (scenario.SchemaVersion != 1) throw new InvalidDataException("Unsupported scenario schema.");
         if (scenario.ScopeWidgetTypes is null || scenario.ScopeWidgetTypes.Any(string.IsNullOrWhiteSpace) || scenario.ScopeWidgetTypes.Distinct(StringComparer.Ordinal).Count() != scenario.ScopeWidgetTypes.Length)
             throw new InvalidDataException("Widget scope requires unique nonempty type names.");
-        _ = StableWidgetId.CanonicalPrefab(scenario.PrefabIdentity);
+        if (string.IsNullOrWhiteSpace(scenario.PrefabIdentity)) throw new InvalidDataException("Prefab identity is required.");
+        try { _ = StableWidgetId.CanonicalPrefab(scenario.PrefabIdentity); }
+        catch (ArgumentException exception) { throw new InvalidDataException("Invalid prefab identity.", exception); }
         if (string.IsNullOrWhiteSpace(scenario.Id) || !System.Text.RegularExpressions.Regex.IsMatch(scenario.Id, "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$") ||
             string.IsNullOrWhiteSpace(scenario.Scene) || string.IsNullOrWhiteSpace(scenario.DataState))
             throw new InvalidDataException("Scenario requires identity, scene and data state.");
@@ -100,6 +102,8 @@ public static class ScenarioLoader
                 list.Value.Any(item => item is null || !item.TryGetValue("__key", out var key) || string.IsNullOrWhiteSpace(key)) ||
                 list.Value.Select(item => item["__key"]).Distinct(StringComparer.Ordinal).Count() != list.Value.Count)
                 throw new InvalidDataException("Every list item requires a unique stable __key.");
+            if (list.Value.Any(item => item.Any(field => string.IsNullOrWhiteSpace(field.Key) || field.Value is null)))
+                throw new InvalidDataException("List fields require nonempty keys and nonnull values.");
         }
         if (scenario.Bindings.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Value is null) ||
             scenario.WidgetStates.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Value is null ||

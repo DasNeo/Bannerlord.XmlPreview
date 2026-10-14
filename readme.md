@@ -48,6 +48,14 @@ C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview
 
 ## Technical regression
 
+M4 adds persistent scenario controls, dependency-aware reload, Last Good Preview retention, source navigation, and image comparison views. Scenarios live in `%LOCALAPPDATA%/Bannerlord.XmlPreview/Scenarios`; edit their JSON in your external editor for widget states, masks and Capture Profile metadata. Bindings/list edits and preview resolution are editable in the app; save dirty values before switching scenarios. Set `BANNERLORD_PREVIEW_EDITOR` to an editor executable supporting `--goto file:line:column`; without it source actions copy the location.
+
+**Compare Reference** opens an interactive image comparison using the current scenario; its uncalibrated default cannot certify in-game fidelity. **Open Comparison Report** opens artifacts from a Full Visual Regression run for the saved active scenario. Both offer reference, actual, side-by-side, overlay and diff with shared zoom/pan and mapped Key Bounds navigation. A Structure Only report has pixels `NotRun` and no image comparison views.
+
+Run `tools/run_m4_validation.ps1` for automated authoring coverage and the installed structural targets. The [M4 implementation report](docs/reports/m4-implementation.md) records validation and the remaining manual smoke acceptance.
+
+For repeatable manual testing, follow [M4 Steps to Repeat (StR)](docs/testing/m4-steps-to-repeat.md), including the disposable fixture setup, expected outcomes and result sheet.
+
 Assets load directly from the installed module TPAC packages. Editable mod packages with the verified single-texture RDC layout use their RuntimeDataCache companion. Production setup requires no manual DDS export or cropped PNG directory. Provider images need explicit scenario data; unavailable runtime content remains visibly Partial.
 
 M3 image and asset acceptance:

@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Bannerlord.XmlPreview.Interfaces;
 using Bannerlord.XmlPreview.Rendering;
+using Bannerlord.XmlPreview.Models;
 
 namespace Bannerlord.XmlPreview.ViewModels;
 
@@ -62,6 +63,11 @@ public sealed class PreviewInspectorViewModel : ViewModelBase
     {
         if (node?.Element is null || _isSynchronizingSelection) return;
         SelectElement(node.Element);
+    }
+    public void SelectSource(SourceLocation source)
+    {
+        var node = _previewTreeLookup.Keys.FirstOrDefault(element => PreviewElementDebugProperties.GetSourceLocation(element) == source);
+        if (node is not null) SelectElement(node);
     }
 
     private void DetachInteractions()

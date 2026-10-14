@@ -4,6 +4,7 @@ namespace Bannerlord.XmlPreview.Interfaces;
 
 public interface IPrefabLoader
 {
+    void Invalidate() { }
     PrefabDocument Load(
         string path,
         PreviewDiagnostics diagnostics,

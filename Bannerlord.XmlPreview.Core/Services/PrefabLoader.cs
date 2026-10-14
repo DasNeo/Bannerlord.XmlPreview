@@ -11,6 +11,7 @@ namespace Bannerlord.XmlPreview.Services;
 
 public sealed class PrefabLoader : IPrefabLoader
 {
+    public void Invalidate() => _prefabReferenceResolver.Invalidate();
     private const int MaxLoadAttempts = 6;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(120);
     private static readonly string[] MetadataElementNames =
@@ -27,6 +28,8 @@ public sealed class PrefabLoader : IPrefabLoader
     private readonly IWidgetPropertyResolver _widgetPropertyResolver;
     private readonly IWidgetReferenceResolver _widgetReferenceResolver;
     private readonly IWidgetNodeFactory _widgetNodeFactory;
+    private readonly HashSet<string> _dependencies = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SourceLocation> _sourceMap = new(StringComparer.Ordinal);
 
     public PrefabLoader(
         IAssetCatalog assetCatalog,
@@ -147,7 +150,13 @@ public sealed class PrefabLoader : IPrefabLoader
             nodeTypeCounts.Values.Sum(),
             maxDepth,
             nodeTypeCounts);
-        return new PrefabDocument(fullPath, rootNode, constants, bindingKeys, propertyMap, referenceMap) { PrefabIdentity = _prefabReferenceResolver.GetPrefabIdentity(fullPath) };
+        _dependencies.UnionWith(_assetCatalog.Dependencies.Select(Path.GetFullPath));
+        return new PrefabDocument(fullPath, rootNode, constants, bindingKeys, propertyMap, referenceMap)
+        {
+            PrefabIdentity = _prefabReferenceResolver.GetPrefabIdentity(fullPath),
+            Dependencies = _dependencies.ToHashSet(StringComparer.OrdinalIgnoreCase),
+            SourceMap = new Dictionary<string, SourceLocation>(_sourceMap, StringComparer.Ordinal)
+        };
     }
 
     private static (IReadOnlyCollection<string> BrushNames, IReadOnlyCollection<string> SpriteNames)
@@ -205,7 +214,8 @@ public sealed class PrefabLoader : IPrefabLoader
                     FileAccess.Read,
                     FileShare.ReadWrite | FileShare.Delete);
 
-                return XDocument.Load(stream, LoadOptions.None);
+                using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit }, path);
+                return XDocument.Load(reader, LoadOptions.SetLineInfo);
             }
             catch (Exception exception) when (IsTransientLoadException(exception) && attempt < MaxLoadAttempts)
             {
@@ -242,10 +252,16 @@ public sealed class PrefabLoader : IPrefabLoader
         cancellationToken.ThrowIfCancellationRequested();
         var document = LoadDocumentWithRetry(path, diagnostics, cancellationToken);
         var root = document.Root ?? throw new InvalidOperationException("The prefab XML is missing a root element.");
+        _dependencies.Add(Path.GetFullPath(path));
+        foreach (var element in root.DescendantsAndSelf())
+        {
+            var line = (IXmlLineInfo)element;
+            element.AddAnnotation(new SourceLocation(Path.GetFullPath(path), line.LineNumber, line.LinePosition));
+        }
         var rootWindow = root.Element("Window") ?? root;
         var rootNodeElement = includeRootOnly
             ? GetIncludeRootElement(rootWindow, path)
-            : new XElement(rootWindow);
+            : CloneWithSource(rootWindow);
 
         return new PrefabExpansionState(
             Path.GetFullPath(path),
@@ -572,6 +588,7 @@ public sealed class PrefabLoader : IPrefabLoader
 
         logicalChildrenConsumed = false;
         var clone = new XElement(element.Name);
+        if (element.Annotation<SourceLocation>() is { } location) clone.AddAnnotation(location);
         foreach (var attribute in element.Attributes())
         {
             clone.SetAttributeValue(attribute.Name, ResolveSimpleScopedValue(attribute.Value, parameters, constants));
@@ -587,7 +604,7 @@ public sealed class PrefabLoader : IPrefabLoader
 
             if (string.Equals(childElement.Name.LocalName, "LogicalChildrenLocation", StringComparison.OrdinalIgnoreCase))
             {
-                clone.Add(new XElement(childElement));
+                clone.Add(CloneWithSource(childElement));
                 continue;
             }
 
@@ -755,7 +772,7 @@ public sealed class PrefabLoader : IPrefabLoader
         {
             foreach (var logicalChild in logicalChildren)
             {
-                targetElement.Add(new XElement(logicalChild));
+                targetElement.Add(CloneWithSource(logicalChild));
             }
 
             return;
@@ -770,7 +787,7 @@ public sealed class PrefabLoader : IPrefabLoader
 
         foreach (var logicalChild in logicalChildren)
         {
-            childrenElement.Add(new XElement(logicalChild));
+            childrenElement.Add(CloneWithSource(logicalChild));
         }
     }
 
@@ -852,6 +869,9 @@ public sealed class PrefabLoader : IPrefabLoader
 
     private PrefabNode ParseNode(XElement element, HashSet<string> bindingKeys)
     {
+        if (element.Annotation<SourceLocation>() is { } location &&
+            element.Attribute(PrefabVisualTreeHelper.DebugWidgetPathAttributeName)?.Value is { } widgetPath)
+            _sourceMap[widgetPath] = location;
         var attributes = element.Attributes()
             .ToDictionary(attribute => attribute.Name.LocalName, attribute => attribute.Value, StringComparer.OrdinalIgnoreCase);
 
@@ -902,7 +922,7 @@ public sealed class PrefabLoader : IPrefabLoader
     {
         if (!string.Equals(rootWindow.Name.LocalName, "Window", StringComparison.OrdinalIgnoreCase))
         {
-            return new XElement(rootWindow);
+            return CloneWithSource(rootWindow);
         }
 
         var visualElements = rootWindow.Elements()
@@ -910,7 +930,7 @@ public sealed class PrefabLoader : IPrefabLoader
             .ToArray();
         return visualElements.Length switch
         {
-            1 => new XElement(visualElements[0]),
+            1 => CloneWithSource(visualElements[0]),
             0 => throw new InvalidOperationException($"The prefab '{path}' does not contain a visual root inside <Window>."),
             _ => throw new InvalidOperationException($"The prefab '{path}' contains multiple visual roots inside <Window>.")
         };
@@ -933,6 +953,14 @@ public sealed class PrefabLoader : IPrefabLoader
             "yes" or "on" or "visible" or "enabled" => true,
             _ => false
         };
+    }
+
+    private static XElement CloneWithSource(XElement element)
+    {
+        var copy = new XElement(element);
+        foreach (var pair in element.DescendantsAndSelf().Zip(copy.DescendantsAndSelf()))
+            if (pair.First.Annotation<SourceLocation>() is { } source) pair.Second.AddAnnotation(source);
+        return copy;
     }
 
     private static void CollectBindingKey(string? rawValue, HashSet<string> bindingKeys)

@@ -1,5 +1,7 @@
 # WPF loading performance investigation
 
+The subsequent [issue #1 region-decoding investigation](issue-1-region-decoding.md) records the 2026-10-14 implementation, validation and remaining gap to a one-second combined load/render target.
+
 Measured on 2026-10-13, validation-host, using the WPF app's `--exit-after-load` diagnostics path. Each screen measurement starts a fresh process; the OS file cache is uncontrolled. Times exclude process startup.
 
 | Screen / version | Load | Render | Combined |

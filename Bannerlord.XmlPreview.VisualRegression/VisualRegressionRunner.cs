@@ -61,6 +61,7 @@ public sealed class VisualRegressionRunner(
         var differences = DiagnosticsComparator.Compare(scenario.ExpectedWarnings, actual.Diagnostics);
         var checks = ComparisonResults.NotRun;
         var metrics = new ComparisonMetrics();
+        PixelTolerance? appliedTolerance = null;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -86,6 +87,7 @@ public sealed class VisualRegressionRunner(
                 var tolerance = scenario.PixelToleranceOverride ?? manifest.GlobalPixelTolerance
                     ?? throw new InvalidDataException("Full comparison requires calibrated Pixel Tolerance metadata.");
                 var reference = WpfPreviewCapture.ReadPng(referencePath, scenario.CaptureProfile.Background);
+                appliedTolerance = tolerance;
                 var pixels = PixelComparator.Compare(reference, actual.Pixels!, tolerance, scenario.Masks);
                 checks = checks with { PixelDimensions = Status(pixels.DimensionsPassed), Pixels = Status(pixels.Passed) };
                 metrics = metrics with { MaximumChannelDifference = pixels.MaximumChannelDifference,
@@ -113,7 +115,7 @@ public sealed class VisualRegressionRunner(
                 diagnosticDifferences: differences, artifacts: artifacts, timing: actual.Timing with { Comparison = stopwatch.Elapsed })
                 .WithFailureReason(e.Message);
         }
-        return WriteReport(request, report, scenario.Masks);
+        return WriteReport(request, report.WithPixelTolerance(appliedTolerance), scenario.Masks);
     }
 
     /// <summary>Writes review candidates only. It cannot accept or modify reference expectations.</summary>

@@ -71,6 +71,9 @@ public sealed class PrefabRenderer : IPrefabRenderer
         using var totalTiming = diagnostics.MeasurePhase("PrefabRenderer.Render.Total");
         var matcherDocument = document;
         var previewData = _previewDataSourceProvider.CaptureSnapshot(document.RootNode);
+        if (options?.Lists is { } lists)
+            previewData = previewData with { TemplateItems = lists.ToImmutableDictionary(p => p.Key,
+                p => p.Value.Select(row => row.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase)).ToImmutableArray(), StringComparer.Ordinal) };
         document = document with { RootNode = document.RootNode.CopyForRender(options?.WidgetStates ?? new Dictionary<string, IReadOnlyDictionary<string, string>>()) };
         PrefabRenderContext context;
         using (diagnostics.MeasurePhase("PrefabRenderer.Render.CreateContext"))
@@ -107,7 +110,7 @@ public sealed class PrefabRenderer : IPrefabRenderer
         context.SetBehaviorPlan(inputs, plan);
         try
         {
-            var rootSize = _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
+            var rootSize = options?.PreviewSize ?? _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
             if (options is not null)
                 diagnostics.RenderStructure = RegressionSnapshotProducer.Structure(document, context, options.PrefabIdentity);
             RenderedPrefabNode renderedRoot;
@@ -162,6 +165,15 @@ public sealed class PrefabRenderer : IPrefabRenderer
                     options.KeyBoundsSelectors.Concat(plan.Contributions.Where(c => c.Contribution is InspectionContribution { KeyBounds: true }).Select(c => c.Widget.Value)).Distinct(StringComparer.Ordinal).ToArray());
             token.ThrowIfCancellationRequested();
             context.ExecuteBehaviorPhase(plan, BehaviorPhase.Inspect);
+            foreach (var element in context.SnapshotElements)
+                if (document.SourceMap.TryGetValue(element.Path, out var source))
+                    PreviewElementDebugProperties.SetSourceLocation(element.Element, source);
+            diagnostics.BehaviorTrace = diagnostics.BehaviorTrace.Select(trace => trace with
+            {
+                Source = context.SnapshotElements.FirstOrDefault(element => element.Id == trace.Widget.Value) is { } element
+                    ? document.SourceMap.GetValueOrDefault(element.Path) : null
+            }).ToImmutableArray();
+            diagnostics.Dependencies.UnionWith(context.Assets.Dependencies);
             return renderedRoot.Element;
         }
         catch

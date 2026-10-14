@@ -5,6 +5,10 @@ namespace Bannerlord.XmlPreview.Rendering;
 
 public static class PreviewElementDebugProperties
 {
+    public static readonly DependencyProperty SourceLocationProperty = DependencyProperty.RegisterAttached(
+        "SourceLocation", typeof(SourceLocation), typeof(PreviewElementDebugProperties), new PropertyMetadata(null));
+    public static SourceLocation? GetSourceLocation(DependencyObject element) => (SourceLocation?)element.GetValue(SourceLocationProperty);
+    public static void SetSourceLocation(DependencyObject element, SourceLocation value) => element.SetValue(SourceLocationProperty, value);
     public static readonly DependencyProperty ImageResolutionProperty = DependencyProperty.RegisterAttached(
         "ImageResolution", typeof(Bannerlord.XmlPreview.Models.Assets.ImageResolution), typeof(PreviewElementDebugProperties), new PropertyMetadata(null));
     public static Bannerlord.XmlPreview.Models.Assets.ImageResolution? GetImageResolution(DependencyObject element) =>

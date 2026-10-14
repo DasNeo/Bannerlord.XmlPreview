@@ -5,6 +5,8 @@ namespace Bannerlord.XmlPreview.Interfaces;
 
 public interface IAssetCatalog
 {
+    IReadOnlyCollection<string> Dependencies => Array.Empty<string>();
+    void Invalidate() { }
     IAssetCatalog ForPrefab(string path) => this;
     IAssetCatalog ForPrefab(string path, string? assetModule) => ForPrefab(path);
 

@@ -140,12 +140,16 @@ Automate these scenarios:
 
 Run a manual WPF smoke test with an external editor after automated coverage passes.
 
+Use [M4 Steps to Repeat (StR)](../testing/m4-steps-to-repeat.md) to run and record that acceptance.
+
 ## Exit checklist
 
-- [ ] Preview Scenarios load, save, and switch persistently.
-- [ ] Root XML, includes, brushes, and assets trigger dependency-aware reload.
-- [ ] Failed reload retains a visibly stale Last Good Preview.
-- [ ] Diagnostics and Preview Tree navigate to file and line.
-- [ ] Side-by-side, overlay, and diff use Visual Regression results.
-- [ ] No embedded XML editor was introduced.
+- [x] Preview Scenarios load, save, and switch persistently.
+- [x] Root XML, includes, brushes, and assets trigger dependency-aware reload.
+- [x] Failed reload retains a visibly stale Last Good Preview.
+- [x] Diagnostics and Preview Tree navigate to file and line.
+- [x] Side-by-side, overlay, and diff use Visual Regression results.
+- [x] No embedded XML editor was introduced.
 - [ ] End-to-end authoring tests and WPF smoke test pass.
+
+Automated authoring and compiled comparison-window tests pass. The manual smoke test was stopped by the user; see [implementation evidence and remaining acceptance](../reports/m4-implementation.md).

@@ -45,6 +45,7 @@ public sealed partial class PrefabRenderContext
     private readonly PrefabWidgetPropertyMap _propertyMap;
     private readonly PrefabWidgetReferenceMap _referenceMap;
     private readonly IAssetCatalog _assetCatalog;
+    internal IAssetCatalog Assets => _assetCatalog;
     private readonly IBrushMetricsProvider _brushMetricsProvider;
     private readonly IBrushOverlayFeatureHandler _brushOverlayFeatureHandler;
     private readonly IWidgetTextSourceProvider _widgetTextSourceProvider;
@@ -1556,7 +1557,7 @@ public sealed partial class PrefabRenderContext
                 var instance = string.Concat(_instanceKeys.Select((key, i) => "/" +
                     (i < templatePaths.Count ? templatePaths[i] : widgetPath) + "=" + key));
                 var id = StableWidgetId.Create(GraphPrefabIdentity, widgetPath, instance);
-                if (_regressionOptions is not null)
+                // Source navigation also needs registrations in the interactive preview.
                 {
                     var previous = SnapshotElements.FindIndex(e => e.Id == id);
                     var snapshot = new SnapshotElement(id, widgetPath, renderedNode.Element, attributes);

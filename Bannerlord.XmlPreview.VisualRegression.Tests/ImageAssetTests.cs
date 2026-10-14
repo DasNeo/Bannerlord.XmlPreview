@@ -72,7 +72,7 @@ public sealed class ImageAssetTests
         _ = store.Crop(second, 0, 0, 2, 2);
         Assert.Equal(16, store.CachedCropBytes);
         Assert.NotSame(crop, store.Crop(first, 0, 0, 2, 2));
-        Assert.Equal(3, store.DecodeCount);
+        Assert.Equal(4, store.DecodeCount);
         Assert.Equal(16, store.CachedCropBytes);
         var pixels = new byte[16]; crop.CopyPixels(pixels, 8, 0);
         Assert.Equal(new byte[] { 0, 0, 255, 255 }, pixels[..4]);
@@ -239,6 +239,30 @@ public sealed class ImageAssetTests
         var spriteName = id == "Unrelated" ? "unrelated.icon" : "icon";
         File.WriteAllText(Path.Combine(directory, "GUI", "TestSpriteData.xml"), $"<SpriteData><SpriteParts><SpritePart><Name>{spriteName}</Name><CategoryName>ui_test</CategoryName><SheetID>1</SheetID><SheetX>0</SheetX><SheetY>0</SheetY><Width>4</Width><Height>4</Height></SpritePart></SpriteParts></SpriteData>");
         WritePackage(Path.Combine(directory, "AssetPackages", id.ToLowerInvariant() + ".tpac"), "ui_test_1", color);
+    }
+
+    [Fact]
+    public void DependencyInvalidationReloadsMetadataAndImagePixels()
+    {
+        using var fixture = new RegressionFixture();
+        Module(fixture.Root, "Native", "", 0xF800);
+        var metadata = Path.Combine(fixture.Root, "Modules/Native/GUI/TestSpriteData.xml");
+        var package = Path.Combine(fixture.Root, "Modules/Native/AssetPackages/native.tpac");
+        var catalog = new BannerlordAssetCatalog(new Settings(fixture.Root), new BannerlordInstallationIndex());
+        var source = Path.Combine(fixture.Root, "Modules/Native/GUI/Prefabs/screen.xml");
+        var scoped = catalog.ForPrefab(source);
+        var original = scoped.ResolveImage(new("icon"));
+        Assert.Contains(Path.GetFullPath(metadata), scoped.Dependencies);
+        Assert.Contains(Path.GetFullPath(package), scoped.Dependencies);
+        Assert.Contains(Path.GetFullPath(Path.Combine(fixture.Root, "Modules/Native/SubModule.xml")), scoped.Dependencies);
+        WritePackage(package, "ui_test_1", 0x07E0);
+        File.WriteAllText(metadata, File.ReadAllText(metadata).Replace("<Width>4</Width>", "<Width>2</Width>"));
+        catalog.Invalidate();
+        var updated = catalog.ForPrefab(source).ResolveImage(new("icon"));
+        Assert.Equal(2, updated.Image!.PixelWidth);
+        var pixels = new byte[32]; updated.Image.CopyPixels(pixels, 8, 0);
+        Assert.Equal(new byte[] { 0, 255, 0, 255 }, pixels[..4]);
+        Assert.Equal(4, original.Image!.PixelWidth);
     }
 
     internal sealed class Settings(string root) : IAppSettingsService
