@@ -1,5 +1,7 @@
 # M1 Completion Report
 
+Raw validation evidence is retained outside the source repository. `{evidence-archive}` denotes the anonymized evidence archive; the documented results remain in this report.
+
 Status: complete on 2026-10-12 under the automated validation policy approved on that date.
 
 M1 provides repeatable structural, layout and Diagnostics regression for nine Native scenarios, with focused behavior and asset-metric tests. The user-supplied CI artifacts satisfy the final public CI observation requirement. Screenshot capture, calibration and Full comparison remain optional.
@@ -29,11 +31,11 @@ After compacting the snapshots:
 - `./tools/run_visual_regression.ps1 -Mode StructureOnly`: all nine portable cases Passed, exit 0.
 - The same command with `-BannerlordRoot <installation>`: all nine installed Native v1.4.7 cases Passed, exit 0.
 
-Local suite evidence is under `docs/evidence/build-verify/compact-snapshots-2026-10-12/`, in `portable/summary.md` and `native/summary.md`. Test results are the two projects' `TestResults/compact-snapshots.trx` files. The earlier six-fixture Phase-9 evidence and performance measurements remain linked in [the progress report](./m1-progress.md).
+Local suite evidence is under `{evidence-archive}/build-verify/compact-snapshots-2026-10-12/`, in `portable/summary.md` and `native/summary.md`. Archived test results are under `{evidence-archive}/test-results/<project>/compact-snapshots.trx`. The earlier six-fixture Phase-9 evidence and performance measurements remain linked in [the progress report](./m1-progress.md).
 
 ## Observed CI evidence
 
-The user supplied the exported CI results at `docs/evidence/ci-test-result/1/`. Both TRX runs completed on 2026-10-12; their recorded finish times are around 18:13 Europe/Berlin. The export contains test and regression artifacts, without a workflow URL or commit SHA.
+The user supplied the exported CI results at `{evidence-archive}/ci-test-result/1/`. Both TRX runs completed on 2026-10-12; their recorded finish times are around 18:13 Europe/Berlin. The export contains test and regression artifacts, without a workflow URL or commit SHA.
 
 | Test project | Passed | Failed | Skipped |
 | --- | ---: | ---: | ---: |

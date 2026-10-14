@@ -1,5 +1,7 @@
 # M1 Implementation and Verification Report
 
+Raw validation evidence is retained outside the source repository. `{evidence-archive}` denotes the anonymized evidence archive; the documented results remain in this report.
+
 Status: complete 2026-10-12 under automated structural, layout, behavior, asset and Diagnostics validation. The supplied CI artifacts satisfy the final CI requirement. See [the completion report](./m1-completion.md); this document preserves implementation and verification history.
 
 [M0 was reverified](./m0-completion.md) before M1 began. No renderer screenshot has been presented as an in-game reference. M1 requires all nine portable and installed-game Structure Only passes, focused correctness tests and observation of the public CI run. The verification and acceptance revisions below retain their historical context.
@@ -32,7 +34,7 @@ Status: complete 2026-10-12 under automated structural, layout, behavior, asset 
 
 Dependencies use existing NuGet package versions and the local cache. The CI workflow is configured and its build/test/suite commands were verified locally; a remote workflow run has not been triggered or observed.
 
-Evidence root: `docs/evidence/m1`.
+Evidence root: `{evidence-archive}/m1`.
 
 | Evidence | Location under the evidence root |
 | --- | --- |
@@ -96,6 +98,6 @@ Verified commands and results:
 - `./tools/run_visual_regression.ps1 -Mode StructureOnly -BannerlordRoot <installation> -OutputRoot <evidence>/native`: all nine Passed, exit 0; pixels NotRun, with installed Native v1.4.7.
 - Optional `capture --mode Full` for Options: Complete, exit 0; generated `actual.png` without a reference package, comparison or baseline acceptance.
 
-Evidence root: `docs/evidence/build-verify/validation-policy-2026-10-12`; suite summaries are `portable/summary.md` and `native/summary.md`, and optional preview artifacts are under `optional-review/`. Final test results are the `validation-policy.trx` files in both test projects' `TestResults` directories.
+Evidence root: `{evidence-archive}/build-verify/validation-policy-2026-10-12`; suite summaries are `portable/summary.md` and `native/summary.md`, and optional preview artifacts are under `optional-review/`. Archived test results are under `{evidence-archive}/test-results/<project>/validation-policy.trx`.
 
 Structural baselines detect renderer regressions; they do not prove pixel fidelity to Bannerlord. Portable sprites remain transparent stand-ins. Focused asset tests verify metadata and metrics, not texture appearance. Fonts, colors and texture appearance may be inspected occasionally using automatically generated preview images. No in-game screenshot was created or accepted. The subsequently supplied CI artifacts and [completion report](./m1-completion.md) close the final M1 requirements.

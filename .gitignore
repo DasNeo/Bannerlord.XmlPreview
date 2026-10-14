@@ -2,6 +2,8 @@ bin/
 obj/
 /packages/
 riderModule.iml
+*.DotSettings.user
 /_ReSharper.Caches/
 /artifacts/
 **/TestResults/
+/docs/evidence/

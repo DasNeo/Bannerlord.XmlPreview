@@ -1,5 +1,7 @@
 # M0 Completion Report: Stabilize the Current Refactor
 
+Raw validation evidence is retained outside the source repository. `{evidence-archive}` denotes the anonymized evidence archive; the documented results remain in this report.
+
 Status: implementation and verification complete
 
 Completed: 2026-10-01
@@ -62,13 +64,13 @@ No M1 contract was introduced.
 
 ## Verification
 
-Commands:
+Commands (run from the repository root):
 
 ```powershell
-dotnet build C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-restore
-dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-build
-powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 -PerFixtureTimeoutSeconds 30 -OutputRoot docs/evidence\build-verify\m0-final-success
-powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 -Fixture standard-window -PerFixtureTimeoutSeconds 0 -OutputRoot docs/evidence\build-verify\m0-simulated-failure
+dotnet build .\Bannerlord.XmlPreview.sln --no-restore
+dotnet test .\Bannerlord.XmlPreview.sln --no-build
+powershell -ExecutionPolicy Bypass -File .\tools\run_phase9_validation.ps1 -PerFixtureTimeoutSeconds 30 -OutputRoot artifacts/m0-final-success
+powershell -ExecutionPolicy Bypass -File .\tools\run_phase9_validation.ps1 -Fixture standard-window -PerFixtureTimeoutSeconds 0 -OutputRoot artifacts/m0-simulated-failure
 ```
 
 Results:
@@ -91,18 +93,18 @@ Final fixture render durations from the successful run:
 
 These measurements are recorded, not gated. The run performed technical validation only and no visual comparison.
 
-Reverification on 2026-10-01 after the cancellation lifecycle fixes: build passed with 0 warnings and 0 errors; 8 tests passed; all six fixtures reported `Complete` and `TruncationReason: None` with exit code 0. The new summary is at `docs/evidence\build-verify\m0-resume-final\summary.md`. A zero-second timeout again returned exit code 1 and preserved its summary at `docs/evidence\build-verify\m0-resume-simulated-failure\summary.md`. The interactive smoke loaded Tournament.xml followed by Standard.Window.xml and displayed the latter as the final preview.
+Reverification on 2026-10-01 after the cancellation lifecycle fixes: build passed with 0 warnings and 0 errors; 8 tests passed; all six fixtures reported `Complete` and `TruncationReason: None` with exit code 0. The new summary is at `{evidence-archive}/build-verify/m0-resume-final/summary.md`. A zero-second timeout again returned exit code 1 and preserved its summary at `{evidence-archive}/build-verify/m0-resume-simulated-failure/summary.md`. The interactive smoke loaded Tournament.xml followed by Standard.Window.xml and displayed the latter as the final preview.
 
 ## Reverification before M1: 2026-10-04
 
-The committed M0 baseline (`b77d232`, following `621f9c0`) had a clean working tree before M1 edits. The load coordinator, its automated scenarios, DI call sites, structured completion handling, and Phase-9 aggregation were checked against the exit criteria.
+The committed M0 baseline (`7938220`, following `25f6d57`) had a clean working tree before M1 edits. The load coordinator, its automated scenarios, DI call sites, structured completion handling, and Phase-9 aggregation were checked against the exit criteria.
 
 - `dotnet build Bannerlord.XmlPreview.sln --no-restore`: passed, 0 warnings, 0 errors.
 - `dotnet test Bannerlord.XmlPreview.sln --no-build`: all 8 M0 tests passed.
 - Phase 9 with a 30-second per-fixture timeout: exit code 0; all six diagnostics files contain `Complete` and `TruncationReason: None`.
 - Phase 9 with `standard-window` and a zero-second timeout: exit code 1; the summary records `TimedOut`.
-- Successful run evidence: `docs/evidence\build-verify\m0-20261004-success\summary.md`.
-- Failure-path evidence: `docs/evidence\build-verify\m0-20261004-failure\summary.md`.
+- Successful run evidence: `{evidence-archive}/build-verify/m0-20261004-success/summary.md`.
+- Failure-path evidence: `{evidence-archive}/build-verify/m0-20261004-failure/summary.md`.
 
 The manual WPF smoke evidence remains the 2026-10-01 run documented above; it was not repeated during this reverification. M0 meets its exit criteria and M1 can start. Subsequent working-tree changes belong to M1 and this verification record.
 
