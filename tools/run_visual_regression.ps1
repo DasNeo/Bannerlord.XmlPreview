@@ -6,13 +6,14 @@ param(
     [string]$MetadataRoot,
     [string]$OutputRoot = (Join-Path $env:TEMP ('Bannerlord.VisualRegression-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))),
     [switch]$Benchmark,
-    [ValidateRange(0, 3600)][int]$PerCaseTimeoutSeconds = 120
+    [ValidateRange(0, 3600)][int]$PerCaseTimeoutSeconds = 120,
+    [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug'
 )
 
 $ErrorActionPreference = 'Stop'
 $cases = @('standard-window', 'standard-scrollable-panel', 'hint-tooltip', 'crosshair',
     'standard-dropdown', 'option-item', 'options', 'conversation', 'single-query-popup')
-$cli = Join-Path $RepoRoot 'Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.exe'
+$cli = Join-Path $RepoRoot "Bannerlord.XmlPreview.VisualRegression.Cli/bin/$Configuration/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.exe"
 if (!(Test-Path -LiteralPath $cli)) { throw 'Build the solution before running Visual Regression.' }
 $data = Join-Path $RepoRoot 'test-data/visual-regression'
 $portable = [string]::IsNullOrWhiteSpace($BannerlordRoot)

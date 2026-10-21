@@ -1,6 +1,6 @@
 # Bannerlord.XmlPreview Development Roadmap
 
-Status: 2026-10-13. M0-M3 complete. M4 authoring implementation and automated acceptance are complete; manual WPF/external-editor smoke acceptance remains pending after the user stopped Computer Use. See [M4 implementation and acceptance](./reports/m4-implementation.md) and [M3 fidelity limits](./reports/m3-completion.md). Optional in-game screenshot comparison remains skipped.
+Status: 2026-10-21. M0-M4 complete. M4 acceptance combines passing automated tests, installed Structure Only comparisons and live WPF/external-editor checks; additional copied-game asset mutation checks are optional. See [M4 completion and evidence limits](./reports/m4-completion.md) and [M3 fidelity limits](./reports/m3-completion.md). Optional in-game screenshot comparison remains skipped.
 
 ## Product direction
 
@@ -314,6 +314,8 @@ If a changed dependency fails to load, show the error and preserve the last good
 - failed reloads never replace the last good preview
 - Diagnostics and Preview Tree open the correct source location
 - side-by-side and overlay work with the active reference
+
+Accepted on 2026-10-21 using the combined automated, installed structural and live smoke evidence. Scenario deletion and deterministic obsolete-load cancellation use automated coverage. Copied-game brush-layer/package mutation checks are optional additional integration coverage; their unexecuted status does not block completion or imply an in-game pixel-fidelity pass. See [M4 completion](./reports/m4-completion.md).
 
 ## Fidelity reporting
 

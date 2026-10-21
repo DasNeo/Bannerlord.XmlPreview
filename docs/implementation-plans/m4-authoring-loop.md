@@ -150,6 +150,6 @@ Use [M4 Steps to Repeat (StR)](../testing/m4-steps-to-repeat.md) to run and reco
 - [x] Diagnostics and Preview Tree navigate to file and line.
 - [x] Side-by-side, overlay, and diff use Visual Regression results.
 - [x] No embedded XML editor was introduced.
-- [ ] End-to-end authoring tests and WPF smoke test pass.
+- [x] End-to-end authoring tests and WPF smoke test pass with the accepted combination of automated and live evidence.
 
-Automated authoring and compiled comparison-window tests pass. The manual smoke test was stopped by the user; see [implementation evidence and remaining acceptance](../reports/m4-implementation.md).
+M4 was accepted on 2026-10-21. Automated authoring and compiled comparison-window tests, installed Structure Only comparisons and the exercised live authoring cases pass. Scenario deletion and deterministic obsolete-load cancellation use automated coverage; live generated brush/RDC invalidation and installed structural evidence are accepted together. Copied-game asset mutation checks are optional additional coverage, not a completion gate. Unexecuted checks retain their NotRun status; see [completion evidence and limitations](../reports/m4-completion.md).

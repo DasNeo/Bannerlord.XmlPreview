@@ -1,0 +1,145 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (for example v0.1.0-preview.1)'
+        required: true
+        type: string
+      prerelease:
+        description: Mark as a prerelease
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$') {
+            throw 'Use a version tag such as v0.1.0 or v0.1.0-preview.1.'
+          }
+          $existing = git rev-parse --verify --quiet "refs/tags/$($env:RELEASE_TAG)^{commit}"
+          if ($LASTEXITCODE -eq 0 -and $existing -ne $env:GITHUB_SHA) {
+            throw 'The existing tag points to a different commit. Select that ref or use a new tag.'
+          }
+          # A missing tag is expected; it will be created only after validation passes.
+          $global:LASTEXITCODE = 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Bannerlord.XmlPreview.sln
+
+      - name: Build Release
+        run: dotnet build Bannerlord.XmlPreview.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test Bannerlord.XmlPreview.sln --configuration Release --no-build --logger "trx;LogFileName=results.trx"
+
+      - name: Complete nine-case Structure Only suite
+        run: ./tools/run_visual_regression.ps1 -Configuration Release -Mode StructureOnly -OutputRoot artifacts/release-validation
+
+      - name: Publish Windows x64 app
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          dotnet publish Bannerlord.XmlPreview.csproj --configuration Release --runtime win-x64 --self-contained true `
+            -p:PublishReadyToRun=true "-p:Version=$version" --output artifacts/publish
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing failed.' }
+          Copy-Item -LiteralPath readme.md -Destination artifacts/publish/README.md
+          New-Item -ItemType Directory -Path artifacts/publish/docs -Force | Out-Null
+          Copy-Item -LiteralPath docs/fidelity -Destination artifacts/publish/docs/fidelity -Recurse
+          if (!(Test-Path -LiteralPath artifacts/publish/Bannerlord.XmlPreview.exe)) { throw 'Published app is missing.' }
+          if (!(Test-Path -LiteralPath artifacts/publish/THIRD-PARTY-NOTICES.md)) { throw 'Third-party notices are missing.' }
+          if (!(Test-Path -LiteralPath artifacts/publish/licenses)) { throw 'Third-party licenses are missing.' }
+
+      - name: Create ZIP and SHA-256 checksum
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          New-Item -ItemType Directory -Path artifacts/release -Force | Out-Null
+          $name = "Bannerlord.XmlPreview-$($env:RELEASE_TAG)-win-x64.zip"
+          $archive = Join-Path artifacts/release $name
+          Compress-Archive -Path artifacts/publish/* -DestinationPath $archive
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name" | Set-Content -LiteralPath "$archive.sha256" -Encoding utf8NoBOM
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: artifacts/release/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-validation
+          path: |
+            artifacts/release-validation
+            **/TestResults/*.trx
+
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: release
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_HOST: ${{ github.server_url }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          IS_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          # gh expects a hostname rather than the server URL.
+          $env:GH_HOST = ([uri]$env:GH_HOST).Host
+          $notes = @"
+          Bannerlord.XmlPreview Preview for Windows x64.
+
+          Extract the ZIP and run Bannerlord.XmlPreview.exe. The .NET desktop runtime is included.
+          A local Bannerlord installation is required for game assets; no game assets are distributed.
+          Validated game scope: Bannerlord v1.4.7, with AgricultureEstate v1.4.7.3 coverage.
+          See the included docs/fidelity/images.md for widget Fidelity Status and limitations.
+          Structural validation passed; optional in-game screenshot comparison remains NotRun.
+          "@
+          $notes | Set-Content -LiteralPath release-notes.md -Encoding utf8NoBOM
+          $arguments = @('release', 'create', $env:RELEASE_TAG, '--target', $env:GITHUB_SHA,
+            '--title', "Bannerlord.XmlPreview $($env:RELEASE_TAG)", '--generate-notes',
+            '--notes-file', 'release-notes.md')
+          if ($env:IS_PRERELEASE -eq 'true') { $arguments += @('--prerelease', '--latest=false') }
+          $arguments += @(Get-ChildItem -LiteralPath release -File | ForEach-Object { $_.FullName })
+          gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release creation failed.' }

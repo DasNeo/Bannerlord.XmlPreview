@@ -1,6 +1,8 @@
 # M4 Steps to Repeat (StR)
 
-Use this procedure to test the authoring loop. Record each case as Passed, Failed or NotRun, with the observed result. These instructions do not mark the pending manual smoke test as passed.
+Use this procedure to test the authoring loop. Record each case as Passed, Failed or NotRun, with the observed result. M4 was accepted on 2026-10-21 using combined automated, installed structural and live smoke evidence; see [M4 completion](../reports/m4-completion.md). Acceptance does not turn unexecuted checks into Passed results.
+
+Recorded execution: [2026-10-21 retest results](../reports/m4-retest-2026-10-21.md), including automated totals, exercised WPF cases and remaining NotRun cases.
 
 ## 1. Build and run automated acceptance
 
@@ -79,7 +81,7 @@ Expected: status becomes `Loaded M4Smoke.xml`, the Node Tree includes `include-p
 4. Enter `m4-smoke-<runId>-b` in the identity field and click **Clone**. Change `Greeting` to `Scenario B`, set the resolution to `800 × 450`, click **Apply Size**, wait, then **Save**.
 5. Switch between A and B. Expected: each scenario restores its binding, list values and resolution; Diagnostics identify the active scenario and schema version. Try switching while a binding is dirty: switching must be blocked with a save message. Save, then retry.
 6. Close and reopen the app with the same prefab. Select A, then B. Expected: persisted values survive restart. The selector need not automatically restore the last selected scenario.
-7. With B saved, enter a third fresh identity and click **Rename**. Expected: the new identity is selectable and its JSON exists; the old B filename is gone. Click **Delete** for this disposable renamed scenario. Expected: its file/selector entry disappears and the prefab returns to the unsaved interactive preview. Select saved A for the remaining cases.
+7. With B saved, enter a third fresh identity and click **Rename**. Expected: the new identity is selectable and its JSON exists; the old B filename is gone. Optionally click **Delete** for this disposable renamed scenario. Expected: its file/selector entry disappears and the prefab returns to the unsaved interactive preview. Select saved A for the remaining cases. For M4 acceptance, the passing automated scenario-repository lifecycle test is accepted deletion evidence; a separate live Delete-button check is not required. Record which evidence was used without claiming unexercised UI behavior passed.
 
 ## 4. Apply external scenario values and reject invalid documents
 
@@ -117,13 +119,15 @@ If an editor emits multiple saves or autosaves, record that behavior before inte
 2. Select `smoke-root`, then use **Open Source** and **Copy Location**. Expected: both resolve to `M4Smoke.xml`, line 3.
 3. Click **Behavior Trace**. Expected: a separate read-only trace view opens. Trace entries identify Widget IDs/rules and include source locations where mapping is available. Close it before continuing.
 
-## 7. Watch brushes and actual image assets
+## 7. Optional copied-game brush and image mutation checks
+
+These checks provide additional integration confidence. For M4 acceptance, the user accepted passing installed Structure Only comparisons together with the automated invalidation tests and live generated brush/RDC checks. Repeating mutations with copied installed-game assets is optional and does not block milestone completion.
 
 Use a **disposable copy of a Bannerlord installation with Native and AgricultureEstate**, preserving module paths, rather than altering the live game files. Select this copy in the app's Bannerlord controls and apply it. Open `Modules/AgricultureEstate/GUI/Prefabs/LandManagement.xml` from the copy.
 
 1. Pick a brush used by the selected widget from its debug information. In the copied `GUI/Brushes` definition, change a visible layer color and save a valid XML document. Expected: automatic reload, the brush path in changed dependencies, and the changed brush appearance. Restore it and check recovery.
 2. Identify a resolved image's package/payload path from its debug information or installed image artifacts under `artifacts/m4-validation/installed/`. Using a compatible asset tool, replace the copied TPAC/RDC pair with a valid version having a visible pixel change while retaining the sprite identity and valid metadata. Expected: automatic reload and changed pixels, without restarting the app. Restore the original pair afterward. Do not test this by changing arbitrary binary bytes.
-3. If the copied installation or a valid replacement asset is unavailable, mark this manual case **NotRun**. The focused `DependencyInvalidationReloadsMetadataAndImagePixels` test already checks changed metadata dimensions and independently expected changed pixel channels using generated assets; it does not constitute manual visual acceptance.
+3. If these optional checks are skipped or the copied installation/valid replacement asset is unavailable, record **NotRun** and the reason. The focused `DependencyInvalidationReloadsMetadataAndImagePixels` test checks changed metadata dimensions and independently expected changed pixel channels using generated assets. The accepted live generated-asset checks are separate evidence; neither claims a copied-game mutation run occurred.
 
 ## 8. Check comparison modes, masks and difference navigation
 
@@ -165,10 +169,10 @@ Record date, commit/working-tree state, runtime, game/module versions, editor an
 | External states/schema validation and dirty conflict | NotRun | |
 | Root/include reload, malformed XML and recovery | NotRun | |
 | Diagnostic/tree source navigation and Behavior Trace | NotRun | |
-| Brush reload in disposable installation | NotRun | |
-| Changed image pixels in disposable installation | NotRun | |
+| Optional brush reload in copied game installation | NotRun | |
+| Optional changed image pixels in copied game installation | NotRun | |
 | Five comparison modes, zoom/pan, masks and mapped differences | NotRun | |
 | Full report artifact opening and mismatched-report rejection | NotRun | |
 | Obsolete-load cancellation | NotRun | |
 
-Retain evidence before removing the disposable fixture/scenarios/copy. Only mark manual M4 smoke acceptance complete after the required cases have actually passed; document every NotRun case and its reason.
+Retain evidence before removing the disposable fixture/scenarios/copy. Record whether acceptance uses live or automated evidence for each required behavior. Scenario deletion and deterministic obsolete-load cancellation may use their passing automated tests. Copied-game mutation checks and Full/Reference Package checks are optional; document every NotRun case and its reason without reporting it as passed.

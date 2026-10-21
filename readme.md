@@ -25,6 +25,12 @@ dotnet build C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-res
 dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-build
 ```
 
+## Create a release
+
+In GitHub, open **Actions → Create Release → Run workflow**, select the branch or tag to release, enter a version tag such as `v0.1.0-preview.1`, and choose whether it is a prerelease (default: yes). The workflow runs only when dispatched manually; pushes and tags do not trigger it. The workflow must be present on the default branch to appear in the manual-run UI.
+
+The workflow builds and tests Release, runs the nine portable Structure Only cases, publishes a self-contained Windows x64 app with ReadyToRun, and creates a GitHub release containing a ZIP and SHA-256 checksum. The ZIP includes the .NET runtime and third-party notices/licenses, but no game assets. A new tag points to the selected run's commit; an existing tag must already point to that commit. Existing releases are not overwritten. The built-in GitHub token supplies release permissions; no extra secret is required.
+
 ## Run the app
 
 ```powershell
@@ -52,7 +58,7 @@ M4 adds persistent scenario controls, dependency-aware reload, Last Good Preview
 
 **Compare Reference** opens an interactive image comparison using the current scenario; its uncalibrated default cannot certify in-game fidelity. **Open Comparison Report** opens artifacts from a Full Visual Regression run for the saved active scenario. Both offer reference, actual, side-by-side, overlay and diff with shared zoom/pan and mapped Key Bounds navigation. A Structure Only report has pixels `NotRun` and no image comparison views.
 
-Run `tools/run_m4_validation.ps1` for automated authoring coverage and the installed structural targets. The [M4 implementation report](docs/reports/m4-implementation.md) records validation and the remaining manual smoke acceptance.
+Run `tools/run_m4_validation.ps1` for automated authoring coverage and the installed structural targets. [M4 is complete and accepted](docs/reports/m4-completion.md) using combined automated, installed structural and live smoke evidence; copied-game asset mutation checks remain optional.
 
 For repeatable manual testing, follow [M4 Steps to Repeat (StR)](docs/testing/m4-steps-to-repeat.md), including the disposable fixture setup, expected outcomes and result sheet.
 
