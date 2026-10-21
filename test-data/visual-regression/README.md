@@ -41,7 +41,7 @@ This exercises the production prefab loader and asset catalog without screenshot
 Generate a preview image automatically for occasional inspection of fonts, colors and textures:
 
 ```powershell
-$cli = 'Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.dll'
+$cli = 'src/Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.dll'
 dotnet $cli capture --scenario test-data/visual-regression/scenarios/options.json --metadata test-data/visual-regression/native-baselines --output C:/temp/options-review --bannerlord-root $game --mode Full
 ```
 
@@ -61,7 +61,7 @@ From the repository root, place them under `artifacts/m1/references/samples/<cas
 
 ```powershell
 $references = 'artifacts/m1/references'
-$cli = 'Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.dll'
+$cli = 'src/Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.dll'
 dotnet $cli calibrate --samples "$references/samples" --scenarios test-data/visual-regression/scenarios --output "$references/calibration.json"
 ```
 
@@ -86,7 +86,7 @@ $env:BANNERLORD_ROOT = $game
 $env:BANNERLORD_REFERENCE_METADATA = "$references/metadata-v3"
 $env:BANNERLORD_REFERENCE_PACKAGE = "$references/png-v3"
 $env:BANNERLORD_RUN_PIXEL_TESTS = 'true'
-dotnet test Bannerlord.XmlPreview.VisualRegression.Tests --no-build
+dotnet test tests/Bannerlord.XmlPreview.VisualRegression.Tests --no-build
 ```
 
 Required acceptance needs all nine portable and installed-game Structure Only outcomes and focused correctness tests to pass. Pixels remain NotRun. `Partial` remains nonzero and is not acceptable for this suite. Optional Full comparison still fails on mismatching structure, Key Bounds, diagnostics or pixels; accepting references does not fix renderer fidelity. Clear `BANNERLORD_RUN_PIXEL_TESTS` after optional investigation to restore the normal test path.

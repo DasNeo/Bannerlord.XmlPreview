@@ -1,105 +1,70 @@
 # Bannerlord.XmlPreview
 
-`Bannerlord.XmlPreview` is a WPF tool for loading, expanding, and rendering Bannerlord Gauntlet prefabs from XML. It provides an inspectable preview for investigating layout, asset, binding, and reference issues without launching the game.
+Preview and inspect Mount & Blade II: Bannerlord Gauntlet XML prefabs without launching the game. Open a prefab, explore its widget tree, adjust preview data and resolution, and investigate layout, asset, binding, and reference issues.
 
-All project documentation and Markdown files must be written in English.
+## Download and install
 
-## Solution
+You need Windows x64 and a local Bannerlord installation for game assets. Game assets are not included. Validation currently covers Bannerlord v1.4.7, with AgricultureEstate v1.4.7.3 coverage; other versions may differ.
 
-- `Bannerlord.XmlPreview.csproj`: WPF host, DI, UI, and startup arguments
-- `Bannerlord.XmlPreview.Core/`: generic loading, rendering, node, and Diagnostics logic
-- `Bannerlord.XmlPreview.Bannerlord/`: Bannerlord-specific adapters, assets, and preview data
-- `Bannerlord.XmlPreview.DemoData/`: deterministic preview data
-- `Bannerlord.XmlPreview.Tests/`: automated M0 contract and Diagnostics tests
-- `Bannerlord.XmlPreview.VisualRegression/`: scenarios, snapshots, capture, comparators, reports, and Baseline Acceptance
-- `Bannerlord.XmlPreview.VisualRegression.Cli/`: compare, capture, accept, calibrate, and benchmark commands
-- `Bannerlord.XmlPreview.VisualRegression.Tests/`: comparison, capture, and workflow tests, plus nine Native cases
+Download a ZIP from [GitHub Releases](https://github.com/DasNeo/Bannerlord.XmlPreview/releases):
 
-Core remains generic. Bannerlord names and semantics belong in the adapter. Mod-specific executable widget code is not loaded; see [ADR 0001](docs/adr/0001-do-not-execute-mod-code-widgets.md).
+| Package | Choose this when |
+| --- | --- |
+| `win-x64-self-contained.zip` | You want the included .NET desktop runtime. |
+| `win-x64-framework-dependent.zip` | You already have the .NET 10 Desktop Runtime x64 installed and want a smaller download. |
 
-## Build and tests
+Extract the entire ZIP to a folder and run `Bannerlord.XmlPreview.exe`. Each ZIP has a matching SHA-256 checksum file.
+
+## Open your first preview
+
+1. Start `Bannerlord.XmlPreview.exe`.
+2. In the **Bannerlord** field, enter your game installation directory, or use **Browse**. Select **Apply**.
+3. Select **Open Prefab** and choose a Gauntlet XML prefab from the game or a mod. For example, open `Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml` inside your Bannerlord installation.
+4. Explore the preview and widget tree to inspect layout and Diagnostics. Change the **Preview** width and height to check another resolution.
+
+Assets load directly from installed module TPAC packages. Verified editable mod packages can use their RuntimeDataCache companion; manual DDS export is not required.
+
+## Work on a prefab
+
+Edit the XML in your preferred editor. The app watches loaded dependencies; use **Reload** to request a fresh preview. If loading fails, the **Last Good Preview** remains visible and is marked as stale. Check Diagnostics for the failure before relying on that view.
+
+Use **Scenario** controls to create, save, clone, rename, or delete a Preview Scenario. A scenario preserves preview data, widget states, and resolution so you can return to the same setup. Bindings and list contents are editable in the app. Save changes before switching scenarios.
+
+Scenarios are stored in `%LOCALAPPDATA%\Bannerlord.XmlPreview\Scenarios`. Use **Edit Scenario** to edit JSON for widget states, dynamic image masks, and reference capture settings. To enable editor navigation, set `BANNERLORD_PREVIEW_EDITOR` to an editor executable that accepts `--goto file:line:column`; otherwise source actions copy the location.
+
+## Compare with a reference
+
+**Compare Reference** opens an image comparison for the current scenario, with reference, actual, side-by-side, overlay, and diff views. Shared zoom and pan help inspect differences. Its uncalibrated default does not certify in-game fidelity.
+
+**Open Comparison Report** opens saved Visual Regression artifacts for the active saved scenario. A Full run includes pixel comparison; a Structure Only report records pixels as `NotRun` and has no image comparison views. See the [Visual Regression workflow](https://github.com/DasNeo/Bannerlord.XmlPreview/blob/main/test-data/visual-regression/README.md) for preparing reference packages and running comparisons.
+
+## Understand preview limits
+
+The preview helps investigate prefabs, but a successful structural check does not establish pixel-perfect agreement with the game. Check the [image fidelity matrix](docs/fidelity/images.md) for verified behavior and known limitations.
+
+- Mod-specific executable Code Widgets appear as labeled placeholders. The app does not execute their code.
+- Images that require live game state need explicit scenario data. Unavailable runtime content remains visibly `Partial`.
+- Missing assets or references appear in Diagnostics. Confirm the installation path and relevant module assets when a preview is incomplete.
+
+When reporting a problem, include the game and mod versions, prefab path, Preview Scenario, Diagnostics, and expected behavior. [Report an issue](https://github.com/DasNeo/Bannerlord.XmlPreview/issues).
+
+## Command line
+
+From the extracted application folder:
 
 ```powershell
-dotnet restore C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln
-dotnet build C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-restore
-dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-build
-```
-
-## Create a release
-
-In GitHub, open **Actions → Create Release → Run workflow**, select the branch or tag to release, enter a version tag such as `v0.1.0-preview.1`, and choose whether it is a prerelease (default: yes). The workflow runs only when dispatched manually; pushes and tags do not trigger it. The workflow must be present on the default branch to appear in the manual-run UI.
-
-The workflow builds and tests Release, runs the nine portable Structure Only cases, and creates a GitHub release with two Windows x64 ZIPs, both using ReadyToRun:
-
-- `Bannerlord.XmlPreview-<tag>-win-x64-framework-dependent.zip`: smaller download; requires **.NET 10 Desktop Runtime x64** installed separately.
-- `Bannerlord.XmlPreview-<tag>-win-x64-self-contained.zip`: larger download; includes the .NET desktop runtime.
-
-Choose one ZIP, extract it, and run `Bannerlord.XmlPreview.exe`. Each ZIP has a matching SHA-256 checksum and includes third-party notices/licenses and the fidelity matrix, but no game assets. A new tag points to the selected run's commit; an existing tag must already point to that commit. Existing releases are not overwritten. The built-in GitHub token supplies release permissions; no extra secret is required.
-
-## Run the app
-
-```powershell
-C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe
-```
-
-Supported arguments:
-
-- `--prefab <path>` loads a prefab directly.
-- `--bannerlord-root <path>` sets the Bannerlord installation path.
-- `--diagnostics-out <path>` writes a Diagnostics snapshot.
-- `--exit-after-load` exits the app after the technical validation run.
-
-Example:
-
-```powershell
-C:\Dev\WPF\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe `
+.\Bannerlord.XmlPreview.exe `
   --bannerlord-root "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord" `
-  --prefab "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord\Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml"
+  --prefab "C:\path\to\YourPrefab.xml"
 ```
 
-## Technical regression
+| Argument | Purpose |
+| --- | --- |
+| `--bannerlord-root <path>` | Set the Bannerlord installation directory. |
+| `--prefab <path>` | Load a prefab directly. |
+| `--diagnostics-out <path>` | Write a Diagnostics snapshot. |
+| `--exit-after-load` | Exit after the technical validation run. |
 
-M4 adds persistent scenario controls, dependency-aware reload, Last Good Preview retention, source navigation, and image comparison views. Scenarios live in `%LOCALAPPDATA%/Bannerlord.XmlPreview/Scenarios`; edit their JSON in your external editor for widget states, masks and Capture Profile metadata. Bindings/list edits and preview resolution are editable in the app; save dirty values before switching scenarios. Set `BANNERLORD_PREVIEW_EDITOR` to an editor executable supporting `--goto file:line:column`; without it source actions copy the location.
+## Development
 
-**Compare Reference** opens an interactive image comparison using the current scenario; its uncalibrated default cannot certify in-game fidelity. **Open Comparison Report** opens artifacts from a Full Visual Regression run for the saved active scenario. Both offer reference, actual, side-by-side, overlay and diff with shared zoom/pan and mapped Key Bounds navigation. A Structure Only report has pixels `NotRun` and no image comparison views.
-
-Run `tools/run_m4_validation.ps1` for automated authoring coverage and the installed structural targets. [M4 is complete and accepted](docs/reports/m4-completion.md) using combined automated, installed structural and live smoke evidence; copied-game asset mutation checks remain optional.
-
-For repeatable manual testing, follow [M4 Steps to Repeat (StR)](docs/testing/m4-steps-to-repeat.md), including the disposable fixture setup, expected outcomes and result sheet.
-
-Assets load directly from the installed module TPAC packages. Editable mod packages with the verified single-texture RDC layout use their RuntimeDataCache companion. Production setup requires no manual DDS export or cropped PNG directory. Provider images need explicit scenario data; unavailable runtime content remains visibly Partial.
-
-M3 image and asset acceptance:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_m3_validation.ps1 `
-  -BannerlordRoot "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord"
-```
-
-This runs focused image/pixel tests, nine portable renderer cases, installed package assertions, and all three M3 structural targets. The [M3 scenarios](test-data/visual-regression/m3-scenarios/README.md) explain explicit provider data, active asset module scope, diagnostics and runtime-only limits. `-PublishFidelity` updates the local fidelity matrix only after validation passes.
-
-Phase 9 checks six curated fixtures. `Complete` indicates success; timeouts, process failures, missing Diagnostics, `Partial`, and `Failed` produce a nonzero aggregate exit code. Per-fixture Diagnostics and `summary.md` are preserved even when validation fails.
-
-Both fixture scripts use the archived version at [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml) for the `land-management` fixture. Its provenance and dependencies are described in the [fixture documentation](fixtures/README.md).
-
-```powershell
-powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 `
-  -PerFixtureTimeoutSeconds 30 `
-  -OutputRoot C:\path\to\m0-validation
-```
-
-Diagnostics include `CompletionStatus`, `TruncationReason`, `RootActual`, `ElementLayout`, and phase timings. This run performs technical validation; visual acceptance is assessed separately.
-
-## Architecture and planning
-
-- [Glossary](GLOSSARY.md)
-- [Roadmap](docs/roadmap.md)
-- [Milestone plans](docs/implementation-plans/README.md)
-- [M0 completion report](docs/reports/m0-completion.md)
-- [M1 completion report](docs/reports/m1-completion.md): local and CI checks passed; screenshot comparisons are optional.
-- [M2 completion report](docs/reports/m2-completion.md): Behavior Graph and widget verification.
-- [M3 completion report](docs/reports/m3-completion.md): production TPAC/RDC assets, image behavior, acceptance and fidelity limits.
-- [Image fidelity matrix](docs/fidelity/images.md).
-- [Visual Regression workflow](test-data/visual-regression/README.md): nine scenarios, portable CI, Reference Packages, and CLI commands.
-
-Key entry points are `App.xaml.cs`, `ViewModels/MainWindowViewModel.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`, `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs`, and `Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`.
+For building, testing, architecture, and release instructions, see [Contributing](https://github.com/DasNeo/Bannerlord.XmlPreview/blob/main/CONTRIBUTING.md).

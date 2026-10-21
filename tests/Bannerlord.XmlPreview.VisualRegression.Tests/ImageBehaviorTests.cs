@@ -84,22 +84,79 @@ public sealed class ImageBehaviorTests
     }
 
     [Theory]
-    [InlineData("source", "#FF000080", new byte[] { 128, 0, 0, 128, 0, 0 })]
-    [InlineData("mask", "#FF0000FF", new byte[] { 255, 0, 0, 0, 0, 0 })]
-    public void StaticImageTintPreservesSourceTransparencyAndAppliesAlphaOnce(string sprite, string color, byte[] expected)
+    [InlineData("ImageWidget", "source", "#FF000080", new byte[] { 128, 0, 0, 128, 0, 0 })]
+    [InlineData("ImageWidget", "mask", "#FF0000FF", new byte[] { 255, 0, 0, 0, 0, 0 })]
+    [InlineData("Widget", "source", "#FF000080", new byte[] { 128, 0, 0, 128, 0, 0 })]
+    [InlineData("Widget", "mask", "#FF0000FF", new byte[] { 255, 0, 0, 0, 0, 0 })]
+    [InlineData("Widget", "source", "#080806B0", new byte[] { 5, 5, 4, 5, 5, 4 })]
+    public void StaticImageTintPreservesSourceTransparencyAndAppliesAlphaOnce(string type, string sprite, string color, byte[] expected)
     {
         SnapshotCaptureTests.Sta(() =>
         {
-            var (root, diagnostics) = Render("ImageWidget", ("Sprite", sprite), ("Color", color));
-            var widget = (Border)ImageWidget(root);
+            var (root, diagnostics) = Render(type, ("Sprite", sprite), ("Color", color));
+            var widget = Elements(root).OfType<Border>().Single(e => PreviewElementDebugProperties.GetDebugInfo(e)?.NodeName == type);
             widget.CornerRadius = new CornerRadius(0);
             ((Panel)VisualTreeHelper.GetParent(widget)).Children.Remove(widget);
             var parent = new Grid { Width = 2, Height = 1 };
             parent.Children.Add(widget);
             var pixels = WpfPreviewCapture.Capture(parent, new("static-tint", 2, 1, Background: "#000000"));
             Assert.Equal(expected, pixels.Pixels);
-            Assert.Equal(ImageResolutionStatus.Resolved, PreviewElementDebugProperties.GetImageResolution(widget)!.Status);
+            if (type == "ImageWidget")
+                Assert.Equal(ImageResolutionStatus.Resolved, PreviewElementDebugProperties.GetImageResolution(widget)!.Status);
             Assert.Equal(RenderCompletionStatus.Complete, diagnostics.CompletionStatus);
+            return 0;
+        });
+    }
+
+    [Theory]
+    [InlineData("Widget", 12, 8)]
+    [InlineData("Widget", 8, 12)]
+    [InlineData("Widget", 2, 2)]
+    [InlineData("ImageWidget", 12, 8)]
+    public void NineRegionFramePreservesBorderAndTransparentCenterAfterResize(string type, int width, int height)
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var (root, diagnostics) = Render(type, ("Sprite", "frame"), ("Color", "#FF000080"), ("AlphaFactor", "0.5"),
+                ("SuggestedWidth", width.ToString()), ("SuggestedHeight", height.ToString()));
+            var widget = Elements(root).OfType<Border>().Single(e => PreviewElementDebugProperties.GetDebugInfo(e)?.NodeName == type);
+            ((Panel)VisualTreeHelper.GetParent(widget)).Children.Remove(widget);
+            // Re-arrange the same visual at a new size to catch fixed-size or whole-image overlays.
+            foreach (var size in new[] { (width, height), (width + 4, height + 4) })
+            {
+                widget.Width = size.Item1; widget.Height = size.Item2;
+                var parent = new Grid { Width = size.Item1, Height = size.Item2 };
+                parent.Children.Add(widget);
+                var pixels = WpfPreviewCapture.Capture(parent, new("nine-region", size.Item1, size.Item2, Background: "#000000"));
+                for (int y = 0; y < size.Item2; y++)
+                    for (int x = 0; x < size.Item1; x++)
+                    {
+                        var index = (y * size.Item1 + x) * 3;
+                        var edge = x == 0 || x == size.Item1 - 1 || y == 0 || y == size.Item2 - 1;
+                        Assert.InRange(pixels.Pixels[index], edge ? 63 : 0, edge ? 65 : 0);
+                        Assert.Equal(0, pixels.Pixels[index + 1]); Assert.Equal(0, pixels.Pixels[index + 2]);
+                    }
+                parent.Children.Remove(widget);
+            }
+            Assert.Equal(RenderCompletionStatus.Complete, diagnostics.CompletionStatus);
+            return 0;
+        });
+    }
+
+    [Theory]
+    [InlineData("Widget")]
+    [InlineData("ImageWidget")]
+    public void TintConvertsStraightAlphaPixelsBeforeMultiplication(string type)
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var source = BitmapSource.Create(2, 1, 96, 96, PixelFormats.Bgra32, null,
+                new byte[] { 255, 255, 255, 128, 255, 255, 255, 0 }, 8);
+            source.Freeze();
+            var (root, _) = Render(new Images { SourceImage = source }, type, ("Sprite", "source"), ("Color", "#FF000080"));
+            var pixels = WpfPreviewCapture.Capture(root, new("straight-alpha", 2, 1, Background: "#000000"));
+            Assert.InRange(pixels.Pixels[0], 63, 65);
+            Assert.All(pixels.Pixels.Skip(1), value => Assert.Equal(0, value));
             return 0;
         });
     }
@@ -243,12 +300,15 @@ public sealed class ImageBehaviorTests
         public Task WarmUpAsync(CancellationToken token = default) => Task.CompletedTask;
         public Task WarmUpAssetsAsync(IReadOnlyCollection<string> brushes, IReadOnlyCollection<string> sprites, CancellationToken token = default) => Task.CompletedTask;
         public BrushDefinition? FindBrush(string? name) => null;
-        public SpriteDefinition? FindSprite(string? name) => name is "source" or "mask" ? new(name, "fixture", "Sprite", name, "fixture", 1, 2, 1) : null;
+        public SpriteDefinition? FindSprite(string? name) => name == "frame"
+            ? new(name, "fixture", "NineRegionSprite", name, "fixture", 1, 3, 3, 1, 1, 1, 1)
+            : name is "source" or "mask" ? new(name, "fixture", "Sprite", name, "fixture", 1, 2, 1) : null;
         public ImageSource? GetSpriteImage(string? name) => name switch
         {
             "source" => SourceImage ?? Bitmap([255, 255, 255, 255, 255, 255, 255, 255]),
             "mask" => Bitmap([255, 255, 255, 255, 0, 0, 0, 0]),
-            "mask-r8" => Bitmap([255, 255, 255, 255, 0, 0, 0, 255]), _ => null
+            "mask-r8" => Bitmap([255, 255, 255, 255, 0, 0, 0, 255]),
+            "frame" => FrameBitmap(), _ => null
         };
         public SpriteAssetResolution ResolveSpriteAsset(string? name) => new(name ?? "", FindSprite(name) is null ? SpriteAssetResolutionKind.Missing : SpriteAssetResolutionKind.ExactName,
             name, FindSprite(name) is null ? null : "fixture", FindSprite(name), null);
@@ -264,6 +324,13 @@ public sealed class ImageBehaviorTests
         private static BitmapSource Bitmap(byte[] pixels)
         {
             var bitmap = BitmapSource.Create(2, 1, 96, 96, PixelFormats.Pbgra32, null, pixels, 8); bitmap.Freeze(); return bitmap;
+        }
+        private static BitmapSource FrameBitmap()
+        {
+            var pixels = Enumerable.Repeat((byte)255, 3 * 3 * 4).ToArray();
+            Array.Clear(pixels, 4 * 4, 4);
+            var bitmap = BitmapSource.Create(3, 3, 96, 96, PixelFormats.Pbgra32, null, pixels, 12);
+            bitmap.Freeze(); return bitmap;
         }
     }
     private sealed class ImageLayout : Bannerlord.XmlPreview.Core.Abstractions.IRootLayoutHints
