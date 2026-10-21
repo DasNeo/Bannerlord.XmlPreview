@@ -29,7 +29,12 @@ dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-buil
 
 In GitHub, open **Actions → Create Release → Run workflow**, select the branch or tag to release, enter a version tag such as `v0.1.0-preview.1`, and choose whether it is a prerelease (default: yes). The workflow runs only when dispatched manually; pushes and tags do not trigger it. The workflow must be present on the default branch to appear in the manual-run UI.
 
-The workflow builds and tests Release, runs the nine portable Structure Only cases, publishes a self-contained Windows x64 app with ReadyToRun, and creates a GitHub release containing a ZIP and SHA-256 checksum. The ZIP includes the .NET runtime and third-party notices/licenses, but no game assets. A new tag points to the selected run's commit; an existing tag must already point to that commit. Existing releases are not overwritten. The built-in GitHub token supplies release permissions; no extra secret is required.
+The workflow builds and tests Release, runs the nine portable Structure Only cases, and creates a GitHub release with two Windows x64 ZIPs, both using ReadyToRun:
+
+- `Bannerlord.XmlPreview-<tag>-win-x64-framework-dependent.zip`: smaller download; requires **.NET 10 Desktop Runtime x64** installed separately.
+- `Bannerlord.XmlPreview-<tag>-win-x64-self-contained.zip`: larger download; includes the .NET desktop runtime.
+
+Choose one ZIP, extract it, and run `Bannerlord.XmlPreview.exe`. Each ZIP has a matching SHA-256 checksum and includes third-party notices/licenses and the fidelity matrix, but no game assets. A new tag points to the selected run's commit; an existing tag must already point to that commit. Existing releases are not overwritten. The built-in GitHub token supplies release permissions; no extra secret is required.
 
 ## Run the app
 

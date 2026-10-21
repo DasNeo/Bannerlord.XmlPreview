@@ -64,31 +64,39 @@ jobs:
       - name: Complete nine-case Structure Only suite
         run: ./tools/run_visual_regression.ps1 -Configuration Release -Mode StructureOnly -OutputRoot artifacts/release-validation
 
-      - name: Publish Windows x64 app
+      - name: Publish both Windows x64 packages
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           $version = $env:RELEASE_TAG.Substring(1)
-          dotnet publish Bannerlord.XmlPreview.csproj --configuration Release --runtime win-x64 --self-contained true `
-            -p:PublishReadyToRun=true "-p:Version=$version" --output artifacts/publish
-          if ($LASTEXITCODE -ne 0) { throw 'Publishing failed.' }
-          Copy-Item -LiteralPath readme.md -Destination artifacts/publish/README.md
-          New-Item -ItemType Directory -Path artifacts/publish/docs -Force | Out-Null
-          Copy-Item -LiteralPath docs/fidelity -Destination artifacts/publish/docs/fidelity -Recurse
-          if (!(Test-Path -LiteralPath artifacts/publish/Bannerlord.XmlPreview.exe)) { throw 'Published app is missing.' }
-          if (!(Test-Path -LiteralPath artifacts/publish/THIRD-PARTY-NOTICES.md)) { throw 'Third-party notices are missing.' }
-          if (!(Test-Path -LiteralPath artifacts/publish/licenses)) { throw 'Third-party licenses are missing.' }
+          foreach ($variant in @('framework-dependent', 'self-contained')) {
+            $selfContained = if ($variant -eq 'self-contained') { 'true' } else { 'false' }
+            $output = Join-Path artifacts/publish $variant
+            dotnet publish Bannerlord.XmlPreview.csproj --configuration Release --runtime win-x64 --self-contained $selfContained `
+              -p:PublishReadyToRun=true "-p:Version=$version" --output $output
+            if ($LASTEXITCODE -ne 0) { throw "Publishing $variant failed." }
+            Copy-Item -LiteralPath readme.md -Destination (Join-Path $output README.md)
+            New-Item -ItemType Directory -Path (Join-Path $output docs) -Force | Out-Null
+            Copy-Item -LiteralPath docs/fidelity -Destination (Join-Path $output docs/fidelity) -Recurse
+            foreach ($required in @('Bannerlord.XmlPreview.exe', 'THIRD-PARTY-NOTICES.md', 'licenses')) {
+              if (!(Test-Path -LiteralPath (Join-Path $output $required))) { throw "$variant is missing $required." }
+            }
+            $hasRuntime = Test-Path -LiteralPath (Join-Path $output hostfxr.dll)
+            if ($hasRuntime -ne ($variant -eq 'self-contained')) { throw "Unexpected runtime contents in $variant." }
+          }
 
-      - name: Create ZIP and SHA-256 checksum
+      - name: Create both ZIPs and SHA-256 checksums
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           New-Item -ItemType Directory -Path artifacts/release -Force | Out-Null
-          $name = "Bannerlord.XmlPreview-$($env:RELEASE_TAG)-win-x64.zip"
-          $archive = Join-Path artifacts/release $name
-          Compress-Archive -Path artifacts/publish/* -DestinationPath $archive
-          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $name" | Set-Content -LiteralPath "$archive.sha256" -Encoding utf8NoBOM
+          foreach ($variant in @('framework-dependent', 'self-contained')) {
+            $name = "Bannerlord.XmlPreview-$($env:RELEASE_TAG)-win-x64-$variant.zip"
+            $archive = Join-Path artifacts/release $name
+            Compress-Archive -Path "artifacts/publish/$variant/*" -DestinationPath $archive
+            $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $name" | Set-Content -LiteralPath "$archive.sha256" -Encoding utf8NoBOM
+          }
 
       - uses: actions/upload-artifact@v4
         with:
@@ -129,7 +137,10 @@ jobs:
           $notes = @"
           Bannerlord.XmlPreview Preview for Windows x64.
 
-          Extract the ZIP and run Bannerlord.XmlPreview.exe. The .NET desktop runtime is included.
+          Choose one ZIP, extract it, and run Bannerlord.XmlPreview.exe:
+          - win-x64-framework-dependent.zip: smaller download; requires .NET 10 Desktop Runtime x64 installed separately.
+          - win-x64-self-contained.zip: larger download; includes the .NET desktop runtime.
+          Each ZIP has a matching SHA-256 checksum file.
           A local Bannerlord installation is required for game assets; no game assets are distributed.
           Validated game scope: Bannerlord v1.4.7, with AgricultureEstate v1.4.7.3 coverage.
           See the included docs/fidelity/images.md for widget Fidelity Status and limitations.
