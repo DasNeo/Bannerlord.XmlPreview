@@ -95,6 +95,8 @@ From the extracted application folder:
 
 ## Development
 
+This project was developed with assistance from AI coding tools. The maintainer is responsible for the published code, testing, and releases.
+
 For building, testing, architecture, and release instructions, see [Contributing](https://github.com/DasNeo/Bannerlord.XmlPreview/blob/main/CONTRIBUTING.md).
 
 ## License
