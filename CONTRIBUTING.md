@@ -29,7 +29,7 @@ tests/
   Bannerlord.XmlPreview.Tests/
   Bannerlord.XmlPreview.VisualRegression.Tests/
 tools/
-  TpacSpike/                                  # Investigation utility
+  archive/                                    # Historical investigation utilities
 test-data/
 fixtures/
 docs/
@@ -38,7 +38,7 @@ licenses/
 
 - `src/`: WPF application, generic Core, Bannerlord adapter, preview data, and Visual Regression library and CLI.
 - `tests/`: application contracts and Visual Regression tests.
-- `tools/`: validation and investigation scripts, including the TPAC investigation utility.
+- `tools/`: maintained validation scripts; historical extraction and TPAC investigation tools are documented in [tools/archive](tools/archive/README.md).
 - `test-data/` and `fixtures/`: scenarios, accepted metadata, portable corpus, and archived prefab fixtures.
 - `docs/`: developer guidance, fidelity information, architecture decisions, and historical plans. Machine-specific reports remain local and ignored.
 - `GLOSSARY.md` and `docs/adr/`: shared terminology and architecture decisions.

@@ -141,12 +141,12 @@ Tableau fidelity remains outside M3.
 
 ### `fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`
 
-Use the preserved strong mod baseline from the repository fixture, with assets resolved from the installed game. Verify:
+Use the repository's full mod fixture, with assets resolved from the installed game. The fixture was replaced with the installed dashboard layout on 2026-10-22. Verify:
 
 - `ae_gardens`, `ae_granary`, `ae_storehouse`, `ae_irrigation`, and `ae_patrols`
 - Native brush dependencies
-- exact classification of `clan_frame_small` as resolved or genuinely missing
-- no regression in existing geometry
+- Native dashboard frames and icons, including `frame_small_9` (the updated layout no longer references `clan_frame_small`)
+- dashboard, holding, upgrade, workforce, stockpile, and project Key Bounds
 
 ## Work package 3.9: Publish Fidelity Status
 

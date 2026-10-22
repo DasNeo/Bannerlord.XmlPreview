@@ -29,8 +29,8 @@ try {
     }
     # Warm measurements above use the regular test host. Only these independent
     # WPF app measurements use the publication when -ReadyToRun is specified.
-    foreach ($variant in @('preserved', 'installed')) {
-        $prefab = if ($variant -eq 'preserved') { Join-Path $repo 'fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml' }
+    foreach ($variant in @('fixture', 'installed')) {
+        $prefab = if ($variant -eq 'fixture') { Join-Path $repo 'fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml' }
             else { Join-Path $BannerlordRoot 'Modules/AgricultureEstate/GUI/Prefabs/LandManagement.xml' }
         foreach ($iteration in 1..$Processes) {
             $output = Join-Path $OutputRoot "$variant-$iteration.txt"

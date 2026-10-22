@@ -10,10 +10,11 @@
 
     <ItemGroup>
         <PackageReference Include="MaterialDesignThemes" Version="5.3.2"/>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13"/>
     </ItemGroup>
 
     <ItemGroup>
+        <None Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
         <None Include="..\..\licenses\**" Link="licenses\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
         <None Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
     </ItemGroup>

@@ -13,7 +13,7 @@ public sealed class RegressionWorkflowTests
         using var fixture = new RegressionFixture();
         var before = File.ReadAllBytes(Path.Combine(fixture.Metadata, "manifest.json"));
         IVisualRegression regression = fixture.Runner;
-        var report = await regression.CompareAsync(fixture.Request);
+        var report = await regression.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(VisualRegressionOutcome.Passed, report.Outcome);
         Assert.Equal(0, report.ToExitCode());
@@ -29,8 +29,8 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         var before = File.ReadAllBytes(Path.Combine(fixture.Metadata, "manifest.json"));
-        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Runner.CompareAsync(fixture.Request with { OutputDirectory = fixture.Metadata }));
-        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Runner.CaptureAsync(fixture.Request with { OutputDirectory = fixture.Package }));
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Runner.CompareAsync(fixture.Request with { OutputDirectory = fixture.Metadata }, cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Runner.CaptureAsync(fixture.Request with { OutputDirectory = fixture.Package }, cancellationToken: TestContext.Current.CancellationToken));
         Assert.Equal(before, File.ReadAllBytes(Path.Combine(fixture.Metadata, "manifest.json")));
     }
 
@@ -39,7 +39,7 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         Directory.Move(fixture.Package, fixture.Package + "-unavailable");
-        var report = await fixture.Runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly });
+        var report = await fixture.Runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(VisualRegressionOutcome.Passed, report.Outcome);
         Assert.Equal(ComparisonStatus.NotRun, report.Checks.Pixels);
@@ -52,7 +52,7 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         var runner = new VisualRegressionRunner(fixture.Capture, fixture.Metadata);
-        var report = await runner.CompareAsync(fixture.Request);
+        var report = await runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(VisualRegressionOutcome.MissingBaseline, report.Outcome);
         Assert.Equal(1, report.ToExitCode(allowExpectedPartial: true));
@@ -66,7 +66,7 @@ public sealed class RegressionWorkflowTests
         using var fixture = new RegressionFixture();
         File.WriteAllText(fixture.ScenarioPath, "{ invalid json");
         var runner = new VisualRegressionRunner((_, _, _) => throw new Exception("Must not capture"), fixture.Metadata);
-        var report = await runner.CompareAsync(fixture.Request);
+        var report = await runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(VisualRegressionOutcome.InvalidScenario, report.Outcome);
         Assert.True(File.Exists(report.Artifacts.ReportJson));
@@ -77,7 +77,7 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         var runner = new VisualRegressionRunner((_, _, _) => throw new InvalidOperationException("Deliberate capture failure"), fixture.Metadata);
-        var report = await runner.CompareAsync(fixture.Request);
+        var report = await runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.CaptureFailed, report.Outcome);
         Assert.Contains("Deliberate", report.FailureReason);
         using var cancellation = new CancellationTokenSource();
@@ -90,9 +90,9 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         fixture.Frame = fixture.Frame with { ModuleVersion = "different-module" };
-        Assert.Equal(VisualRegressionOutcome.CaptureFailed, (await fixture.Runner.CompareAsync(fixture.Request)).Outcome);
+        Assert.Equal(VisualRegressionOutcome.CaptureFailed, (await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken)).Outcome);
         fixture.Frame = fixture.Frame with { ModuleVersion = null, Pixels = new(1, 1, [0, 0, 0]) };
-        Assert.Equal(VisualRegressionOutcome.CaptureFailed, (await fixture.Runner.CompareAsync(fixture.Request)).Outcome);
+        Assert.Equal(VisualRegressionOutcome.CaptureFailed, (await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken)).Outcome);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public sealed class RegressionWorkflowTests
             File.WriteAllText(fixture.ScenarioPath, JsonSerializer.Serialize(scenario with { Scene = "Changed during capture" }, ScenarioLoader.JsonOptions));
             return fixture.Capture(scenario, mode, token);
         }, fixture.Metadata, fixture.Package);
-        var evidence = await runner.CaptureAsync(fixture.Request);
+        var evidence = await runner.CaptureAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(originalHash, evidence.ScenarioSha256);
         Assert.NotEqual(ScenarioLoader.LoadWithHash(fixture.ScenarioPath).Sha256, evidence.ScenarioSha256);
         Assert.Throws<InvalidDataException>(() => BaselineAcceptance.Accept(new(fixture.ScenarioPath, fixture.Request.OutputDirectory,
@@ -119,7 +119,7 @@ public sealed class RegressionWorkflowTests
         var lf = File.ReadAllText(fixture.ScenarioPath).Replace("\r\n", "\n", StringComparison.Ordinal);
         File.WriteAllText(fixture.ScenarioPath, lf);
         var request = fixture.Request with { Mode = VisualRegressionMode.StructureOnly };
-        var evidence = await fixture.Runner.CaptureAsync(request);
+        var evidence = await fixture.Runner.CaptureAsync(request, cancellationToken: TestContext.Current.CancellationToken);
 
         File.WriteAllText(fixture.ScenarioPath, lf.Replace("\n", "\r\n", StringComparison.Ordinal));
         Assert.Equal(evidence.ScenarioSha256, ScenarioLoader.LoadWithHash(fixture.ScenarioPath).Sha256);
@@ -127,13 +127,13 @@ public sealed class RegressionWorkflowTests
         var destination = Path.Combine(fixture.Root, "accepted-line-endings");
         BaselineAcceptance.Accept(new(fixture.ScenarioPath, request.OutputDirectory,
             Path.Combine(fixture.Root, "no-source-metadata"), destination), _ => { });
-        Assert.Equal(VisualRegressionOutcome.Passed, (await fixture.Runner.CompareAsync(request)).Outcome);
+        Assert.Equal(VisualRegressionOutcome.Passed, (await fixture.Runner.CompareAsync(request, cancellationToken: TestContext.Current.CancellationToken)).Outcome);
         var runner = new VisualRegressionRunner(fixture.Capture, destination);
         Assert.Equal(VisualRegressionOutcome.Passed,
-            (await runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly })).Outcome);
+            (await runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly }, cancellationToken: TestContext.Current.CancellationToken)).Outcome);
 
         File.WriteAllText(fixture.ScenarioPath, lf.Replace("Fixed two pixels", "Changed pixels", StringComparison.Ordinal));
-        var changed = await runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly });
+        var changed = await runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly }, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Failed, changed.Outcome);
         Assert.Contains("Scenario metadata or hash", changed.FailureReason);
     }
@@ -162,8 +162,8 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         fixture.Frame = fixture.Frame with { Layout = new(1, [fixture.Frame.Layout.KeyBounds[0] with { X = 1 }]) };
-        var first = await fixture.Runner.CompareAsync(fixture.Request);
-        var second = await fixture.Runner.CompareAsync(fixture.Request);
+        var first = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
+        var second = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(VisualRegressionOutcome.Failed, first.Outcome);
         Assert.Equal(ComparisonStatus.Failed, first.Checks.KeyBounds);
@@ -177,11 +177,11 @@ public sealed class RegressionWorkflowTests
         using var fixture = new RegressionFixture();
         var warning = new CapturedDiagnostic("asset.missing", "/root/image", "Missing image.");
         fixture.Frame = fixture.Frame with { Diagnostics = [warning] };
-        var failed = await fixture.Runner.CompareAsync(fixture.Request);
+        var failed = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Failed, failed.Outcome);
         Assert.Single(failed.DiagnosticDifferences);
         fixture.UpdateScenario(fixture.Scenario with { ExpectedWarnings = [new(warning.Code, warning.WidgetIdOrPath, warning.Message, "Synthetic expected warning.")] });
-        var accepted = await fixture.Runner.CompareAsync(fixture.Request);
+        var accepted = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Passed, accepted.Outcome);
     }
 
@@ -190,11 +190,11 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         fixture.Frame = fixture.Frame with { Pixels = new(2, 1, [10, 20, 30, 255, 255, 255]) };
-        var failed = await fixture.Runner.CompareAsync(fixture.Request);
+        var failed = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Failed, failed.Outcome);
         Assert.Equal(0.5, failed.Metrics.DifferingPixelProportion);
         fixture.UpdateScenario(fixture.Scenario with { Masks = [new("clock", "Synthetic dynamic clock", 1, 0, 1, 1)] });
-        var masked = await fixture.Runner.CompareAsync(fixture.Request);
+        var masked = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Passed, masked.Outcome);
         Assert.Equal(1, masked.Metrics.MaskedPixelCount);
         Assert.Equal(1, masked.Metrics.ComparedPixelCount);
@@ -211,7 +211,7 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         File.AppendAllText(Path.Combine(file.EndsWith(".png") ? fixture.Package : fixture.Metadata, file), "corrupt");
-        var report = await fixture.Runner.CompareAsync(fixture.Request);
+        var report = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Failed, report.Outcome);
         Assert.Contains("hash mismatch", report.FailureReason);
         Assert.Equal(1, report.ToExitCode());
@@ -222,7 +222,7 @@ public sealed class RegressionWorkflowTests
     {
         using var fixture = new RegressionFixture();
         var original = File.ReadAllText(Path.Combine(fixture.Metadata, "manifest.json"));
-        await fixture.Runner.CaptureAsync(fixture.Request);
+        await fixture.Runner.CaptureAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         var samples = Path.Combine(fixture.Root, "samples", fixture.Scenario.Id);
         Directory.CreateDirectory(samples);
         for (var i = 0; i < 5; i++) File.Copy(Path.Combine(fixture.Package, "reference.png"), Path.Combine(samples, i + ".png"));
@@ -239,14 +239,14 @@ public sealed class RegressionWorkflowTests
         Assert.Equal(original, File.ReadAllText(Path.Combine(fixture.Metadata, "manifest.json")));
         Assert.Throws<InvalidDataException>(() => BaselineAcceptance.Accept(request, identified.Add));
         var runner = new VisualRegressionRunner(fixture.Capture, destination, packageDestination);
-        Assert.Equal(VisualRegressionOutcome.Passed, (await runner.CompareAsync(fixture.Request)).Outcome);
+        Assert.Equal(VisualRegressionOutcome.Passed, (await runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken)).Outcome);
     }
 
     [Fact]
     public async Task AcceptanceRejectsChangedScenarioAndTamperedCapture()
     {
         using var fixture = new RegressionFixture();
-        await fixture.Runner.CaptureAsync(fixture.Request);
+        await fixture.Runner.CaptureAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         var request = new BaselineAcceptanceRequest(fixture.ScenarioPath, fixture.Request.OutputDirectory, fixture.Metadata,
             Path.Combine(fixture.Root, "new-metadata"));
         File.AppendAllText(Path.Combine(fixture.Request.OutputDirectory, "layout.json"), "tamper");
@@ -260,7 +260,7 @@ public sealed class RegressionWorkflowTests
     public async Task PerformanceUsesFiveWarmIterationsAndReportsUnavailablePixelPhases()
     {
         using var fixture = new RegressionFixture();
-        var result = await RegressionPerformance.MeasureAsync(fixture.Runner, fixture.Request with { Mode = VisualRegressionMode.StructureOnly });
+        var result = await RegressionPerformance.MeasureAsync(fixture.Runner, fixture.Request with { Mode = VisualRegressionMode.StructureOnly }, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(5, result.WarmIterations);
         Assert.Equal(5, result.Outcomes.Count);
         Assert.All(result.Outcomes, outcome => Assert.Equal(VisualRegressionOutcome.Passed, outcome));

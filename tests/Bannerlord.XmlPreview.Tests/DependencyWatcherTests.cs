@@ -29,7 +29,7 @@ public sealed class DependencyWatcherTests
             watcher.NotifyChanged([root]); watcher.NotifyChanged([root, include]); watcher.NotifyChanged([include]);
             Assert.Equal(3, delays.Count);
             foreach (var delay in delays) delay.TrySetResult();
-            var batch = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var batch = await received.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(new[] { include, root }, batch);
             Assert.Equal(1, count);
             watcher.ReplaceDependencies([root]);
@@ -59,12 +59,12 @@ public sealed class DependencyWatcherTests
             var temporary = Path.Combine(directory, "editor.tmp");
             File.WriteAllText(temporary, "after");
             File.Move(temporary, root, true);
-            Assert.True(await batchReady.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.True(await batchReady.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken: TestContext.Current.CancellationToken));
             Assert.Equal(root, Assert.Single(Assert.Single(batches)));
             File.Delete(root);
-            Assert.True(await batchReady.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.True(await batchReady.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken: TestContext.Current.CancellationToken));
             File.WriteAllText(root, "recovered");
-            Assert.True(await batchReady.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.True(await batchReady.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken: TestContext.Current.CancellationToken));
             Assert.Equal(3, batches.Count);
         }
         finally { Directory.Delete(directory, true); }
