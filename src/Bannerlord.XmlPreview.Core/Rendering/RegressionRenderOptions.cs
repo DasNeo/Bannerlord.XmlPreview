@@ -79,7 +79,9 @@ internal static class RegressionSnapshotProducer
             {
                 properties["Resolved.IsVisible"] = registration.Element.Visibility == Visibility.Visible ? "true" : "false";
                 properties["Resolved.IsEnabled"] = registration.Element.IsEnabled ? "true" : "false";
-                properties["Resolved.Opacity"] = registration.Element.Opacity.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                // Render Structure describes widget visual opacity, independent of WPF host composition.
+                properties["Resolved.Opacity"] = (registration.Element.Opacity *
+                    PreviewElementDebugProperties.GetOwnVisualAlpha(registration.Element)).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
                 if (PreviewElementDebugProperties.GetImageResolution(registration.Element) is { } image)
                 {
                     properties["Resolved.ImageStatus"] = image.Status.ToString();

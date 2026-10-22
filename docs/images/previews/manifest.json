@@ -32,7 +32,7 @@
     "Prefab": "modules/native/gui/prefabs/escapemenu.xml",
     "CapturedOn": "2026-10-22",
     "GameVersion": "v1.4.7",
-    "ImageSha256": "9afb783d02f0b7fcdf7984a0a7df7658ba2a3698fd5034e9df06a5a6980b97ee",
+    "ImageSha256": "52dd81f95a77c8f77b4f9083274300263259806a0a1d4e1eb0e1ce64f442fd42",
     "Scenario": "scenarios/escape-menu.json",
     "Image": "escape-menu.png",
     "ModuleVersion": "v1.4.7",

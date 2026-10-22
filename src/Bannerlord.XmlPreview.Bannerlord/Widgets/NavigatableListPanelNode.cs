@@ -19,7 +19,7 @@ public sealed class NavigatableListPanelNode : PrefabNode
         };
 
         context.ApplySizing(panel, Attributes, parentSize);
-        context.ApplyOpacity(panel, Attributes);
+        context.ApplyOpacity(panel, Attributes, panel);
         context.ApplyVisibility(panel, Attributes);
         context.ApplyToolTip(panel, Name, Attributes);
         context.AttachElementDebugMetadata(panel, Name, Attributes);

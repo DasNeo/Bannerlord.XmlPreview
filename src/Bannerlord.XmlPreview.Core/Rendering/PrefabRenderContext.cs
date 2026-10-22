@@ -2120,18 +2120,48 @@ public sealed partial class PrefabRenderContext
         }
     }
 
-    public void ApplyOpacity(UIElement element, IReadOnlyDictionary<string, string> attributes)
+    public void ApplyOpacity(UIElement element, IReadOnlyDictionary<string, string> attributes, Panel? childHost = null)
     {
         var opacity = attributes.TryGetValue("AlphaFactor", out var alphaFactor)
             ? Math.Clamp(ResolveDouble(alphaFactor, 1), 0, 1)
             : 1d;
 
-        if (IsDisabled(attributes))
+        element.Opacity = IsDisabled(attributes) ? 0.88 : 1;
+        PreviewElementDebugProperties.SetOwnVisualAlpha(element, childHost is null ? 1 : opacity);
+        if (childHost is null)
+            element.Opacity *= opacity;
+        else
+            ApplyOwnVisualOpacity(element, childHost, opacity);
+    }
+
+    // Gauntlet Widget.OnRender applies AlphaFactor to its sprite material;
+    // Widget.Render draws children independently. Never fade their WPF host.
+    private static void ApplyOwnVisualOpacity(UIElement element, Panel childHost, double opacity)
+    {
+        if (opacity == 1) return;
+
+        Brush? Fade(Brush? brush)
         {
-            opacity *= 0.88;
+            if (brush is null) return null;
+            var copy = brush.CloneCurrentValue();
+            copy.Opacity *= opacity;
+            return copy;
         }
 
-        element.Opacity = opacity;
+        if (element is Border border)
+        {
+            border.Background = Fade(border.Background);
+            border.BorderBrush = Fade(border.BorderBrush);
+            if (border.Child is { } child) ApplyOwnVisualOpacity(child, childHost, opacity);
+        }
+        else if (element is Panel panel)
+        {
+            panel.Background = Fade(panel.Background);
+            if (panel == childHost) return;
+            foreach (UIElement child in panel.Children) ApplyOwnVisualOpacity(child, childHost, opacity);
+        }
+        else
+            element.Opacity *= opacity;
     }
 
     public void ApplyVisibility(UIElement element, IReadOnlyDictionary<string, string> attributes)

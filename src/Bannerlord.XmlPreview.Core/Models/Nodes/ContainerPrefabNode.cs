@@ -66,7 +66,6 @@ public abstract class ContainerPrefabNode : PrefabNode
         context.ApplySizing(border, Attributes, parentSize);
         context.ApplyAssetSizing(border, spriteId, brushId, isDisabled);
         context.ApplyBrushBorderStyle(border, brushId, isDisabled, _frameBrush);
-        context.ApplyOpacity(border, Attributes);
         context.ApplyVisibility(border, Attributes);
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, [spriteId], [brushId], isDisabled);
@@ -128,6 +127,8 @@ public abstract class ContainerPrefabNode : PrefabNode
             var overlayHeight = double.IsNaN(border.Height) || border.Height <= 0 ? containerSize.Height : border.Height;
             context.AddBrushOverlay(layout, brushId, isDisabled, overlayWidth, overlayHeight, 0);
         }
+
+        context.ApplyOpacity(border, Attributes, childCanvas);
 
         var alignmentBounds = !_frameBrush && !string.IsNullOrWhiteSpace(spriteId)
             ? CreateSpriteAlignmentBounds(selectionRect, containerSize)

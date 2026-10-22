@@ -23,7 +23,7 @@ public sealed class TabControlNode : PrefabNode
         border.Child = childCanvas;
 
         context.ApplySizing(border, Attributes, parentSize);
-        context.ApplyOpacity(border, Attributes);
+        context.ApplyOpacity(border, Attributes, childCanvas);
         context.ApplyVisibility(border, Attributes);
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes);

@@ -31,7 +31,6 @@ public abstract class BrushChromeNodeBase : PrefabNode
         context.ApplySizing(border, Attributes, parentSize);
         context.ApplyButtonSizing(border, Attributes, chrome.PrimaryBrushId, chrome.IsDisabled);
         context.ApplyBrushBorderStyle(border, chrome.PrimaryBrushId, chrome.IsDisabled, false);
-        context.ApplyOpacity(border, Attributes);
         context.ApplyVisibility(border, Attributes);
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, null, chrome.DebugBrushIds, chrome.IsDisabled);
@@ -48,6 +47,7 @@ public abstract class BrushChromeNodeBase : PrefabNode
         FinalizeContent(context, childHost, initialChromeSize, chrome);
 
         context.AddBrushOverlay(layout, chrome.PrimaryBrushId, chrome.IsDisabled, initialChromeSize.Width, initialChromeSize.Height, 0);
+        context.ApplyOpacity(border, Attributes, childHost);
 
         return new RenderedPrefabNode(border, childHost);
     }
