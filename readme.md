@@ -44,6 +44,22 @@ Use **Scenario** controls to create, save, clone, rename, or delete a Preview Sc
 
 Scenarios are stored in `%LOCALAPPDATA%\Bannerlord.XmlPreview\Scenarios`. Use **Edit Scenario** to edit JSON for widget states, dynamic image masks, and reference capture settings. To enable editor navigation, set `BANNERLORD_PREVIEW_EDITOR` to an editor executable that accepts `--goto file:line:column`; otherwise source actions copy the location.
 
+## Use mocks to populate a preview
+
+Prefabs normally receive text, values, and lists from the game. Supply those values through **Bindings** and **Mocks** to preview different screen states without running a campaign.
+
+- **Bindings** sets shared values such as a screen title, a counter, or a visibility flag. Use **Filter Bindings** to find a field by name or value.
+- **Mocks** supplies entries for discovered template lists, such as leaderboard rows or menu buttons. Each entry has its own binding values.
+
+1. Open a prefab and create or select a **Scenario** to save your setup.
+2. Expand **Mocks**, find the list you want to populate, and click **Add**. Edit the entry's fields; use **Remove** to delete an entry. Remove all entries to check the empty-list layout.
+3. Click outside an edited field to apply its value. The preview reloads automatically. Use `true` or `false` for boolean fields and numeric text for counts.
+4. Click **Save** in the Scenario controls to keep both list entries and shared bindings. Save before switching scenarios.
+
+For example, open `Modules\Native\GUI\Prefabs\GameMenu\GameMenuTournamentLeaderboard.xml` and add an entry with `@Name` = `Caladog`, `@RankText` = `1`, `@Victories` = `24`, and `@IsMainHero` = `false`. Add another entry with `@IsMainHero` = `true` to inspect player highlighting. Keep each entry's automatically assigned `@__key` unique.
+
+These values affect the preview only; they do not read or change your saved game. Portraits and other runtime images need separate image inputs and may remain unavailable even when list text is populated.
+
 ## Compare with a reference
 
 **Compare Reference** opens an image comparison for the current scenario, with reference, actual, side-by-side, overlay, and diff views. Shared zoom and pan help inspect differences. Its uncalibrated default does not certify in-game fidelity.
