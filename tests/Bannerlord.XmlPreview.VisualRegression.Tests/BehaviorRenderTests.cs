@@ -14,6 +14,30 @@ namespace Bannerlord.XmlPreview.VisualRegression.Tests;
 
 public sealed class BehaviorRenderTests
 {
+    [Fact]
+    public void CoverChildrenStackCountsEmptyPersuasionMarginsOnce()
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var child = new System.Windows.Controls.Border
+            {
+                Width = 0, Height = 0, Margin = new Thickness(50, 0, 50, 0)
+            };
+            var panel = new GauntletStackLayoutPanel
+            {
+                LayoutMethod = GauntletStackLayoutMethod.VerticalTopToBottom
+            };
+            panel.Children.Add(child);
+            panel.Measure(new Size(1920, 1080));
+            Assert.Equal(100, panel.DesiredSize.Width);
+            Assert.Equal(0, panel.DesiredSize.Height);
+            panel.Arrange(new Rect(new Point(), panel.DesiredSize));
+            Assert.Equal(50, child.TranslatePoint(new Point(), panel).X);
+            Assert.Equal(0, child.ActualWidth);
+            return 0;
+        });
+    }
+
     private static Dictionary<string, string> Attributes(string path, params (string Key, string Value)[] values)
     {
         var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Debug.WidgetPath"] = path, ["WidthSizePolicy"] = "Fixed", ["HeightSizePolicy"] = "Fixed", ["SuggestedWidth"] = "20", ["SuggestedHeight"] = "10" };
