@@ -1,6 +1,6 @@
 # Third-party image and package components
 
-The production TPAC texture field reader in `Bannerlord.XmlPreview.Bannerlord/Assets/TpacTextureReader.cs` adapts the binary layout from [szszss/TpacTool](https://github.com/szszss/TpacTool), reviewed at `b56b77ad273ba67192b1594dbb2eeca8c542b3b7`. Copyright 2020-2022 szszss, MIT. The complete notice is retained in `licenses/TpacTool-MIT.txt`. TpacTool's GUI, exporters, mesh readers and assembly manager are not shipped.
+The production TPAC texture field reader in `src/Bannerlord.XmlPreview.Bannerlord/Assets/TpacTextureReader.cs` adapts the binary layout from [szszss/TpacTool](https://github.com/szszss/TpacTool), reviewed at `b56b77ad273ba67192b1594dbb2eeca8c542b3b7`. Copyright 2020-2022 szszss, MIT. The complete notice is retained in `licenses/TpacTool-MIT.txt`. TpacTool's GUI, exporters, mesh readers and assembly manager are not shipped.
 
 Production dependencies:
 
@@ -14,4 +14,4 @@ The net10.0 production build selects BCnEncoder's netstandard2.1 assets. Its opt
 
 The isolated `tools/TpacSpike` evaluation additionally links the kerema14/TpacTool fork and uses lz4net and JetBrains.Annotations. Those components stay outside the production solution. The spike and its dependency inspection are documented in `docs/reports/m3-progress.md`.
 
-Game and mod images remain the property of their producers. They are loaded from the user's installation and are not redistributed in this repository.
+Game and mod images remain the property of their producers. The application loads assets from the user's installation; game asset packages are not bundled. The README includes screenshots illustrating the game and preview output.

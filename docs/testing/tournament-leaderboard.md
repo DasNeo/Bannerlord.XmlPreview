@@ -50,9 +50,10 @@ never accepted automatically.
 
 ## Review limits
 
-The [corrected reference on issue #6](https://github.com/DasNeo/Bannerlord.XmlPreview/issues/6)
-remains the qualitative reference. Its attachment URL returned an HTTP error
-during this run, so no local copy or calibrated pixel comparison was produced.
+The [README comparison](../../readme.md#preview-examples) includes an in-game
+screenshot alongside an illustrative preview. The original defect discussion
+is in [issue #6](https://github.com/DasNeo/Bannerlord.XmlPreview/issues/6).
+No calibrated pixel comparison has been performed.
 Bitmap distance-field edge smoothing and outline amounts are preview
 approximations; this work does not certify in-game pixel fidelity or
 runtime image fidelity.

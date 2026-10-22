@@ -1,6 +1,6 @@
 # M3 Implementation Plan: Image and Asset Fidelity
 
-Status: complete 2026-10-12. See [M3 completion, installed acceptance and supported data layouts](../reports/m3-completion.md).
+Historical plan; completed 2026-10-12. Current supported image behavior is in the [fidelity matrix](../fidelity/images.md); installed validation scope is in the [image scenario guide](../../test-data/visual-regression/m3-scenarios/README.md).
 
 ## Objective
 

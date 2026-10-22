@@ -4,19 +4,15 @@ Preview and inspect Mount & Blade II: Bannerlord Gauntlet XML prefabs without la
 
 ## Preview examples
 
-These renders show what to expect from the preview today. All were captured at 1920 × 1080 using installed Bannerlord v1.4.7 assets and illustrative Preview Scenario data. Live game backgrounds are replaced with black. In-game screenshots will be added alongside them; these examples do not establish pixel-perfect fidelity.
+These comparisons show what to expect from the preview today. XML previews were captured at 1920 × 1080 using installed Bannerlord v1.4.7 assets and illustrative Preview Scenario data. The supplied in-game screenshots use different framing and resolutions. Live game backgrounds are replaced with black in the previews; text, values, fonts, and layout can also differ. These examples do not establish pixel-perfect fidelity.
 
 | Screen | In game | XML preview |
 | --- | --- | --- |
-| **LandManagement** — AgricultureEstate v1.4.7.3; estate panels, upgrade cards, icons, and controls. | In-game screenshot pending. | [![Land Management XML preview](docs/images/previews/land-management.png)](docs/images/previews/land-management.png) |
-| **GameMenuTournamentLeaderboard** — Native; three sample entries, alternating rows, and player highlighting. Portraits and clan banners are absent; this capture is `Partial`. | In-game screenshot pending. | [![Tournament leaderboard XML preview](docs/images/previews/tournament-leaderboard.png)](docs/images/previews/tournament-leaderboard.png) |
-| **EscapeMenu** — Native; populated pause menu and game-tip panel. A simpler example selected for its cleaner rendering. | In-game screenshot pending. | [![Escape menu XML preview](docs/images/previews/escape-menu.png)](docs/images/previews/escape-menu.png) |
+| **LandManagement** — Preview uses AgricultureEstate v1.4.7.3; estate panels, upgrade cards, icons, and controls. Settlement art, labels, and values differ. | [![Land Management in game](docs/images/previews/land-management-ingame.png)](docs/images/previews/land-management-ingame.png) | [![Land Management XML preview](docs/images/previews/land-management.png)](docs/images/previews/land-management.png) |
+| **GameMenuTournamentLeaderboard** — Native; three sample entries, alternating rows, and player highlighting. Portraits and clan banners are absent; this preview is `Partial`. | [![Tournament leaderboard in game](docs/images/previews/tournament-leaderboard-ingame.png)](docs/images/previews/tournament-leaderboard-ingame.png) | [![Tournament leaderboard XML preview](docs/images/previews/tournament-leaderboard.png)](docs/images/previews/tournament-leaderboard.png) |
+| **EscapeMenu** — Native; populated pause menu and game-tip panel. The preview uses a different tip, with tip navigation disabled, and omits the campaign map. | [![Escape menu in game](docs/images/previews/escape-menu-ingame.png)](docs/images/previews/escape-menu-ingame.png) | [![Escape menu XML preview](docs/images/previews/escape-menu.png)](docs/images/previews/escape-menu.png) |
 
-Open a preview image for the full-resolution capture. Text, values, and selections are sample data and may differ from your campaign. [Capture details and reproducible scenarios](docs/images/previews/README.md) are included for later comparison.
-
-<!-- Replace each pending cell with an image link after receiving the corresponding
-     in-game screenshot. Keep the full frame and record resolution, UI scale,
-     language, game/mod version, and screen state before aligning scenario data. -->
+Open either image at its original resolution. Text, values, and selections in the previews are sample data.
 
 ## Download and install
 

@@ -20,7 +20,7 @@ dotnet run --project src/Bannerlord.XmlPreview --no-build
 - `tests/`: application contracts and Visual Regression tests.
 - `tools/`: validation and investigation scripts, including the TPAC investigation utility.
 - `test-data/` and `fixtures/`: scenarios, accepted metadata, portable corpus, and archived prefab fixtures.
-- `docs/`: developer guidance, fidelity information, plans, and validation reports.
+- `docs/`: developer guidance, fidelity information, architecture decisions, and historical plans. Machine-specific reports remain local and ignored.
 - `GLOSSARY.md` and `docs/adr/`: shared terminology and architecture decisions.
 
 The solution remains at the root. Keep each project's source and build output inside its own directory. Paths in developer commands are relative to the repository root unless stated otherwise. All project documentation and Markdown files must be written in English.
