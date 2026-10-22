@@ -4,19 +4,15 @@ Preview and inspect Mount & Blade II: Bannerlord Gauntlet XML prefabs without la
 
 ## Preview examples
 
-These renders show what to expect from the preview today. All were captured at 1920 × 1080 using installed Bannerlord v1.4.7 assets and illustrative Preview Scenario data. Live game backgrounds are replaced with black. In-game screenshots will be added alongside them; these examples do not establish pixel-perfect fidelity.
+These comparisons show what to expect from the preview today. XML previews were captured at 1920 × 1080 using installed Bannerlord v1.4.7 assets and illustrative Preview Scenario data. The supplied in-game screenshots use different framing and resolutions. Live game backgrounds are replaced with black in the previews; text, values, fonts, and layout can also differ. These examples do not establish pixel-perfect fidelity.
 
 | Screen | In game | XML preview |
 | --- | --- | --- |
-| **LandManagement** — AgricultureEstate v1.4.7.3; estate panels, upgrade cards, icons, and controls. | In-game screenshot pending. | [![Land Management XML preview](docs/images/previews/land-management.png)](docs/images/previews/land-management.png) |
-| **GameMenuTournamentLeaderboard** — Native; three sample entries, alternating rows, and player highlighting. Portraits and clan banners are absent; this capture is `Partial`. | In-game screenshot pending. | [![Tournament leaderboard XML preview](docs/images/previews/tournament-leaderboard.png)](docs/images/previews/tournament-leaderboard.png) |
-| **EscapeMenu** — Native; populated pause menu and game-tip panel. A simpler example selected for its cleaner rendering. | In-game screenshot pending. | [![Escape menu XML preview](docs/images/previews/escape-menu.png)](docs/images/previews/escape-menu.png) |
+| **LandManagement** — Preview uses AgricultureEstate v1.4.7.3; estate panels, upgrade cards, icons, and controls. Settlement art, labels, and values differ. | [![Land Management in game](docs/images/previews/land-management-ingame.png)](docs/images/previews/land-management-ingame.png) | [![Land Management XML preview](docs/images/previews/land-management.png)](docs/images/previews/land-management.png) |
+| **GameMenuTournamentLeaderboard** — Native; three sample entries, alternating rows, and player highlighting. Portraits and clan banners are absent; this preview is `Partial`. | [![Tournament leaderboard in game](docs/images/previews/tournament-leaderboard-ingame.png)](docs/images/previews/tournament-leaderboard-ingame.png) | [![Tournament leaderboard XML preview](docs/images/previews/tournament-leaderboard.png)](docs/images/previews/tournament-leaderboard.png) |
+| **EscapeMenu** — Native; populated pause menu and game-tip panel. The preview uses a different tip, with tip navigation disabled, and omits the campaign map. | [![Escape menu in game](docs/images/previews/escape-menu-ingame.png)](docs/images/previews/escape-menu-ingame.png) | [![Escape menu XML preview](docs/images/previews/escape-menu.png)](docs/images/previews/escape-menu.png) |
 
-Open a preview image for the full-resolution capture. Text, values, and selections are sample data and may differ from your campaign. [Capture details and reproducible scenarios](docs/images/previews/README.md) are included for later comparison.
-
-<!-- Replace each pending cell with an image link after receiving the corresponding
-     in-game screenshot. Keep the full frame and record resolution, UI scale,
-     language, game/mod version, and screen state before aligning scenario data. -->
+Open either image at its original resolution. Text, values, and selections in the previews are sample data.
 
 ## Download and install
 
@@ -47,6 +43,22 @@ Edit the XML in your preferred editor. The app watches loaded dependencies; use 
 Use **Scenario** controls to create, save, clone, rename, or delete a Preview Scenario. A scenario preserves preview data, widget states, and resolution so you can return to the same setup. Bindings and list contents are editable in the app. Save changes before switching scenarios.
 
 Scenarios are stored in `%LOCALAPPDATA%\Bannerlord.XmlPreview\Scenarios`. Use **Edit Scenario** to edit JSON for widget states, dynamic image masks, and reference capture settings. To enable editor navigation, set `BANNERLORD_PREVIEW_EDITOR` to an editor executable that accepts `--goto file:line:column`; otherwise source actions copy the location.
+
+## Use mocks to populate a preview
+
+Prefabs normally receive text, values, and lists from the game. Supply those values through **Bindings** and **Mocks** to preview different screen states without running a campaign.
+
+- **Bindings** sets shared values such as a screen title, a counter, or a visibility flag. Use **Filter Bindings** to find a field by name or value.
+- **Mocks** supplies entries for discovered template lists, such as leaderboard rows or menu buttons. Each entry has its own binding values.
+
+1. Open a prefab and create or select a **Scenario** to save your setup.
+2. Expand **Mocks**, find the list you want to populate, and click **Add**. Edit the entry's fields; use **Remove** to delete an entry. Remove all entries to check the empty-list layout.
+3. Click outside an edited field to apply its value. The preview reloads automatically. Use `true` or `false` for boolean fields and numeric text for counts.
+4. Click **Save** in the Scenario controls to keep both list entries and shared bindings. Save before switching scenarios.
+
+For example, open `Modules\Native\GUI\Prefabs\GameMenu\GameMenuTournamentLeaderboard.xml` and add an entry with `@Name` = `Caladog`, `@RankText` = `1`, `@Victories` = `24`, and `@IsMainHero` = `false`. Add another entry with `@IsMainHero` = `true` to inspect player highlighting. Keep each entry's automatically assigned `@__key` unique.
+
+These values affect the preview only; they do not read or change your saved game. Portraits and other runtime images need separate image inputs and may remain unavailable even when list text is populated.
 
 ## Compare with a reference
 

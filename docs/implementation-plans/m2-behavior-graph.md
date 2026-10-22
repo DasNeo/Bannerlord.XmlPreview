@@ -1,5 +1,7 @@
 # M2 Implementation Plan: Behavior Graph and Widget Fidelity
 
+Historical plan; completed 2026-10-12. The starting point and migration steps describe the original work. See the [plan index](README.md) for current guidance.
+
 ## Objective
 
 Move Bannerlord-specific widget behavior out of Core into a per-render Behavior Graph. Remove Core's DemoData dependency and global preview state. Prove the graph with four contrasting widgets before migrating additional families.
@@ -239,4 +241,4 @@ Visual Regression remains the acceptance layer for observable output. Tests must
 - [x] Behavior Graph ADR is accepted after proof.
 - [x] Selected Wave-1 and Wave-2 families have Behavior and Visual Regression coverage.
 
-Evidence and static preview limitations are recorded in the [M2 completion report](../reports/m2-completion.md), including the 2026-10-12 audit before M3.
+The accepted architecture is recorded in [ADR 0002](../adr/0002-per-render-behavior-graph.md). Current verification procedures and pixel-comparison limits are in the [Visual Regression workflow](../../test-data/visual-regression/README.md).

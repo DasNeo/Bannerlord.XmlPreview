@@ -10,7 +10,21 @@
     "Scenario": "scenarios/land-management.json",
     "Image": "land-management.png",
     "ModuleVersion": "v1.4.7.3",
-    "CompletionStatus": "Complete"
+    "CompletionStatus": "Complete",
+    "InGameScreenshot": {
+      "Image": "land-management-ingame.png",
+      "SourceFile": "AgricultureEstate_LandManagement-ingame.png",
+      "ModuleVersion": null,
+      "UiScale": null,
+      "MetadataNote": "Game/mod versions and UI scale were not supplied; preview versions do not establish screenshot versions.",
+      "Language": "English",
+      "Framing": "As supplied; no cropping or resizing applied",
+      "ImageSha256": "eea46bdb9d6e9da85ec02217a2a217894bb5e666f931a169ea78221d6f3a3359",
+      "GameVersion": null,
+      "Width": 1995,
+      "AddedOn": "2026-10-22",
+      "Height": 1295
+    }
   },
   {
     "Id": "tournament-leaderboard",
@@ -23,7 +37,21 @@
     "Scenario": "scenarios/tournament-leaderboard.json",
     "Image": "tournament-leaderboard.png",
     "ModuleVersion": "v1.4.7",
-    "CompletionStatus": "Partial"
+    "CompletionStatus": "Partial",
+    "InGameScreenshot": {
+      "Image": "tournament-leaderboard-ingame.png",
+      "SourceFile": "Native_GameMenuTournamentLeaderboard-ingame.png",
+      "ModuleVersion": null,
+      "UiScale": null,
+      "MetadataNote": "Game/mod versions and UI scale were not supplied; preview versions do not establish screenshot versions.",
+      "Language": "English",
+      "Framing": "As supplied; no cropping or resizing applied",
+      "ImageSha256": "1840cb211401e1e898a68673bc4e37d575ae0ab72d3c75e81e9962af21f4e9d0",
+      "GameVersion": null,
+      "Width": 934,
+      "AddedOn": "2026-10-22",
+      "Height": 964
+    }
   },
   {
     "Id": "escape-menu",
@@ -32,10 +60,24 @@
     "Prefab": "modules/native/gui/prefabs/escapemenu.xml",
     "CapturedOn": "2026-10-22",
     "GameVersion": "v1.4.7",
-    "ImageSha256": "9afb783d02f0b7fcdf7984a0a7df7658ba2a3698fd5034e9df06a5a6980b97ee",
+    "ImageSha256": "52dd81f95a77c8f77b4f9083274300263259806a0a1d4e1eb0e1ce64f442fd42",
     "Scenario": "scenarios/escape-menu.json",
     "Image": "escape-menu.png",
     "ModuleVersion": "v1.4.7",
-    "CompletionStatus": "Complete"
+    "CompletionStatus": "Complete",
+    "InGameScreenshot": {
+      "Image": "escape-menu-ingame.png",
+      "SourceFile": "Native_EscapeMenu-ingame.png",
+      "ModuleVersion": null,
+      "UiScale": null,
+      "MetadataNote": "Game/mod versions and UI scale were not supplied; preview versions do not establish screenshot versions.",
+      "Language": "English",
+      "Framing": "User-corrected crop; accidental bottom strip removed from the supplied screenshot",
+      "ImageSha256": "91c08bdbdaf3a5b20d066b8b985d545eddbdbf5cea7ba6be8c54f87788493f4e",
+      "GameVersion": null,
+      "Width": 2657,
+      "AddedOn": "2026-10-22",
+      "Height": 1222
+    }
   }
 ]

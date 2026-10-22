@@ -1,8 +1,6 @@
-# M4 Steps to Repeat (StR)
+# Manual authoring tests
 
-Use this procedure to test the authoring loop. Record each case as Passed, Failed or NotRun, with the observed result. M4 was accepted on 2026-10-21 using combined automated, installed structural and live smoke evidence; see [M4 completion](../reports/m4-completion.md). Acceptance does not turn unexecuted checks into Passed results.
-
-Recorded execution: [2026-10-21 retest results](../reports/m4-retest-2026-10-21.md), including automated totals, exercised WPF cases and remaining NotRun cases.
+Use this procedure to test scenario persistence, dependency reload, source navigation, and comparison views. Record each case as Passed, Failed or NotRun, with the observed result. Historical milestone acceptance does not turn unexecuted checks into Passed results.
 
 ## 1. Build and run automated acceptance
 
@@ -121,7 +119,7 @@ If an editor emits multiple saves or autosaves, record that behavior before inte
 
 ## 7. Optional copied-game brush and image mutation checks
 
-These checks provide additional integration confidence. For M4 acceptance, the user accepted passing installed Structure Only comparisons together with the automated invalidation tests and live generated brush/RDC checks. Repeating mutations with copied installed-game assets is optional and does not block milestone completion.
+These optional checks provide additional integration confidence beyond installed Structure Only comparisons and generated-asset invalidation tests.
 
 Use a **disposable copy of a Bannerlord installation with Native and AgricultureEstate**, preserving module paths, rather than altering the live game files. Select this copy in the app's Bannerlord controls and apply it. Open `Modules/AgricultureEstate/GUI/Prefabs/LandManagement.xml` from the copy.
 

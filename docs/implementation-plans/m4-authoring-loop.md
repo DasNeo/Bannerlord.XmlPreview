@@ -1,5 +1,7 @@
 # M4 Implementation Plan: Authoring Loop
 
+Historical plan; completed 2026-10-21. The work packages describe the original implementation. See the [plan index](README.md) for current guidance.
+
 ## Objective
 
 Make repeated prefab editing fast and diagnosable through persistent Preview Scenarios, dependency-aware reload, source navigation, and visual comparison. Keep editing in the user's chosen external editor.
@@ -152,4 +154,4 @@ Use [M4 Steps to Repeat (StR)](../testing/m4-steps-to-repeat.md) to run and reco
 - [x] No embedded XML editor was introduced.
 - [x] End-to-end authoring tests and WPF smoke test pass with the accepted combination of automated and live evidence.
 
-M4 was accepted on 2026-10-21. Automated authoring and compiled comparison-window tests, installed Structure Only comparisons and the exercised live authoring cases pass. Scenario deletion and deterministic obsolete-load cancellation use automated coverage; live generated brush/RDC invalidation and installed structural evidence are accepted together. Copied-game asset mutation checks are optional additional coverage, not a completion gate. Unexecuted checks retain their NotRun status; see [completion evidence and limitations](../reports/m4-completion.md).
+M4 was accepted on 2026-10-21. Automated authoring and compiled comparison-window tests, installed Structure Only comparisons and the exercised live authoring cases supplied acceptance evidence. Scenario deletion and deterministic obsolete-load cancellation used automated coverage; live generated brush/RDC invalidation and installed structural evidence were accepted together. Copied-game asset mutation checks remain optional. Unexecuted checks retain their NotRun status; use the [manual testing guide](../testing/m4-steps-to-repeat.md) for repeatable checks and evidence recording.

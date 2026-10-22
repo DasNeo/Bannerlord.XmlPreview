@@ -1,47 +1,15 @@
-# Milestone Implementation Plans
+# Historical milestone plans
 
-Status: M0 complete and reverified 2026-10-04; M1-M3 complete 2026-10-12; M4 complete and accepted 2026-10-21 using combined automated, installed structural and live smoke evidence. See [M4 completion](../reports/m4-completion.md).
+These completed plans preserve the original work breakdown, design rationale, and acceptance criteria. Their starting points, future-tense instructions, and checklists describe the implementation at the time; they are not current tasks.
 
-These plans turn the [development roadmap](../roadmap.md) into executable work packages. They preserve the terminology in [GLOSSARY.md](../../GLOSSARY.md) and the execution boundary in [ADR 0001](../adr/0001-do-not-execute-mod-code-widgets.md).
+| Milestone | Completed | Scope |
+| --- | --- | --- |
+| [M0: Stabilize the Current Refactor](m0-stabilize-current-refactor.md) | Reverified 2026-10-04 | Async loading, cancellation, Diagnostics, and fixture validation. |
+| [M1: Measurable Visual Fidelity](m1-measurable-visual-fidelity.md) | 2026-10-12 | Structural comparisons, capture, scenarios, and explicit Baseline Acceptance. |
+| [M2: Behavior Graph and Widget Fidelity](m2-behavior-graph.md) | 2026-10-12 | Per-render declarative behavior and the Core/adapter boundary. |
+| [M3: Image and Asset Fidelity](m3-image-and-asset-fidelity.md) | 2026-10-12 | TPAC/RDC loading, module precedence, image providers, and placeholders. |
+| [M4: Authoring Loop](m4-authoring-loop.md) | 2026-10-21 | Scenario editing, dependency reload, source navigation, and comparison views. |
 
-Source paths and runnable commands use the current [repository layout](../../CONTRIBUTING.md#repository-layout): production projects in `src/`, test projects in `tests/`, and the solution at the root. The milestone scope and recorded acceptance dates remain historical.
+Completion reports and machine-specific evidence under `docs/reports/` and `artifacts/` are local, ignored files and are not distributed with the repository. Completed milestones do not certify in-game pixel fidelity.
 
-## Execution order
-
-1. [M0: Stabilize the Current Refactor](./m0-stabilize-current-refactor.md)
-2. [M1: Measurable Visual Fidelity](./m1-measurable-visual-fidelity.md)
-3. [M2: Behavior Graph and Widget Fidelity](./m2-behavior-graph.md)
-4. [M3: Image and Asset Fidelity](./m3-image-and-asset-fidelity.md)
-5. [M4: Authoring Loop](./m4-authoring-loop.md)
-
-Each milestone starts only after the previous milestone meets its exit criteria. A later milestone may add a narrow enabling contract earlier only when the current milestone cannot be completed without it. Such an exception must be documented in the current milestone report.
-
-M0 implementation and verification are recorded in [the M0 completion report](../reports/m0-completion.md).
-
-M1's accepted validation results and observed CI evidence are recorded in [the M1 completion report](../reports/m1-completion.md); implementation history and benchmark evidence remain in [the progress report](../reports/m1-progress.md). Screenshot capture and Full comparison are optional and do not block milestones.
-
-M2's implementation, accepted ADR and reverified acceptance are recorded in [the M2 completion report](../reports/m2-completion.md). M3's installed acceptance, fidelity matrix and supported data layouts are recorded in [the M3 completion report](../reports/m3-completion.md); the [TPAC decoding spike](../reports/m3-progress.md) retains initial performance evidence.
-
-## Rules shared by every milestone
-
-- Preserve unrelated user changes in the working tree.
-- Prefer vertical changes that include implementation, diagnostics, fixture coverage, and documentation together.
-- Keep Core generic. Bannerlord names and semantics belong in the Bannerlord adapter.
-- Treat the module interface as the primary test surface.
-- Replace obsolete tests and paths when a new seam supersedes them; do not maintain permanent parallel implementations.
-- Add structured outcomes before scripts parse human-readable text.
-- Never convert `Partial`, Truncation, missing assets, or missing behavior into `Passed` for convenience.
-- Record performance before optimizing it.
-- Update the roadmap, Glossary, and relevant milestone report when an accepted decision changes.
-
-## Milestone report format
-
-Each milestone closes with `docs/reports/m<N>-completion.md` containing:
-
-- implemented work packages
-- important deviations from the plan
-- build and test commands with results
-- fixture and Visual Regression results
-- performance measurements where applicable
-- known limitations and explicitly deferred work
-- links to ADRs created during the milestone
+For current work, use [GitHub Issues](https://github.com/DasNeo/Bannerlord.XmlPreview/issues). For current procedures and contracts, use the [development guide](../development/README.md), [Visual Regression workflow](../../test-data/visual-regression/README.md), [manual testing guide](../testing/m4-steps-to-repeat.md), [glossary](../../GLOSSARY.md), and [ADRs](../adr/).

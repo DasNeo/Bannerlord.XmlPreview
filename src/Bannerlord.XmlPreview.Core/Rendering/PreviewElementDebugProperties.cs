@@ -5,6 +5,12 @@ namespace Bannerlord.XmlPreview.Rendering;
 
 public static class PreviewElementDebugProperties
 {
+    // Alpha applied to a widget's own visuals, independently of its child host.
+    public static readonly DependencyProperty OwnVisualAlphaProperty = DependencyProperty.RegisterAttached(
+        "OwnVisualAlpha", typeof(double), typeof(PreviewElementDebugProperties), new PropertyMetadata(1d));
+    public static double GetOwnVisualAlpha(DependencyObject element) => (double)element.GetValue(OwnVisualAlphaProperty);
+    public static void SetOwnVisualAlpha(DependencyObject element, double value) => element.SetValue(OwnVisualAlphaProperty, value);
+
     public static readonly DependencyProperty SourceLocationProperty = DependencyProperty.RegisterAttached(
         "SourceLocation", typeof(SourceLocation), typeof(PreviewElementDebugProperties), new PropertyMetadata(null));
     public static SourceLocation? GetSourceLocation(DependencyObject element) => (SourceLocation?)element.GetValue(SourceLocationProperty);

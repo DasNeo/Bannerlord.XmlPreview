@@ -1,6 +1,6 @@
 # M1 Implementation Plan: Measurable Visual Fidelity
 
-Status: complete 2026-10-12 under automated structural, layout, behavior, asset and Diagnostics validation. Screenshots and Full comparison are optional. The supplied CI artifacts confirm all required tests and all nine portable cases passed. See [the completion report](../reports/m1-completion.md).
+Historical plan; completed 2026-10-12 under automated structural, layout, behavior, asset and Diagnostics validation. Screenshots and Full comparison are optional. See the [plan index](README.md) for current guidance.
 
 ## Objective
 

@@ -17,6 +17,7 @@ public sealed partial class PrefabRenderContext
         var attributes = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
         // Image Color tints source pixels; it must not also paint the container background.
         attributes.Remove("Color");
+        attributes.Remove("AlphaFactor"); // Apply after replacing/adding the image visual.
         if (dynamicImage)
         {
             attributes.Remove("Brush"); attributes.Remove("Sprite");
@@ -80,8 +81,6 @@ public sealed partial class PrefabRenderContext
             });
             PreviewElementDebugProperties.SetSelectionBounds(border, new Rect(new Point(0, 0), size));
         }
-        if (node.Attributes.TryGetValue("Brush.AlphaFactor", out var alpha))
-            border.Opacity *= Math.Clamp(ResolveDouble(alpha, 1), 0, 1);
         ReportImage(border, node, resolution, "source");
         if (resolution.Status is ImageResolutionStatus.Missing or ImageResolutionStatus.RuntimeOnly or ImageResolutionStatus.Invalid)
         {
@@ -96,6 +95,14 @@ public sealed partial class PrefabRenderContext
             border.Background = new SolidColorBrush(Color.FromArgb(50, color.R, color.G, color.B));
             grid.Children.Add(new TextBlock { Text = $"{resolution.Status}: {request.Provider ?? request.Identity}",
                 Foreground = new SolidColorBrush(color), TextWrapping = TextWrapping.Wrap, FontSize = 11 });
+        }
+        ApplyOpacity(border, node.Attributes, rendered.ChildHost);
+        if (node.Attributes.TryGetValue("Brush.AlphaFactor", out var alpha))
+        {
+            var brushAlpha = Math.Clamp(ResolveDouble(alpha, 1), 0, 1);
+            ApplyOwnVisualOpacity(border, rendered.ChildHost!, brushAlpha);
+            PreviewElementDebugProperties.SetOwnVisualAlpha(border,
+                PreviewElementDebugProperties.GetOwnVisualAlpha(border) * brushAlpha);
         }
         return rendered;
     }

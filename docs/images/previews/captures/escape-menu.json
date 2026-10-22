@@ -23,14 +23,14 @@
   "CompletionStatus": "Complete",
   "StructureSha256": "409fa8e830fbb8a921986268163693d27148287d31c8aed667aeb353dbf3fd3d",
   "LayoutSha256": "e634e3f55821d3891687ea5c6e5e60a3bc6a2c7d1d661e750db73aeabb7f62e1",
-  "ActualSha256": "9afb783d02f0b7fcdf7984a0a7df7658ba2a3698fd5034e9df06a5a6980b97ee",
+  "ActualSha256": "52dd81f95a77c8f77b4f9083274300263259806a0a1d4e1eb0e1ce64f442fd42",
   "Diagnostics": [],
   "Timing": {
-    "Load": "00:00:05.2815487",
-    "Render": "00:00:00.4456914",
-    "Capture": "00:00:00.0894416",
+    "Load": "00:00:00.4006385",
+    "Render": "00:00:00.5910451",
+    "Capture": "00:00:00.1420350",
     "Comparison": null,
-    "ArtifactWrite": "00:00:00.0816246"
+    "ArtifactWrite": "00:00:00.1927344"
   },
   "SchemaVersion": 1
 }

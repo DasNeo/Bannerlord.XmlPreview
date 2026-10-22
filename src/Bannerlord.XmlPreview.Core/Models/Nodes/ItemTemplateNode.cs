@@ -26,7 +26,7 @@ public sealed class ItemTemplateNode : PrefabNode
         };
 
         context.ApplySizing(canvas, Attributes, parentSize);
-        context.ApplyOpacity(canvas, Attributes);
+        context.ApplyOpacity(canvas, Attributes, canvas);
         context.ApplyVisibility(canvas, Attributes);
         context.ApplyToolTip(canvas, Name, Attributes);
         context.AttachElementDebugMetadata(canvas, Name, Attributes);

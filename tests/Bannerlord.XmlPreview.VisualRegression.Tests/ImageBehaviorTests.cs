@@ -17,6 +17,60 @@ namespace Bannerlord.XmlPreview.VisualRegression.Tests;
 
 public sealed class ImageBehaviorTests
 {
+    [Theory]
+    [InlineData("Widget", "1", 255)]
+    [InlineData("Widget", "0.5", 204)]
+    [InlineData("Widget", "0", 153)]
+    [InlineData("ImageWidget", "1", 255)]
+    [InlineData("ImageWidget", "0.5", 204)]
+    [InlineData("MaskedTextureWidget", "1", 255)]
+    [InlineData("ButtonWidget", "1", 255)]
+    [InlineData("ButtonWidget", "0.5", 230)]
+    [InlineData("ImageIdentifierWidget", "1", 255)]
+    [InlineData("ImageIdentifierWidget", "0.5", 230)]
+    public void TranslucentParentSpritePreservesIndependentChildAlpha(string type, string childAlpha, int expectedChild)
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var child = new WidgetNode("Widget", new Dictionary<string, string>
+            {
+                [PrefabVisualTreeHelper.DebugWidgetPathAttributeName] = "Window > Parent > Child",
+                ["Id"] = "child",
+                ["WidthSizePolicy"] = "Fixed", ["HeightSizePolicy"] = "Fixed",
+                ["SuggestedWidth"] = "10", ["SuggestedHeight"] = "4",
+                ["Sprite"] = "source", ["AlphaFactor"] = childAlpha
+            }, []);
+            var parentAttributes = new Dictionary<string, string>
+            {
+                [PrefabVisualTreeHelper.DebugWidgetPathAttributeName] = "Window > Parent",
+                ["WidthSizePolicy"] = "Fixed", ["HeightSizePolicy"] = "Fixed",
+                ["SuggestedWidth"] = "40", ["SuggestedHeight"] = "20",
+                ["Sprite"] = type == "ButtonWidget" ? "" : "source",
+                ["Brush"] = type == "ButtonWidget" ? "translucent" : "",
+                ["ImageId"] = "source", ["MaskSprite"] = "source",
+                ["Brush.AlphaFactor"] = type == "ImageIdentifierWidget" ? "0.5" : "1",
+                ["Color"] = "#000000FF", ["AlphaFactor"] = "0.4"
+            };
+            PrefabNode parent = type == "ButtonWidget"
+                ? new ButtonWidgetNode(type, parentAttributes, [child])
+                : new WidgetNode(type, parentAttributes, [child]);
+            var (root, diagnostics) = Render(new Images(), parent, new Size(40, 20));
+            foreach (var border in Elements(root).OfType<Border>()) border.CornerRadius = new CornerRadius(0);
+            var pixels = WpfPreviewCapture.Capture(root, new("independent-alpha", 40, 20, Background: "#FFFFFF"));
+            var childVisual = Elements(root).Single(e => PreviewElementDebugProperties.GetDebugInfo(e)?.GetAttributeDisplayValue("Id") == "child");
+            var childPosition = childVisual.TransformToAncestor(root).Transform(new Point(1, 1));
+            var childOffset = ((int)childPosition.Y * 40 + (int)childPosition.X) * 3;
+            Assert.All(pixels.Pixels.Skip(childOffset).Take(3), value => Assert.InRange(value, expectedChild - 1, expectedChild + 1));
+            var expectedBackdrop = type is "ButtonWidget" or "ImageIdentifierWidget" ? 204 : 153;
+            Assert.All(pixels.Pixels.Skip((15 * 40 + 35) * 3).Take(3), value => Assert.InRange(value, expectedBackdrop - 1, expectedBackdrop + 1));
+            Assert.All(Elements(root).OfType<Border>(), border => Assert.Equal(1, border.Opacity));
+            Assert.Equal(type == "ImageIdentifierWidget" ? "0.2" : "0.4",
+                diagnostics.RenderStructure!.Root.Children[0].Properties["Resolved.Opacity"]);
+            Assert.Equal(RenderCompletionStatus.Complete, diagnostics.CompletionStatus);
+            return 0;
+        });
+    }
+
     [Fact]
     public void AlphaBoundsAreIdenticalForPremultipliedAndOtherPixelFormats()
     {
@@ -168,7 +222,8 @@ public sealed class ImageBehaviorTests
         {
             var (root, diagnostics) = Render("ImageWidget", ("Sprite", "source"), ("Stretch", "Fill"), ("AlphaFactor", "0.5"), ("Color", "#FF0000FF"));
             var widget = ImageWidget(root);
-            Assert.Equal(2, widget.ActualWidth); Assert.Equal(1, widget.ActualHeight); Assert.Equal(.5, widget.Opacity);
+            Assert.Equal(2, widget.ActualWidth); Assert.Equal(1, widget.ActualHeight); Assert.Equal(1, widget.Opacity);
+            Assert.Equal(.5, Elements(widget).OfType<Image>().Single().Opacity);
             Assert.Equal(RenderCompletionStatus.Complete, diagnostics.CompletionStatus);
             var pixels = WpfPreviewCapture.Capture(root, new("images", 2, 1, Background: "#000000"));
             Assert.InRange(pixels.Pixels[0], 127, 128); Assert.Equal(0, pixels.Pixels[1]); Assert.Equal(0, pixels.Pixels[2]);
@@ -277,12 +332,17 @@ public sealed class ImageBehaviorTests
             ["WidthSizePolicy"] = "Fixed", ["HeightSizePolicy"] = "Fixed", ["SuggestedWidth"] = "2", ["SuggestedHeight"] = "1" };
         foreach (var (name, value) in values) attrs[name] = value;
         var node = new WidgetNode(type, attrs, []);
-        var rootAttrs = new Dictionary<string, string>(attrs) { [PrefabVisualTreeHelper.DebugWidgetPathAttributeName] = "Window" };
+        return Render(assets, node);
+    }
+    private static (FrameworkElement, PreviewDiagnostics) Render(Images assets, PrefabNode node, Size? size = null)
+    {
+        var rootAttrs = new Dictionary<string, string> { [PrefabVisualTreeHelper.DebugWidgetPathAttributeName] = "Window" };
         rootAttrs["WidthSizePolicy"] = rootAttrs["HeightSizePolicy"] = "Fixed";
         var document = new PrefabDocument("fixture.xml", new WindowNode(rootAttrs, [node]), new Dictionary<string, string>(), new HashSet<string>(), PrefabWidgetPropertyMap.Empty, PrefabWidgetReferenceMap.Empty);
         var diagnostics = new PreviewDiagnostics();
         var renderer = new PrefabRenderer(assets, new BannerlordBrushMetricsProvider(assets), new BannerlordBrushOverlayFeatureHandler(),
-            new SnapshotCaptureTests.EmptyData(), new ImageLayout(), new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider(), new BannerlordBehaviorRuleProvider());
+            new SnapshotCaptureTests.EmptyData(), new ImageLayout { PreviewSize = size ?? new Size(2, 1) },
+            new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider(), new BannerlordBehaviorRuleProvider());
         var root = renderer.Render(document, diagnostics, new("fixture.xml", new Dictionary<string, string>(), new Dictionary<string, IReadOnlyDictionary<string, string>>(), []));
         return (root, diagnostics);
     }
@@ -299,13 +359,18 @@ public sealed class ImageBehaviorTests
         public BitmapSource? SourceImage { get; init; }
         public Task WarmUpAsync(CancellationToken token = default) => Task.CompletedTask;
         public Task WarmUpAssetsAsync(IReadOnlyCollection<string> brushes, IReadOnlyCollection<string> sprites, CancellationToken token = default) => Task.CompletedTask;
-        public BrushDefinition? FindBrush(string? name) => null;
+        public BrushDefinition? FindBrush(string? name) => name == "translucent"
+            ? new(name, "fixture", [new("Default", "black", null, null, null, null, .5,
+                null, null, null, false, null, null, null, null, null, null)],
+                new Dictionary<string, BrushStyleDefinition>(), null, null, null, null)
+            : null;
         public SpriteDefinition? FindSprite(string? name) => name == "frame"
             ? new(name, "fixture", "NineRegionSprite", name, "fixture", 1, 3, 3, 1, 1, 1, 1)
-            : name is "source" or "mask" ? new(name, "fixture", "Sprite", name, "fixture", 1, 2, 1) : null;
+            : name is "source" or "mask" or "black" ? new(name, "fixture", "Sprite", name, "fixture", 1, 2, 1) : null;
         public ImageSource? GetSpriteImage(string? name) => name switch
         {
             "source" => SourceImage ?? Bitmap([255, 255, 255, 255, 255, 255, 255, 255]),
+            "black" => Bitmap([0, 0, 0, 255, 0, 0, 0, 255]),
             "mask" => Bitmap([255, 255, 255, 255, 0, 0, 0, 0]),
             "mask-r8" => Bitmap([255, 255, 255, 255, 0, 0, 0, 255]),
             "frame" => FrameBitmap(), _ => null
@@ -336,6 +401,6 @@ public sealed class ImageBehaviorTests
     private sealed class ImageLayout : Bannerlord.XmlPreview.Core.Abstractions.IRootLayoutHints
     {
         public Size PreviewSize { get; set; } = new(2, 1);
-        public Size ResolveRootSize(Func<string?, double, double> resolveDouble) => new(2, 1);
+        public Size ResolveRootSize(Func<string?, double, double> resolveDouble) => PreviewSize;
     }
 }

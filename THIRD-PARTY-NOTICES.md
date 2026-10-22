@@ -14,4 +14,4 @@ The net10.0 production build selects BCnEncoder's netstandard2.1 assets. Its opt
 
 The isolated `tools/TpacSpike` evaluation additionally links the kerema14/TpacTool fork and uses lz4net and JetBrains.Annotations. Those components stay outside the production solution. The spike and its dependency inspection are documented in `docs/reports/m3-progress.md`.
 
-Game and mod images remain the property of their producers. They are loaded from the user's installation and are not redistributed in this repository.
+Game and mod images remain the property of their producers. The application loads assets from the user's installation; game asset packages are not bundled. The README includes screenshots illustrating the game and preview output.

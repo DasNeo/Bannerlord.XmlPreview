@@ -1,5 +1,7 @@
 # M0 Implementation Plan: Stabilize the Current Refactor
 
+Historical plan; M0 was completed and reverified on 2026-10-04. The starting point and unchecked exit list below describe the original work, not outstanding tasks. See the [plan index](README.md) for current guidance.
+
 ## Objective
 
 Turn the current async loading, cancellation, environment warm-up, installation indexing, file watching, diagnostics timing, and responsibility extraction work into a reviewed and reproducible baseline. M0 changes no product scope and introduces no new fidelity architecture.
