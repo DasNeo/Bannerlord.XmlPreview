@@ -31,6 +31,7 @@ public sealed class NativeSuiteTests
     [Theory]
     [InlineData("m2-portable-baselines", "portable-scenarios")]
     [InlineData("m3-portable-baselines", "m3-portable-scenarios")]
+    [InlineData("issue-6-portable-baselines", "m3-portable-scenarios")]
     [InlineData("native-baselines", "scenarios")]
     [InlineData("m3-native-baselines", "m3-scenarios")]
     [InlineData("m3-mod-baselines", "m3-scenarios")]
@@ -61,7 +62,7 @@ public sealed class NativeSuiteTests
         using var capture = new BannerlordPreviewCapture(".", Path.Combine(data, "corpus"));
         var scenarioPath = Path.Combine(data, "m3-portable-scenarios", id + ".json");
         var scenario = ScenarioLoader.Load(scenarioPath);
-        IVisualRegression regression = new VisualRegressionRunner(capture.CaptureAsync, Path.Combine(data, "m3-portable-baselines"));
+        IVisualRegression regression = new VisualRegressionRunner(capture.CaptureAsync, Path.Combine(data, "issue-6-portable-baselines"));
         var report = await regression.CompareAsync(new(scenario.PrefabIdentity, scenarioPath, VisualRegressionMode.StructureOnly,
             new(id, "v1.4.7", "v1.4.7", scenario.CaptureProfile.Id, 1), Path.Combine(fixture.Root, "native-actual")));
         Assert.True(report.Outcome == VisualRegressionOutcome.Passed,

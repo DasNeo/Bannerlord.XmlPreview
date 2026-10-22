@@ -2,6 +2,22 @@
 
 Preview and inspect Mount & Blade II: Bannerlord Gauntlet XML prefabs without launching the game. Open a prefab, explore its widget tree, adjust preview data and resolution, and investigate layout, asset, binding, and reference issues.
 
+## Preview examples
+
+These renders show what to expect from the preview today. All were captured at 1920 × 1080 using installed Bannerlord v1.4.7 assets and illustrative Preview Scenario data. Live game backgrounds are replaced with black. In-game screenshots will be added alongside them; these examples do not establish pixel-perfect fidelity.
+
+| Screen | In game | XML preview |
+| --- | --- | --- |
+| **LandManagement** — AgricultureEstate v1.4.7.3; estate panels, upgrade cards, icons, and controls. | In-game screenshot pending. | [![Land Management XML preview](docs/images/previews/land-management.png)](docs/images/previews/land-management.png) |
+| **GameMenuTournamentLeaderboard** — Native; three sample entries, alternating rows, and player highlighting. Portraits and clan banners are absent; this capture is `Partial`. | In-game screenshot pending. | [![Tournament leaderboard XML preview](docs/images/previews/tournament-leaderboard.png)](docs/images/previews/tournament-leaderboard.png) |
+| **EscapeMenu** — Native; populated pause menu and game-tip panel. A simpler example selected for its cleaner rendering. | In-game screenshot pending. | [![Escape menu XML preview](docs/images/previews/escape-menu.png)](docs/images/previews/escape-menu.png) |
+
+Open a preview image for the full-resolution capture. Text, values, and selections are sample data and may differ from your campaign. [Capture details and reproducible scenarios](docs/images/previews/README.md) are included for later comparison.
+
+<!-- Replace each pending cell with an image link after receiving the corresponding
+     in-game screenshot. Keep the full frame and record resolution, UI scale,
+     language, game/mod version, and screen state before aligning scenario data. -->
+
 ## Download and install
 
 You need Windows x64 and a local Bannerlord installation for game assets. Game assets are not included. Validation currently covers Bannerlord v1.4.7, with AgricultureEstate v1.4.7.3 coverage; other versions may differ.

@@ -57,8 +57,10 @@ Bitmap distance-field edge smoothing and outline amounts are preview
 approximations; this work does not certify in-game pixel fidelity or
 runtime image fidelity.
 
-Six previously accepted portable structural snapshots differ after the
-visibility and margin corrections: options, single-query-popup, crosshair,
-standard-dropdown, conversation, and option-item. Their comparison reports
-are generated under `artifacts/issue-6/snapshots`. Baseline Acceptance must
-remain a separate explicit action; the accepted metadata is unchanged.
+The visibility and margin corrections changed six portable structural
+snapshots: options, single-query-popup, crosshair, standard-dropdown,
+conversation, and option-item. Following review, the separate CLI `accept`
+command recorded them in `test-data/visual-regression/issue-6-portable-baselines`.
+Its README describes the reviewed differences. CI uses that package;
+the original M3 metadata remains unchanged. Comparison evidence is under
+`artifacts/issue-6/ci-review`.

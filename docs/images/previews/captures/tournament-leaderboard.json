@@ -1,0 +1,72 @@
+{
+  "Reference": {
+    "CaseId": "tournament-leaderboard",
+    "GameVersion": "v1.4.7",
+    "ModuleVersion": "v1.4.7",
+    "CaptureProfileId": "readme-1920x1080-en-srgb",
+    "PackageSchemaVersion": 1
+  },
+  "PrefabIdentity": "modules/native/gui/prefabs/gamemenu/gamemenutournamentleaderboard.xml",
+  "CaptureProfile": {
+    "Id": "readme-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "README preview example",
+  "DataState": "Illustrative preview data; no in-game reference yet",
+  "ScenarioSha256": "0862cc00066f229b66cd78df9f410dd44f7c356f8a33c7546841d471a6ee1842",
+  "CompletionStatus": "Partial",
+  "StructureSha256": "de70fa83007b436421a06d87e71f0c29c3d9383254bc5ddead3ce7699cb9aa2e",
+  "LayoutSha256": "bd436b27cd7f58fc577bd45f331cbbcee9b01563e9a3f3365f47b5a240ed342d",
+  "ActualSha256": "d2a41e9245dff0f343d62c3579c0a91f27492698a3dd44ea3c72bf53de698811",
+  "Diagnostics": [
+    {
+      "Code": "legacy.f7042d0ae2283133",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel]: optional \u0027HorizontalScrollbar\u0027 missing: This screen scrolls vertically only."
+    },
+    {
+      "Code": "legacy.21257a14f52c413e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel] \u003E Widget[Id=EntriesListRect] \u003E NavigatableListPanel[Id=EntriesList] \u003E ItemTemplate \u003E Widget[Id=TupleParent] \u003E ListPanel \u003E ButtonWidget \u003E MaskedTextureWidget: image.missing source: Image identity is empty."
+    },
+    {
+      "Code": "legacy.eec0a451d990880e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel] \u003E Widget[Id=EntriesListRect] \u003E NavigatableListPanel[Id=EntriesList] \u003E ItemTemplate \u003E Widget[Id=TupleParent] \u003E ListPanel \u003E ButtonWidget \u003E ImageIdentifierWidget: image.missing source: Image identity is empty."
+    },
+    {
+      "Code": "legacy.21257a14f52c413e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel] \u003E Widget[Id=EntriesListRect] \u003E NavigatableListPanel[Id=EntriesList] \u003E ItemTemplate \u003E Widget[Id=TupleParent] \u003E ListPanel \u003E ButtonWidget \u003E MaskedTextureWidget: image.missing source: Image identity is empty."
+    },
+    {
+      "Code": "legacy.eec0a451d990880e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel] \u003E Widget[Id=EntriesListRect] \u003E NavigatableListPanel[Id=EntriesList] \u003E ItemTemplate \u003E Widget[Id=TupleParent] \u003E ListPanel \u003E ButtonWidget \u003E ImageIdentifierWidget: image.missing source: Image identity is empty."
+    },
+    {
+      "Code": "legacy.21257a14f52c413e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel] \u003E Widget[Id=EntriesListRect] \u003E NavigatableListPanel[Id=EntriesList] \u003E ItemTemplate \u003E Widget[Id=TupleParent] \u003E ListPanel \u003E ButtonWidget \u003E MaskedTextureWidget: image.missing source: Image identity is empty."
+    },
+    {
+      "Code": "legacy.eec0a451d990880e",
+      "WidgetIdOrPath": "$document",
+      "Message": "Window \u003E Widget \u003E BrushWidget \u003E ListPanel \u003E ListPanel \u003E ScrollablePanel[Id=EntriesListScrollablePanel] \u003E Widget[Id=EntriesListRect] \u003E NavigatableListPanel[Id=EntriesList] \u003E ItemTemplate \u003E Widget[Id=TupleParent] \u003E ListPanel \u003E ButtonWidget \u003E ImageIdentifierWidget: image.missing source: Image identity is empty."
+    }
+  ],
+  "Timing": {
+    "Load": "00:00:00.3073832",
+    "Render": "00:00:00.4380327",
+    "Capture": "00:00:00.1253526",
+    "Comparison": null,
+    "ArtifactWrite": "00:00:00.0873396"
+  },
+  "SchemaVersion": 1
+}

@@ -1,0 +1,36 @@
+{
+  "Reference": {
+    "CaseId": "land-management",
+    "GameVersion": "v1.4.7",
+    "ModuleVersion": "v1.4.7.3",
+    "CaptureProfileId": "readme-1920x1080-en-srgb",
+    "PackageSchemaVersion": 1
+  },
+  "PrefabIdentity": "modules/agricultureestate/gui/prefabs/landmanagement.xml",
+  "CaptureProfile": {
+    "Id": "readme-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "README preview example",
+  "DataState": "Illustrative preview data; no in-game reference yet",
+  "ScenarioSha256": "77a1ce832a48ca6720649275553253acd5f13a067800bc9bdfe526d0ef2f027e",
+  "CompletionStatus": "Complete",
+  "StructureSha256": "a02f7ae0d61aa2bc4400f7f93c47d3f1c16fd6e32f472c86af3a0e4cc89745e3",
+  "LayoutSha256": "a917b41b264350049af807ff4e479e5acd57f7faac7ff8cb0474a691fbb3d667",
+  "ActualSha256": "13842380b939866a1aab41f12a3660b90e672983b5c5b8b4566f065a0b073776",
+  "Diagnostics": [],
+  "Timing": {
+    "Load": "00:00:00.5600630",
+    "Render": "00:00:00.5115320",
+    "Capture": "00:00:00.2852404",
+    "Comparison": null,
+    "ArtifactWrite": "00:00:00.1398666"
+  },
+  "SchemaVersion": 1
+}
