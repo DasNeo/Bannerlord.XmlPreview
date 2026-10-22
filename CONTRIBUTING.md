@@ -16,6 +16,26 @@ dotnet run --project src/Bannerlord.XmlPreview --no-build
 
 ## Repository layout
 
+```text
+Bannerlord.XmlPreview.sln
+src/
+  Bannerlord.XmlPreview/                       # WPF application
+  Bannerlord.XmlPreview.Core/
+  Bannerlord.XmlPreview.Bannerlord/
+  Bannerlord.XmlPreview.DemoData/
+  Bannerlord.XmlPreview.VisualRegression/
+  Bannerlord.XmlPreview.VisualRegression.Cli/
+tests/
+  Bannerlord.XmlPreview.Tests/
+  Bannerlord.XmlPreview.VisualRegression.Tests/
+tools/
+  TpacSpike/                                  # Investigation utility
+test-data/
+fixtures/
+docs/
+licenses/
+```
+
 - `src/`: WPF application, generic Core, Bannerlord adapter, preview data, and Visual Regression library and CLI.
 - `tests/`: application contracts and Visual Regression tests.
 - `tools/`: validation and investigation scripts, including the TPAC investigation utility.
@@ -23,7 +43,9 @@ dotnet run --project src/Bannerlord.XmlPreview --no-build
 - `docs/`: developer guidance, fidelity information, plans, and validation reports.
 - `GLOSSARY.md` and `docs/adr/`: shared terminology and architecture decisions.
 
-The solution remains at the root. Keep each project's source and build output inside its own directory. Paths in developer commands are relative to the repository root unless stated otherwise. All project documentation and Markdown files must be written in English.
+The solution remains at the root. The WPF application's XAML, `ViewModels/`, `Controls/`, and application services live inside `src/Bannerlord.XmlPreview/`. Each project's `bin/` and `obj/` output stays inside that project's directory; the application executable is under `src/Bannerlord.XmlPreview/bin/<Configuration>/net10.0-windows/` after a normal build. Shared fixtures and accepted metadata remain outside the test projects in `fixtures/` and `test-data/`; generated validation and publish output goes in the ignored root `artifacts/` directory.
+
+Paths in developer commands and source references are relative to the repository root unless stated otherwise. All project documentation and Markdown files must be written in English.
 
 ## Validation and architecture
 

@@ -12,10 +12,10 @@ M1 is complete. Render Structure, Layout, Diagnostics, and pixel changes can be 
 
 Current behavior is split across:
 
-- `BannerlordWidgetNodeFactory.cs` for name and reflection mapping
+- `src/Bannerlord.XmlPreview.Bannerlord/Adapters/BannerlordWidgetNodeFactory.cs` for name and reflection mapping
 - concrete Core node types
-- concrete Bannerlord name checks in `PrefabRenderContext.cs`
-- `ApplyDeferredReferenceBehaviors()` in `PrefabRenderContext.cs`
+- concrete Bannerlord name checks in `src/Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`
+- `ApplyDeferredReferenceBehaviors()` in `src/Bannerlord.XmlPreview.Core/Rendering/PrefabRenderContext.cs`
 - Core references to `PreviewDemoCatalog` and DemoData
 
 The migration must remove old logic as each Widget Behavior moves. A permanent dual pipeline is prohibited.
@@ -49,7 +49,7 @@ Mods supply XML and data assets only. They never register executable rules.
 2. Pass the snapshot into rendering instead of reading static dictionaries.
 3. Move DemoData-backed values behind an app or Bannerlord adapter that creates the snapshot.
 4. Remove `PreviewDemoCatalog` use from `PrefabRenderContext` and Core nodes.
-5. Remove the DemoData project reference from `Bannerlord.XmlPreview.Core.csproj`.
+5. Remove the DemoData project reference from `src/Bannerlord.XmlPreview.Core/Bannerlord.XmlPreview.Core.csproj`.
 6. Add parallel-render tests proving that two scenarios cannot leak values into each other.
 
 The Bannerlord adapter may continue to use DemoData temporarily to construct a snapshot, but Core must not depend on the DemoData project.
