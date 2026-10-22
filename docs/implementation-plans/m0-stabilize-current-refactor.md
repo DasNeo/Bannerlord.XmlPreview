@@ -78,7 +78,7 @@ Deliverable: one command whose exit code truthfully represents the six-fixture r
 Review these integration points:
 
 - DI registrations in `src/Bannerlord.XmlPreview/App.xaml.cs`
-- cancellation and dispatcher use in `MainWindowViewModel.cs`
+- cancellation and dispatcher use in `src/Bannerlord.XmlPreview/ViewModels/MainWindowViewModel.cs`
 - thread safety and disposal in warm-up and indexing modules
 - watcher registration disposal and duplicate-registration behavior
 - diagnostics writer and preview-tree extraction call sites
@@ -88,12 +88,12 @@ Remove abandoned parallel code only after confirming no caller remains.
 
 ## Work package 0.6: Verify and close
 
-Run:
+Run from the repository root:
 
 ```powershell
-dotnet build C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-restore
-dotnet test C:\Dev\WPF\Bannerlord.XmlPreview\Bannerlord.XmlPreview.sln --no-build
-powershell -ExecutionPolicy Bypass -File C:\Dev\WPF\Bannerlord.XmlPreview\tools\run_phase9_validation.ps1 -PerFixtureTimeoutSeconds 30 -OutputRoot <m0-output>
+dotnet build ./Bannerlord.XmlPreview.sln --no-restore
+dotnet test ./Bannerlord.XmlPreview.sln --no-build
+powershell -ExecutionPolicy Bypass -File ./tools/run_phase9_validation.ps1 -PerFixtureTimeoutSeconds 30 -OutputRoot ./artifacts/m0-validation
 ```
 
 Then:

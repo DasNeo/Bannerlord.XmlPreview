@@ -12,7 +12,7 @@ M0 is complete. The repository has an honest technical status, deterministic Pha
 
 ## Target module and seams
 
-Add a dedicated `Bannerlord.XmlPreview.VisualRegression` project targeting `net10.0-windows`. It references Core and owns comparison, masking, status calculation, report generation, and artifact generation.
+Add a dedicated `Bannerlord.XmlPreview.VisualRegression` project at `src/Bannerlord.XmlPreview.VisualRegression/`, targeting `net10.0-windows`. It references Core and owns comparison, masking, status calculation, report generation, and artifact generation.
 
 Keep snapshot production close to rendering:
 
@@ -21,7 +21,7 @@ Keep snapshot production close to rendering:
 - The CLI and automated tests call the same Visual Regression interface.
 - File access and reference-package lookup remain internal or local-substitutable dependencies; do not expose them through the main interface.
 
-Add a small CLI project, `Bannerlord.XmlPreview.VisualRegression.Cli`, for `compare`, `capture`, and `accept` workflows. Add a Visual Regression test project using the repository's selected test framework.
+Add a small CLI project at `src/Bannerlord.XmlPreview.VisualRegression.Cli/` for `compare`, `capture`, and `accept` workflows. Add the Visual Regression test project at `tests/Bannerlord.XmlPreview.VisualRegression.Tests/` using the repository's selected test framework.
 
 ## Work package 1.1: Define result and request contracts
 

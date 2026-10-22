@@ -4,6 +4,8 @@
 
 ## Solution
 
+Open `Bannerlord.XmlPreview.sln` from the repository root. Production projects are under `src/`; automated test projects are under `tests/`. The [repository layout](../../CONTRIBUTING.md#repository-layout) also identifies shared fixtures, tools, and build output.
+
 - `src/Bannerlord.XmlPreview/Bannerlord.XmlPreview.csproj`: WPF host, DI, UI, and startup arguments
 - `src/Bannerlord.XmlPreview.Core/`: generic loading, rendering, node, and Diagnostics logic
 - `src/Bannerlord.XmlPreview.Bannerlord/`: Bannerlord-specific adapters, assets, and preview data
