@@ -68,7 +68,7 @@ Optionally set `$env:BANNERLORD_PREVIEW_EDITOR` to the full path of an editor ex
 Start the app from the same shell:
 
 ```powershell
-& ./bin/Debug/net10.0-windows/Bannerlord.XmlPreview.exe --prefab (Join-Path $smokeRoot 'M4Smoke.xml')
+& ./src/Bannerlord.XmlPreview/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.exe --prefab (Join-Path $smokeRoot 'M4Smoke.xml')
 ```
 
 Expected: status becomes `Loaded M4Smoke.xml`, the Node Tree includes `include-panel`, and the preview is not stale. Set the Preview width/height controls to `640` and `360`, then click **Apply Size**. Expand **Diagnostics**, **Bindings** and **Mocks** as needed. Record the initial reload generation and any Diagnostics before editing.

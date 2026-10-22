@@ -19,9 +19,12 @@ public abstract class ContainerPrefabNode : PrefabNode
     {
         var spriteId = context.ResolveBinding(GetAttribute("Sprite"));
         var brushId = context.ResolveBinding(GetAttribute("Brush"));
-        var backgroundColor = PrefabRenderContext.ParseBannerlordColor(GetAttribute("Color"));
+        var color = context.ResolveBinding(GetAttribute("Color"));
+        var backgroundColor = string.IsNullOrWhiteSpace(spriteId)
+            ? PrefabRenderContext.ParseBannerlordColor(color)
+            : null;
         var isDisabled = context.IsDisabled(Attributes);
-        var sprite = context.CreateSpriteOverlay(spriteId);
+        var sprite = context.CreateSpriteOverlay(spriteId, color);
         var brush = (_frameBrush
             ? context.ResolvePanelBrush(brushId, isDisabled)
             : context.ResolveWidgetBackground(spriteId, brushId, isDisabled));

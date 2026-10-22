@@ -1756,12 +1756,15 @@ public sealed partial class PrefabRenderContext
         return CreateSolidBrushInternal(hex);
     }
 
-    public FrameworkElement? CreateSpriteOverlay(string spriteId)
+    public FrameworkElement? CreateSpriteOverlay(string spriteId, string? tint = null)
     {
         var spriteAsset = ResolveSpriteAsset(spriteId);
         var spriteImage = ResolveSpriteImage(spriteId);
         if (spriteImage is not null)
         {
+            if (spriteImage is BitmapSource bitmap)
+                return CreateSpriteImageVisual(bitmap, spriteAsset.SpriteDefinition, "Fill", tint);
+
             return new Image
             {
                 Source = spriteImage,

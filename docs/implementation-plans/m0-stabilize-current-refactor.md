@@ -8,12 +8,12 @@ Turn the current async loading, cancellation, environment warm-up, installation 
 
 Relevant current code includes:
 
-- `ViewModels/MainWindowViewModel.cs`: generation-based load cancellation and UI publication
-- `Services/FileWatcherService.cs`: debounced single-file watching
-- `Bannerlord.XmlPreview.Bannerlord/Services/PreviewEnvironmentInitializer.cs`: background warm-up
-- `Bannerlord.XmlPreview.Bannerlord/Services/BannerlordInstallationIndex.cs`: installation inventory
-- `Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`: synchronous prefab loading
-- `Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs`: render orchestration and phase timing
+- `src/Bannerlord.XmlPreview/ViewModels/MainWindowViewModel.cs`: generation-based load cancellation and UI publication
+- `src/Bannerlord.XmlPreview/Services/FileWatcherService.cs`: debounced single-file watching
+- `src/Bannerlord.XmlPreview.Bannerlord/Services/PreviewEnvironmentInitializer.cs`: background warm-up
+- `src/Bannerlord.XmlPreview.Bannerlord/Services/BannerlordInstallationIndex.cs`: installation inventory
+- `src/Bannerlord.XmlPreview.Core/Services/PrefabLoader.cs`: synchronous prefab loading
+- `src/Bannerlord.XmlPreview.Core/Services/PrefabRenderer.cs`: render orchestration and phase timing
 - `tools/run_phase9_validation.ps1`: six-fixture technical validation
 
 The current Phase-9 script records failures in `summary.md` but does not aggregate them into a final non-zero exit code. Large prefabs can also be reported as completed after Truncation.
@@ -75,7 +75,7 @@ Deliverable: one command whose exit code truthfully represents the six-fixture r
 
 Review these integration points:
 
-- DI registrations in `App.xaml.cs`
+- DI registrations in `src/Bannerlord.XmlPreview/App.xaml.cs`
 - cancellation and dispatcher use in `MainWindowViewModel.cs`
 - thread safety and disposal in warm-up and indexing modules
 - watcher registration disposal and duplicate-registration behavior

@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $data = Join-Path $repoRoot 'test-data/visual-regression'
-$cli = Join-Path $repoRoot 'Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.exe'
+$cli = Join-Path $repoRoot 'src/Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.exe'
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $priorRoot = $env:BANNERLORD_ROOT
 $priorArtifacts = $env:BANNERLORD_M3_ARTIFACTS

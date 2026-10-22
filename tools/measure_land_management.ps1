@@ -17,13 +17,13 @@ try {
     $env:BANNERLORD_ROOT = $BannerlordRoot
     $env:BANNERLORD_LOADING_ARTIFACTS = Join-Path $OutputRoot 'warm'
     foreach ($iteration in 1..$Processes) {
-        dotnet test Bannerlord.XmlPreview.VisualRegression.Tests -c Release --no-build --no-restore --filter FullyQualifiedName~LandManagementLoadMeasurements
+        dotnet test tests/Bannerlord.XmlPreview.VisualRegression.Tests -c Release --no-build --no-restore --filter FullyQualifiedName~LandManagementLoadMeasurements
         if ($LASTEXITCODE -ne 0) { throw 'Warm measurements failed.' }
     }
-    $app = Join-Path $repo 'bin/Release/net10.0-windows/Bannerlord.XmlPreview.exe'
+    $app = Join-Path $repo 'src/Bannerlord.XmlPreview/bin/Release/net10.0-windows/Bannerlord.XmlPreview.exe'
     if ($ReadyToRun) {
         $publication = Join-Path $OutputRoot 'published'
-        dotnet publish Bannerlord.XmlPreview.csproj -p:PublishProfile=LoadPerformance -o $publication -m:1
+        dotnet publish src/Bannerlord.XmlPreview/Bannerlord.XmlPreview.csproj -p:PublishProfile=LoadPerformance -o $publication -m:1
         if ($LASTEXITCODE -ne 0) { throw 'ReadyToRun publication failed.' }
         $app = Join-Path $publication 'Bannerlord.XmlPreview.exe'
     }

@@ -88,7 +88,7 @@ if ($Build) {
     }
 }
 
-$executablePath = Join-Path $RepoRoot "bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe"
+$executablePath = Join-Path $RepoRoot "src\Bannerlord.XmlPreview\bin\Debug\net10.0-windows\Bannerlord.XmlPreview.exe"
 if (-not (Test-Path -LiteralPath $executablePath)) {
     Write-Error "Could not find '$executablePath'. Run with -Build first or build the solution manually."
     exit 1

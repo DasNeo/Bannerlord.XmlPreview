@@ -61,8 +61,8 @@ public sealed partial class PrefabRenderContext
         else if (resolution.Status == ImageResolutionStatus.Resolved && resolution.Image is not null && !string.IsNullOrEmpty(blueprint.Request.Identity))
         {
             // Replace the generic sprite overlay to honor stretch and tint explicitly.
-            foreach (var old in grid.Children.OfType<Image>().ToArray()) grid.Children.Remove(old);
-            grid.Children.Insert(0, ImageElement(resolution.Image, blueprint.Stretch, blueprint.Color));
+            foreach (var old in grid.Children.OfType<FrameworkElement>().Where(e => e != rendered.ChildHost).ToArray()) grid.Children.Remove(old);
+            grid.Children.Insert(0, CreateSpriteImageVisual(resolution.Image, ResolveCatalogSprite(request.Identity), blueprint.Stretch, blueprint.Color));
         }
         if (dynamicImage && resolution.Status == ImageResolutionStatus.Resolved && resolution.Image is not null &&
             (UsesCoverChildren(node.Attributes, "WidthSizePolicy") || UsesCoverChildren(node.Attributes, "HeightSizePolicy")))
@@ -116,9 +116,27 @@ public sealed partial class PrefabRenderContext
 
     private static Image ImageElement(BitmapSource source, string stretch, string? tint)
     {
+        source = TintBitmap(source, tint);
+        return new Image { Source = source, Stretch = Enum.TryParse<Stretch>(stretch, true, out var value) ? value : Stretch.Fill,
+            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+    }
+
+    private FrameworkElement CreateSpriteImageVisual(BitmapSource source, SpriteDefinition? sprite, string stretch, string? tint)
+    {
+        if (sprite?.IsNineRegion == true &&
+            (!Enum.TryParse<Stretch>(stretch, true, out var value) || value == Stretch.Fill))
+            return new NineRegionImage(TintBitmap(source, tint), sprite);
+        return ImageElement(source, stretch, tint);
+    }
+
+    private static BitmapSource TintBitmap(BitmapSource source, string? tint)
+    {
         var color = ParseBannerlordColor(tint);
         if (color is not null)
         {
+            // Multiplication below operates on premultiplied channels, regardless of asset format.
+            if (source.Format != PixelFormats.Pbgra32)
+                source = new FormatConvertedBitmap(source, PixelFormats.Pbgra32, null, 0);
             var pixels = new byte[checked(source.PixelWidth * source.PixelHeight * 4)];
             source.CopyPixels(pixels, source.PixelWidth * 4, 0);
             for (int i = 0; i < pixels.Length; i += 4)
@@ -131,8 +149,7 @@ public sealed partial class PrefabRenderContext
             source = BitmapSource.Create(source.PixelWidth, source.PixelHeight, 96, 96, PixelFormats.Pbgra32, null, pixels, source.PixelWidth * 4);
             source.Freeze();
         }
-        return new Image { Source = source, Stretch = Enum.TryParse<Stretch>(stretch, true, out var value) ? value : Stretch.Fill,
-            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
+        return source;
     }
     private static BitmapSource MaskBitmap(ImageResolution mask)
     {

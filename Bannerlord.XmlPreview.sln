@@ -1,20 +1,20 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview", "Bannerlord.XmlPreview.csproj", "{A84360D1-64EB-4892-A2A6-D7611291D682}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview", "src\Bannerlord.XmlPreview\Bannerlord.XmlPreview.csproj", "{A84360D1-64EB-4892-A2A6-D7611291D682}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Core", "Bannerlord.XmlPreview.Core\Bannerlord.XmlPreview.Core.csproj", "{4E0D7809-73BF-4A71-A0C8-F736CB43C4BF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Core", "src\Bannerlord.XmlPreview.Core\Bannerlord.XmlPreview.Core.csproj", "{4E0D7809-73BF-4A71-A0C8-F736CB43C4BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Bannerlord", "Bannerlord.XmlPreview.Bannerlord\Bannerlord.XmlPreview.Bannerlord.csproj", "{D8D4B701-C543-43EC-BF82-C663DC859ABF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Bannerlord", "src\Bannerlord.XmlPreview.Bannerlord\Bannerlord.XmlPreview.Bannerlord.csproj", "{D8D4B701-C543-43EC-BF82-C663DC859ABF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.DemoData", "Bannerlord.XmlPreview.DemoData\Bannerlord.XmlPreview.DemoData.csproj", "{E29A9187-F99F-41DF-985B-171D4D5844CE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.DemoData", "src\Bannerlord.XmlPreview.DemoData\Bannerlord.XmlPreview.DemoData.csproj", "{E29A9187-F99F-41DF-985B-171D4D5844CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Tests", "Bannerlord.XmlPreview.Tests\Bannerlord.XmlPreview.Tests.csproj", "{74331BA6-506F-4A21-BE65-D14EA43E39CD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.Tests", "tests\Bannerlord.XmlPreview.Tests\Bannerlord.XmlPreview.Tests.csproj", "{74331BA6-506F-4A21-BE65-D14EA43E39CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression", "Bannerlord.XmlPreview.VisualRegression\Bannerlord.XmlPreview.VisualRegression.csproj", "{F711AD25-F953-4CB9-92C0-9E892E56837F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression", "src\Bannerlord.XmlPreview.VisualRegression\Bannerlord.XmlPreview.VisualRegression.csproj", "{F711AD25-F953-4CB9-92C0-9E892E56837F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression.Tests", "Bannerlord.XmlPreview.VisualRegression.Tests\Bannerlord.XmlPreview.VisualRegression.Tests.csproj", "{51A29D31-0171-453D-B696-5805DFBB88EA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression.Tests", "tests\Bannerlord.XmlPreview.VisualRegression.Tests\Bannerlord.XmlPreview.VisualRegression.Tests.csproj", "{51A29D31-0171-453D-B696-5805DFBB88EA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression.Cli", "Bannerlord.XmlPreview.VisualRegression.Cli\Bannerlord.XmlPreview.VisualRegression.Cli.csproj", "{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bannerlord.XmlPreview.VisualRegression.Cli", "src\Bannerlord.XmlPreview.VisualRegression.Cli\Bannerlord.XmlPreview.VisualRegression.Cli.csproj", "{B6586B5C-FAEC-45AA-994D-DD99AC5A6413}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
