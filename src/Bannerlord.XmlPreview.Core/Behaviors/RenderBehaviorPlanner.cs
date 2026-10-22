@@ -18,9 +18,16 @@ internal static class RenderBehaviorPlanner
         }
         Define(document.RootNode);
         var expanded = new List<RenderWidgetSnapshot>();
-        void Flatten(RenderWidgetSnapshot node) { expanded.Add(node); foreach (var child in node.Children) Flatten(child); }
-        Flatten(structure.Root);
-        var runValues = expanded.ToImmutableDictionary(w => new WidgetId(w.WidgetId), w => w.Properties.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase));
+        var siblingIndices = new Dictionary<string, int>();
+        void Flatten(RenderWidgetSnapshot node, int index)
+        {
+            expanded.Add(node); siblingIndices[node.WidgetId] = index;
+            for (var i = 0; i < node.Children.Count; i++)
+                Flatten(node.Children[i], node.Kind == "ItemTemplate" ? index : i);
+        }
+        Flatten(structure.Root, 0);
+        var runValues = expanded.ToImmutableDictionary(w => new WidgetId(w.WidgetId), w => w.Properties.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase)
+            .SetItem("Preview.SiblingIndex", siblingIndices[w.WidgetId].ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return expanded.Select(widget =>
         {
             var node = definitions[widget.ExpandedPath];

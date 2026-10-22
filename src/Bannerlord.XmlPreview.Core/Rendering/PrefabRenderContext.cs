@@ -1155,7 +1155,7 @@ public sealed partial class PrefabRenderContext
             {
                 var trackSize = Measure(scrollbarWidget.Element, scrollbarWidget.Attributes, scrollbarWidget.ParentSize);
                 var handleLength = contentLength > 0
-                    ? Math.Max(0d, (horizontalAxis ? trackSize.Width : trackSize.Height) * (viewportLength / contentLength))
+                    ? Math.Max(0d, (horizontalAxis ? trackSize.Width : trackSize.Height) * (Math.Min(1d, viewportLength / contentLength)))
                     : 0d;
                 if (horizontalAxis)
                 {
@@ -1690,6 +1690,7 @@ public sealed partial class PrefabRenderContext
 
     public bool IsVisible(IReadOnlyDictionary<string, string> attributes)
     {
+        if (ResolveBoolean(attributes, "IsHidden")) return false;
         var path = TryGetWidgetPath(attributes);
         if (path is not null && _graphDescriptions.TryGetValue(new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path))), out var description) && description.TryGetValue("IsVisible", out var visible))
             return visible == "true";
@@ -2140,6 +2141,17 @@ public sealed partial class PrefabRenderContext
         if (TryGetDescription(attributes, "IsHitTestVisible", out var hitTest)) element.IsHitTestVisible = ResolveBoolean(hitTest, true);
     }
 
+    public FrameworkElement CreateTextVisual(TextBlock text, string? brushId, IReadOnlyDictionary<string, string> attributes)
+    {
+        var font = _assetCatalog.FindFont(ResolveCatalogBrush(brushId)?.FontName ?? "Galahad");
+        if (font is null) return text;
+        var style = ResolveBrushStyle(ResolveCatalogBrush(brushId), IsDisabled(attributes));
+        return new BitmapFontTextBlock { StyleSource = text, BitmapFont = font,
+            HorizontalAlignment = text.HorizontalAlignment, VerticalAlignment = text.VerticalAlignment,
+            OutlineAmount = style?.TextOutlineAmount ?? (brushId == "DefaultBrush" ? 1 : 0),
+            OutlineColor = ParseBannerlordColor(style?.TextOutlineColor) ?? Colors.Black };
+    }
+
     public void ApplyTextStyle(
         TextBlock textBlock,
         string? brushId,
@@ -2148,7 +2160,8 @@ public sealed partial class PrefabRenderContext
         double fallbackFontSize)
     {
         var isDisabled = IsDisabled(attributes);
-        textBlock.Foreground = ResolveTextBrush(brushId, isDisabled);
+        textBlock.Foreground = ParseBannerlordColor(ResolveAttributeLiteral(attributes, "Brush.FontColor")) is { } overrideColor
+            ? new SolidColorBrush(overrideColor) : ResolveTextBrush(brushId, isDisabled);
         textBlock.FontSize = ResolveTextFontSize(brushId, rawFontSize, isDisabled, fallbackFontSize);
         textBlock.FontFamily = ResolveFontFamily(brushId);
         textBlock.TextAlignment = ResolveTextAlignment(
@@ -4498,7 +4511,7 @@ public sealed partial class PrefabRenderContext
             child.Name,
             child.Attributes,
             renderParentSize,
-            child.Render(this, renderParentSize));
+            RenderNode(child, renderParentSize));
         if (rendered.AutoWidthInFlowLayout)
         {
             rendered.Element.Width = double.NaN;

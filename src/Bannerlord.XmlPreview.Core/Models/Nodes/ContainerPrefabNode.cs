@@ -25,6 +25,7 @@ public abstract class ContainerPrefabNode : PrefabNode
             : null;
         var isDisabled = context.IsDisabled(Attributes);
         var sprite = context.CreateSpriteOverlay(spriteId, color);
+        if (sprite is not null) context.ApplyImageFlip(sprite, Attributes);
         var brush = (_frameBrush
             ? context.ResolvePanelBrush(brushId, isDisabled)
             : context.ResolveWidgetBackground(spriteId, brushId, isDisabled));

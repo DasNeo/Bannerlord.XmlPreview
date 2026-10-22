@@ -31,5 +31,7 @@ public interface IAssetCatalog
 
     ImageSource? GetSpriteImage(string? spriteName);
 
+    BitmapFontDefinition? FindFont(string name) => null;
+
     BrushDefinition? FindBrush(string? brushName);
 }

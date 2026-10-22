@@ -1,0 +1,41 @@
+[
+  {
+    "Id": "land-management",
+    "Capture": "captures/land-management.json",
+    "PrefabSha256": "f76ad36b175dbb21ce785b49999938d5849145385f243ec09b71094b741c62d7",
+    "Prefab": "modules/agricultureestate/gui/prefabs/landmanagement.xml",
+    "CapturedOn": "2026-10-22",
+    "GameVersion": "v1.4.7",
+    "ImageSha256": "13842380b939866a1aab41f12a3660b90e672983b5c5b8b4566f065a0b073776",
+    "Scenario": "scenarios/land-management.json",
+    "Image": "land-management.png",
+    "ModuleVersion": "v1.4.7.3",
+    "CompletionStatus": "Complete"
+  },
+  {
+    "Id": "tournament-leaderboard",
+    "Capture": "captures/tournament-leaderboard.json",
+    "PrefabSha256": "9539e3444cc4645cfa7c17b267cfcbe714d3589e1cc26aa5d7277625d25c75cf",
+    "Prefab": "modules/native/gui/prefabs/gamemenu/gamemenutournamentleaderboard.xml",
+    "CapturedOn": "2026-10-22",
+    "GameVersion": "v1.4.7",
+    "ImageSha256": "d2a41e9245dff0f343d62c3579c0a91f27492698a3dd44ea3c72bf53de698811",
+    "Scenario": "scenarios/tournament-leaderboard.json",
+    "Image": "tournament-leaderboard.png",
+    "ModuleVersion": "v1.4.7",
+    "CompletionStatus": "Partial"
+  },
+  {
+    "Id": "escape-menu",
+    "Capture": "captures/escape-menu.json",
+    "PrefabSha256": "1e571c7224cc7b9c9e4da893449c16f12c263706f46763fc728545fa29631b2b",
+    "Prefab": "modules/native/gui/prefabs/escapemenu.xml",
+    "CapturedOn": "2026-10-22",
+    "GameVersion": "v1.4.7",
+    "ImageSha256": "9afb783d02f0b7fcdf7984a0a7df7658ba2a3698fd5034e9df06a5a6980b97ee",
+    "Scenario": "scenarios/escape-menu.json",
+    "Image": "escape-menu.png",
+    "ModuleVersion": "v1.4.7",
+    "CompletionStatus": "Complete"
+  }
+]

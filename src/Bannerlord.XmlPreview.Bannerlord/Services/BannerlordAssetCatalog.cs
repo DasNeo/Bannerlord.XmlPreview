@@ -1,4 +1,6 @@
 using System.IO;
+using System.Globalization;
+using System.Xml.Linq;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
@@ -32,7 +34,7 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
                 .Concat(usedFiles.Keys).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
     }
-    public void Invalidate() { index.Invalidate(); scopes.Clear(); atlases.Invalidate(); }
+    public void Invalidate() { index.Invalidate(); scopes.Clear(); atlases.Invalidate(); fonts.Clear(); }
     public BannerlordAssetCatalog(IAppSettingsService settingsService, IBannerlordInstallationIndex installationIndex)
         : this(settingsService, installationIndex, new TpacAtlasStore(), null, null) { }
     public BannerlordAssetCatalog(IAppSettingsService settingsService, IBannerlordInstallationIndex installationIndex,
@@ -72,6 +74,26 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         }, token);
     public SpriteDefinition? FindSprite(string? name) => GetSnapshot().Sprites.GetValueOrDefault(Normalize(name));
     public BrushDefinition? FindBrush(string? name) => name is null ? null : GetSnapshot().Brushes.GetValueOrDefault(name);
+    private readonly Dictionary<string, BitmapFontDefinition?> fonts = new(StringComparer.OrdinalIgnoreCase);
+    public BitmapFontDefinition? FindFont(string name)
+    {
+        if (fonts.TryGetValue(name, out var cached)) return cached;
+        // Font identities are names, never file paths supplied by a prefab.
+        if (name.IndexOfAny(['/', '\\', ':']) >= 0) return null;
+        var path = Path.Combine(settings.BannerlordInstallRoot, "GUI/GauntletUI/Fonts", name, name + ".fnt");
+        if (!File.Exists(path)) return fonts[name] = null;
+        usedFiles[path] = 0;
+        var xml = XDocument.Load(path).Root!;
+        double Number(XElement e, string key, double fallback = 0) => double.TryParse(e.Attribute(key)?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : fallback;
+        var texture = ResolveImage(new(Path.GetFileNameWithoutExtension(xml.Element("pages")!.Element("page")!.Attribute("file")!.Value)));
+        if (texture.Image is null) return fonts[name] = null;
+        var glyphs = xml.Element("chars")!.Elements("char").Select(e => new BitmapFontGlyph((int)Number(e, "id"),
+            (int)Number(e, "x"), (int)Number(e, "y"), (int)Number(e, "width"), (int)Number(e, "height"),
+            Number(e, "xadvance"), Number(e, "xoffset"), Number(e, "yoffset"))).ToDictionary(g => g.Id);
+        var kern = xml.Element("kernings")?.Elements("kerning").ToDictionary(e => ((int)Number(e, "first"), (int)Number(e, "second")), e => Number(e, "amount")) ?? new();
+        return fonts[name] = new(name, Number(xml.Element("info")!, "size", 32), Number(xml.Element("common")!, "lineHeight", 36),
+            Number(xml.Element("info")!, "smoothingConstant", 0.5), texture.Image, glyphs, kern);
+    }
     public ImageSource? GetSpriteImage(string? name) => ResolveImage(new(name ?? "")).Image;
     public SpriteAssetResolution ResolveSpriteAsset(string? name)
     {

@@ -1,0 +1,74 @@
+{
+  "Scene": "README preview example",
+  "Lists": {
+    "Window > Widget > BrushWidget > ListPanel > ListPanel > ScrollablePanel[Id=EntriesListScrollablePanel] > Widget[Id=EntriesListRect] > NavigatableListPanel[Id=EntriesList]": [
+      {
+        "IsMainHero": "false",
+        "Name": "Caladog",
+        "Victories": "24",
+        "IsChampion": "true",
+        "RankText": "1",
+        "__key": "caladog"
+      },
+      {
+        "IsMainHero": "false",
+        "Name": "Rhagaea",
+        "Victories": "18",
+        "IsChampion": "false",
+        "RankText": "2",
+        "__key": "rhagaea"
+      },
+      {
+        "IsMainHero": "true",
+        "Name": "Ironwood",
+        "Victories": "12",
+        "IsChampion": "false",
+        "RankText": "3",
+        "__key": "player"
+      }
+    ]
+  },
+  "SchemaVersion": 1,
+  "Id": "tournament-leaderboard",
+  "AssetModule": "Native",
+  "CaptureProfile": {
+    "Width": 1920,
+    "Height": 1080,
+    "Id": "readme-1920x1080-en-srgb"
+  },
+  "Bindings": {
+    "NameState": "0",
+    "VictoriesState": "0",
+    "VictoriesText": "Victories",
+    "IsChampion": "false",
+    "IsMainHero": "false",
+    "IsNameSelected": "false",
+    "PlacementState": "1",
+    "Id": "",
+    "HeroText": "Hero",
+    "IsPlacementSelected": "true",
+    "DoneText": "Done",
+    "TitleText": "Leaderboard",
+    "RankText": "#",
+    "IsVictoriesSelected": "false",
+    "AdditionalArgs": "",
+    "TextureProviderName": "",
+    "KeyID": "",
+    "IsVisible": "false",
+    "Name": "",
+    "Victories": "0"
+  },
+  "DataState": "Illustrative preview data; no in-game reference yet",
+  "PrefabIdentity": "modules/native/gui/prefabs/gamemenu/gamemenutournamentleaderboard.xml",
+  "OptionalConnectionExplanations": {
+    "Window > Widget > BrushWidget > ListPanel > ListPanel > ScrollablePanel[Id=EntriesListScrollablePanel]:HorizontalScrollbar": "This screen scrolls vertically only."
+  },
+  "WidgetStates": {
+    "Window > Widget > BrushWidget > ListPanel > ListPanel > ScrollablePanel[Id=EntriesListScrollablePanel] > Widget[Id=EntriesListRect] > NavigatableListPanel[Id=EntriesList] > ItemTemplate > Widget[Id=TupleParent] > ListPanel > ButtonWidget > MaskedTextureWidget": {
+      "IsVisible": "false"
+    },
+    "Window > Widget > BrushWidget > ListPanel > ListPanel > ScrollablePanel[Id=EntriesListScrollablePanel] > Widget[Id=EntriesListRect] > NavigatableListPanel[Id=EntriesList] > ItemTemplate > Widget[Id=TupleParent] > ListPanel > ButtonWidget > ImageIdentifierWidget": {
+      "IsVisible": "false"
+    }
+  }
+}

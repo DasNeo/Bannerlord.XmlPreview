@@ -20,6 +20,7 @@ public abstract class TextWidgetNodeBase : PrefabNode
     public sealed override RenderedPrefabNode Render(PrefabRenderContext context, Size parentSize)
     {
         var brushId = context.ResolveBinding(GetAttribute("Brush"));
+        if (string.IsNullOrEmpty(brushId) && context.FindBrush("DefaultBrush") is not null) brushId = "DefaultBrush";
         var isDisabled = context.IsDisabled(Attributes);
         var host = new Grid
         {
@@ -27,12 +28,20 @@ public abstract class TextWidgetNodeBase : PrefabNode
         };
         var text = new TextBlock
         {
-            Text = context.ResolveBinding(GetAttribute("Text")),
+            Text = context.ResolveBinding(GetAttribute("Text") ?? GetAttribute("IntText") ?? GetAttribute("FloatText")),
             FontWeight = FontWeights.SemiBold,
             TextWrapping = TextWrapping.Wrap,
             HorizontalAlignment = context.ResolveTextHorizontalAlignment(brushId, Attributes),
             VerticalAlignment = context.ResolveTextVerticalAlignment(brushId, Attributes)
         };
+
+        if (brushId == "DefaultBrush")
+        {
+            if (!Attributes.ContainsKey("Brush.TextHorizontalAlignment"))
+                text.HorizontalAlignment = HorizontalAlignment.Center;
+            if (!Attributes.ContainsKey("Brush.TextVerticalAlignment"))
+                text.VerticalAlignment = VerticalAlignment.Center;
+        }
 
         var centerHorizontally = context.UsesCoverChildren(Attributes, "WidthSizePolicy") &&
             string.Equals(GetAttribute("HorizontalAlignment"), "Center", StringComparison.OrdinalIgnoreCase) &&
@@ -52,20 +61,21 @@ public abstract class TextWidgetNodeBase : PrefabNode
         }
 
         context.ApplyTextStyle(text, brushId, Attributes, FallbackFontSize);
-        var visualOffset = context.ApplyVisualTextCentering(text, parentSize.Width);
+        var textVisual = context.CreateTextVisual(text, brushId, Attributes);
+        var visualOffset = textVisual == text ? context.ApplyVisualTextCentering(text, parentSize.Width) : 0;
         var textMeasureInput = context.ResolveChildMeasureSize(Attributes, parentSize);
         var widthCoversContent = context.UsesCoverChildren(Attributes, "WidthSizePolicy");
         var heightCoversContent = context.UsesCoverChildren(Attributes, "HeightSizePolicy");
         var maxWidth = context.ResolveDouble(Attributes, "MaxWidth", 0d);
         var maxHeight = context.ResolveDouble(Attributes, "MaxHeight", 0d);
-        text.Measure(new Size(
+        textVisual.Measure(new Size(
             widthCoversContent && maxWidth <= 0d
                 ? double.PositiveInfinity
                 : textMeasureInput.Width,
             heightCoversContent && maxHeight <= 0d
                 ? double.PositiveInfinity
                 : textMeasureInput.Height));
-        var textSize = text.DesiredSize;
+        var textSize = textVisual.DesiredSize;
 
         context.ApplySizing(host, Attributes, parentSize);
         context.ApplyCoverChildrenSize(host, Attributes, textSize);
@@ -74,7 +84,7 @@ public abstract class TextWidgetNodeBase : PrefabNode
         context.ApplyVisibility(host, Attributes);
         context.ApplyToolTip(host, Name, Attributes);
         context.AttachElementDebugMetadata(host, Name, Attributes, null, [brushId], isDisabled);
-        host.Children.Add(text);
+        host.Children.Add(textVisual);
 
         if (centerHorizontally || centerVertically)
         {

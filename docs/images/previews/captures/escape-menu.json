@@ -1,0 +1,36 @@
+{
+  "Reference": {
+    "CaseId": "escape-menu",
+    "GameVersion": "v1.4.7",
+    "ModuleVersion": "v1.4.7",
+    "CaptureProfileId": "readme-1920x1080-en-srgb",
+    "PackageSchemaVersion": 1
+  },
+  "PrefabIdentity": "modules/native/gui/prefabs/escapemenu.xml",
+  "CaptureProfile": {
+    "Id": "readme-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080,
+    "UiScale": 1,
+    "Language": "English",
+    "ColorSpace": "sRGB",
+    "Background": "#000000",
+    "CropRule": "FullFrame"
+  },
+  "Scene": "Campaign pause menu",
+  "DataState": "Eight illustrative menu entries and one fixed game tip with navigation disabled; black background instead of the live campaign scene",
+  "ScenarioSha256": "bca77ef22998681dea8cf7745d17549b1d9846660068f190a523ec1e01b585db",
+  "CompletionStatus": "Complete",
+  "StructureSha256": "409fa8e830fbb8a921986268163693d27148287d31c8aed667aeb353dbf3fd3d",
+  "LayoutSha256": "e634e3f55821d3891687ea5c6e5e60a3bc6a2c7d1d661e750db73aeabb7f62e1",
+  "ActualSha256": "9afb783d02f0b7fcdf7984a0a7df7658ba2a3698fd5034e9df06a5a6980b97ee",
+  "Diagnostics": [],
+  "Timing": {
+    "Load": "00:00:05.2815487",
+    "Render": "00:00:00.4456914",
+    "Capture": "00:00:00.0894416",
+    "Comparison": null,
+    "ArtifactWrite": "00:00:00.0816246"
+  },
+  "SchemaVersion": 1
+}

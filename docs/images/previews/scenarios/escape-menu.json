@@ -1,0 +1,73 @@
+{
+  "DataState": "Eight illustrative menu entries and one fixed game tip with navigation disabled; black background instead of the live campaign scene",
+  "CaptureProfile": {
+    "Id": "readme-1920x1080-en-srgb",
+    "Width": 1920,
+    "Height": 1080
+  },
+  "SchemaVersion": 1,
+  "PrefabIdentity": "modules/native/gui/prefabs/escapemenu.xml",
+  "Bindings": {
+    "IsDisabled": "false",
+    "CurrentTip": "You can reset your perks at the tournament master...for the right price.",
+    "NavigationButtonsEnabled": "false",
+    "GameTipTitle": "Game Tips",
+    "ActionText": "Resume",
+    "IsPositiveBehaviored": "false"
+  },
+  "Id": "escape-menu",
+  "Lists": {
+    "Window > Widget > Widget[Id=EscapeMenu] > NavigatableListPanel[Id=ButtonsContainer]": [
+      {
+        "IsDisabled": "false",
+        "__key": "menu-0",
+        "ActionText": "Return to the Game",
+        "IsPositiveBehaviored": "true"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-1",
+        "ActionText": "Campaign Options",
+        "IsPositiveBehaviored": "false"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-2",
+        "ActionText": "Options",
+        "IsPositiveBehaviored": "false"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-3",
+        "ActionText": "Save",
+        "IsPositiveBehaviored": "false"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-4",
+        "ActionText": "Save As",
+        "IsPositiveBehaviored": "false"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-5",
+        "ActionText": "Load",
+        "IsPositiveBehaviored": "false"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-6",
+        "ActionText": "Save And Exit",
+        "IsPositiveBehaviored": "false"
+      },
+      {
+        "IsDisabled": "false",
+        "__key": "menu-7",
+        "ActionText": "Exit to Main Menu",
+        "IsPositiveBehaviored": "false"
+      }
+    ]
+  },
+  "Scene": "Campaign pause menu",
+  "WidgetStates": {}
+}

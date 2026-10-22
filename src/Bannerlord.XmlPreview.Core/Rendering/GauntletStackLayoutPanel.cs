@@ -35,7 +35,6 @@ public sealed class GauntletStackLayoutPanel : Panel
 
         foreach (var child in visibleChildren)
         {
-            var margin = child.Margin;
             if (IsStretchOnPrimaryAxis(child, orientation))
             {
                 var stretchRatio = GetPrimaryStretchRatio(child, orientation);
@@ -44,9 +43,9 @@ public sealed class GauntletStackLayoutPanel : Panel
                 continue;
             }
 
-            child.Measure(CreateChildMeasureSize(availableSize, orientation, double.NaN, margin, IsStretchOnSecondaryAxis(child, orientation)));
-            occupiedPrimary += GetPrimarySize(child.DesiredSize, orientation) + GetPrimaryMargin(margin, orientation);
-            occupiedSecondary = Math.Max(occupiedSecondary, GetSecondarySize(child.DesiredSize, orientation) + GetSecondaryMargin(margin, orientation));
+            child.Measure(CreateChildMeasureSize(availableSize, orientation, double.NaN));
+            occupiedPrimary += GetPrimarySize(child.DesiredSize, orientation);
+            occupiedSecondary = Math.Max(occupiedSecondary, GetSecondarySize(child.DesiredSize, orientation));
         }
 
         var availablePrimary = GetPrimarySize(availableSize, orientation);
@@ -73,15 +72,13 @@ public sealed class GauntletStackLayoutPanel : Panel
             stretchChild.Child.Measure(CreateChildMeasureSize(
                 availableSize,
                 orientation,
-                allocatedPrimary,
-                stretchChild.Child.Margin,
-                IsStretchOnSecondaryAxis(stretchChild.Child, orientation)));
+                allocatedPrimary));
 
-            var measuredPrimary = GetPrimarySize(stretchChild.Child.DesiredSize, orientation) + GetPrimaryMargin(stretchChild.Child.Margin, orientation);
+            var measuredPrimary = GetPrimarySize(stretchChild.Child.DesiredSize, orientation);
             occupiedPrimary += measuredPrimary;
             occupiedSecondary = Math.Max(
                 occupiedSecondary,
-                GetSecondarySize(stretchChild.Child.DesiredSize, orientation) + GetSecondaryMargin(stretchChild.Child.Margin, orientation));
+                GetSecondarySize(stretchChild.Child.DesiredSize, orientation));
 
             if (!double.IsInfinity(remainingPrimary))
             {
@@ -110,7 +107,7 @@ public sealed class GauntletStackLayoutPanel : Panel
         var spaced = IsSpaced(LayoutMethod);
         var centered = IsCentered(LayoutMethod);
 
-        var occupiedPrimary = visibleChildren.Sum(child => GetPrimarySize(child.DesiredSize, orientation) + GetPrimaryMargin(child.Margin, orientation));
+        var occupiedPrimary = visibleChildren.Sum(child => GetPrimarySize(child.DesiredSize, orientation));
         var availablePrimary = GetPrimarySize(finalSize, orientation);
         var spacing = spaced && visibleChildren.Length > 1
             ? (availablePrimary - occupiedPrimary) / (visibleChildren.Length - 1)
@@ -125,28 +122,12 @@ public sealed class GauntletStackLayoutPanel : Panel
         var currentPrimary = reverse ? availablePrimary - startPrimary : startPrimary;
         foreach (var child in visibleChildren)
         {
-            var margin = child.Margin;
-            var desiredPrimary = GetPrimarySize(child.DesiredSize, orientation);
-            var primarySpan = desiredPrimary + GetPrimaryMargin(margin, orientation);
-            var primaryStart = reverse ? currentPrimary - primarySpan + GetPrimaryMarginStart(margin, orientation) : currentPrimary + GetPrimaryMarginStart(margin, orientation);
-
-            var secondaryAvailable = Math.Max(0d, GetSecondarySize(finalSize, orientation) - GetSecondaryMargin(margin, orientation));
-            var stretchSecondary = IsStretchOnSecondaryAxis(child, orientation);
-            var arrangedSecondary = stretchSecondary
-                ? secondaryAvailable
-                : Math.Min(GetSecondarySize(child.DesiredSize, orientation), secondaryAvailable);
-            var secondaryStart = GetSecondaryMarginStart(margin, orientation) + ResolveSecondaryOffset(child, orientation, secondaryAvailable, arrangedSecondary);
-
-            child.Arrange(CreateRect(orientation, primaryStart, secondaryStart, Math.Max(0d, desiredPrimary), Math.Max(0d, arrangedSecondary)));
-
-            if (reverse)
-            {
-                currentPrimary = spaced ? primaryStart - GetPrimaryMarginEnd(margin, orientation) - spacing : primaryStart - GetPrimaryMarginEnd(margin, orientation);
-            }
-            else
-            {
-                currentPrimary = spaced ? primaryStart + desiredPrimary + GetPrimaryMarginEnd(margin, orientation) + spacing : primaryStart + desiredPrimary + GetPrimaryMarginEnd(margin, orientation);
-            }
+            // WPF DesiredSize and Arrange slots already include Margin and alignment.
+            var primarySpan = GetPrimarySize(child.DesiredSize, orientation);
+            var primaryStart = reverse ? currentPrimary - primarySpan : currentPrimary;
+            child.Arrange(CreateRect(orientation, primaryStart, 0, Math.Max(0, primarySpan),
+                Math.Max(0, GetSecondarySize(finalSize, orientation))));
+            currentPrimary += reverse ? -primarySpan - spacing : primarySpan + spacing;
         }
 
         return finalSize;
@@ -193,13 +174,6 @@ public sealed class GauntletStackLayoutPanel : Panel
             : GauntletLayoutProperties.GetHeightSizePolicy(child) == "StretchToParent";
     }
 
-    private static bool IsStretchOnSecondaryAxis(FrameworkElement child, Orientation orientation)
-    {
-        return orientation == Orientation.Horizontal
-            ? GauntletLayoutProperties.GetHeightSizePolicy(child) == "StretchToParent"
-            : GauntletLayoutProperties.GetWidthSizePolicy(child) == "StretchToParent";
-    }
-
     private static double GetPrimaryStretchRatio(FrameworkElement child, Orientation orientation)
     {
         var ratio = orientation == Orientation.Horizontal
@@ -211,78 +185,25 @@ public sealed class GauntletStackLayoutPanel : Panel
     private static Size CreateChildMeasureSize(
         Size availableSize,
         Orientation orientation,
-        double primaryAllocation,
-        Thickness margin,
-        bool stretchSecondary)
+        double primaryAllocation)
     {
         var availablePrimary = GetPrimarySize(availableSize, orientation);
         var availableSecondary = GetSecondarySize(availableSize, orientation);
         var primary = double.IsNaN(primaryAllocation)
             ? availablePrimary
             : primaryAllocation;
-        if (!double.IsInfinity(primary))
-        {
-            primary = Math.Max(0d, primary - GetPrimaryMargin(margin, orientation));
-        }
-
+        primary = Math.Max(0, primary);
         var secondary = availableSecondary;
-        if (!double.IsInfinity(secondary) && stretchSecondary)
-        {
-            secondary = Math.Max(0d, secondary - GetSecondaryMargin(margin, orientation));
-        }
 
         return CreateSize(orientation, primary, secondary);
     }
 
-    private static double ResolveSecondaryOffset(
-        FrameworkElement child,
-        Orientation orientation,
-        double secondaryAvailable,
-        double arrangedSecondary)
-    {
-        var remaining = Math.Max(0d, secondaryAvailable - arrangedSecondary);
-        return orientation == Orientation.Horizontal
-            ? child.VerticalAlignment switch
-            {
-                VerticalAlignment.Bottom => remaining,
-                VerticalAlignment.Center => remaining / 2d,
-                _ => 0d
-            }
-            : child.HorizontalAlignment switch
-            {
-                HorizontalAlignment.Right => remaining,
-                HorizontalAlignment.Center => remaining / 2d,
-                _ => 0d
-            };
-    }
-
     private static double GetPrimarySize(Size size, Orientation orientation) => orientation == Orientation.Horizontal ? size.Width : size.Height;
-
     private static double GetSecondarySize(Size size, Orientation orientation) => orientation == Orientation.Horizontal ? size.Height : size.Width;
-
-    private static Size CreateSize(Orientation orientation, double primary, double secondary)
-    {
-        return orientation == Orientation.Horizontal
-            ? new Size(primary, secondary)
-            : new Size(secondary, primary);
-    }
-
-    private static Rect CreateRect(Orientation orientation, double primaryStart, double secondaryStart, double primarySize, double secondarySize)
-    {
-        return orientation == Orientation.Horizontal
-            ? new Rect(primaryStart, secondaryStart, primarySize, secondarySize)
-            : new Rect(secondaryStart, primaryStart, secondarySize, primarySize);
-    }
-
-    private static double GetPrimaryMargin(Thickness margin, Orientation orientation) => orientation == Orientation.Horizontal ? margin.Left + margin.Right : margin.Top + margin.Bottom;
-
-    private static double GetSecondaryMargin(Thickness margin, Orientation orientation) => orientation == Orientation.Horizontal ? margin.Top + margin.Bottom : margin.Left + margin.Right;
-
-    private static double GetPrimaryMarginStart(Thickness margin, Orientation orientation) => orientation == Orientation.Horizontal ? margin.Left : margin.Top;
-
-    private static double GetPrimaryMarginEnd(Thickness margin, Orientation orientation) => orientation == Orientation.Horizontal ? margin.Right : margin.Bottom;
-
-    private static double GetSecondaryMarginStart(Thickness margin, Orientation orientation) => orientation == Orientation.Horizontal ? margin.Top : margin.Left;
+    private static Size CreateSize(Orientation orientation, double primary, double secondary) => orientation == Orientation.Horizontal ? new Size(primary, secondary) : new Size(secondary, primary);
+    private static Rect CreateRect(Orientation orientation, double primaryStart, double secondaryStart, double primarySize, double secondarySize) => orientation == Orientation.Horizontal
+        ? new Rect(primaryStart, secondaryStart, primarySize, secondarySize)
+        : new Rect(secondaryStart, primaryStart, secondarySize, primarySize);
 
     private sealed record StretchChildInfo(FrameworkElement Child, double PrimaryStretchRatio);
 }
