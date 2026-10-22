@@ -4,6 +4,8 @@ Status: M0 complete and reverified 2026-10-04; M1-M3 complete 2026-10-12; M4 com
 
 These plans turn the [development roadmap](../roadmap.md) into executable work packages. They preserve the terminology in [GLOSSARY.md](../../GLOSSARY.md) and the execution boundary in [ADR 0001](../adr/0001-do-not-execute-mod-code-widgets.md).
 
+Source paths and runnable commands use the current [repository layout](../../CONTRIBUTING.md#repository-layout): production projects in `src/`, test projects in `tests/`, and the solution at the root. The milestone scope and recorded acceptance dates remain historical.
+
 ## Execution order
 
 1. [M0: Stabilize the Current Refactor](./m0-stabilize-current-refactor.md)

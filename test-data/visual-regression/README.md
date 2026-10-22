@@ -4,6 +4,8 @@ The nine cases are the M1 Native suite. Required validation consists of all nine
 
 ## Repository contents
 
+The directories below are relative to `test-data/visual-regression/`. The implementation is in `src/Bannerlord.XmlPreview.VisualRegression/` and `src/Bannerlord.XmlPreview.VisualRegression.Cli/`; automated tests are in `tests/Bannerlord.XmlPreview.VisualRegression.Tests/`. See the [repository layout](../../CONTRIBUTING.md#repository-layout) for the complete project structure.
+
 - `scenarios/`: version-1 scenarios for the installed Native prefabs. Every binding has an explicit value. Every template list contains one item with a stable `__key`. Scene, data state, root selector and exact Expected Warnings are recorded.
 - `native-baselines/`: normalized structure and Key Bounds expectations for the current renderer and installed assets. PNG entries and global Pixel Tolerance are deliberately absent. These expectations establish a regression starting point; they do not certify matching in-game structure or pixels.
 - `corpus/`: compressed, expanded prefab model data, resolved properties and references, brush/sprite metadata, original source SHA-256 and module version. No game DLLs or reference PNGs are included. The corpus was exported from the installed Native prefabs through the production loader; includes and templates have already been resolved. It is an input fixture, not a recorded render outcome.
@@ -18,6 +20,8 @@ Structure and layout snapshots use compact JSON to keep repository changes small
 Legacy renderer warnings currently have document scope (`$document`) and a content-derived `legacy.<hash>` code over the exact normalized message. Installation paths become `{installation}`. Expected Warnings match code, scope and message as a multiset, with a written reason for each. There is no count allowance. Native Conversation retains two missing-brush-metric warnings; OptionItem, Options and SingleQueryPopup retain their missing-Constants warning. Widget IDs and snapshots do not use these legacy diagnostic codes for identity.
 
 ## Run the public suite
+
+Run commands in this guide from the repository root.
 
 ```powershell
 dotnet build Bannerlord.XmlPreview.sln

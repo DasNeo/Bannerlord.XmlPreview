@@ -1,6 +1,6 @@
 # Third-party image and package components
 
-The production TPAC texture field reader in `Bannerlord.XmlPreview.Bannerlord/Assets/TpacTextureReader.cs` adapts the binary layout from [szszss/TpacTool](https://github.com/szszss/TpacTool), reviewed at `b56b77ad273ba67192b1594dbb2eeca8c542b3b7`. Copyright 2020-2022 szszss, MIT. The complete notice is retained in `licenses/TpacTool-MIT.txt`. TpacTool's GUI, exporters, mesh readers and assembly manager are not shipped.
+The production TPAC texture field reader in `src/Bannerlord.XmlPreview.Bannerlord/Assets/TpacTextureReader.cs` adapts the binary layout from [szszss/TpacTool](https://github.com/szszss/TpacTool), reviewed at `b56b77ad273ba67192b1594dbb2eeca8c542b3b7`. Copyright 2020-2022 szszss, MIT. The complete notice is retained in `licenses/TpacTool-MIT.txt`. TpacTool's GUI, exporters, mesh readers and assembly manager are not shipped.
 
 Production dependencies:
 
