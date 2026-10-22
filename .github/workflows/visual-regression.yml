@@ -10,8 +10,8 @@ jobs:
   structure-only:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: '10.0.x'
       - run: dotnet restore Bannerlord.XmlPreview.sln
@@ -20,7 +20,7 @@ jobs:
       - name: Complete nine-case Structure Only suite
         shell: pwsh
         run: ./tools/run_visual_regression.ps1 -Mode StructureOnly -OutputRoot artifacts/visual-regression
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: structure-only-evidence

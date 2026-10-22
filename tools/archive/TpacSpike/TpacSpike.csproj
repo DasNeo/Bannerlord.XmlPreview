@@ -5,7 +5,7 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
-    <ReaderRoot Condition="'$(ReaderRoot)' == ''">../../artifacts/m3-spike/GauntletUI-LSP/tpac-tool/TpacTool.Lib</ReaderRoot>
+    <ReaderRoot Condition="'$(ReaderRoot)' == ''">../../../artifacts/m3-spike/GauntletUI-LSP/tpac-tool/TpacTool.Lib</ReaderRoot>
   </PropertyGroup>
   <ItemGroup>
     <!-- Evaluation only: pinned source is fetched by run_tpac_spike.ps1, never shipped. -->

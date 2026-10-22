@@ -171,7 +171,7 @@ public sealed class InstalledImageTests
     }
 
     [InstalledImageFact]
-    public void PreservedLandManagementRetainsGeometryAndClassifiesClanFrameHonestly()
+    public void LandManagementDashboardRetainsPanelGeometryAndResolvesSprites()
     {
         SnapshotCaptureTests.Sta(() =>
         {
@@ -182,9 +182,11 @@ public sealed class InstalledImageTests
             var diagnostics = new PreviewDiagnostics();
             var document = loader.Load(path, diagnostics);
             Assert.DoesNotContain(Nodes(document.RootNode), n => n.Name.Contains("CodeWidget", StringComparison.Ordinal));
-            var rendered = renderer.Render(document, diagnostics, new("fixtures/agricultureestate/gui/prefabs/landmanagement.xml",
-                new Dictionary<string, string>(), new Dictionary<string, IReadOnlyDictionary<string, string>>(), ["Window"]));
+            var scenario = ScenarioLoader.Load(Path.Combine(NativeSuiteTests.DataRoot(), "m3-scenarios", "m3-land-management.json"));
+            var rendered = renderer.Render(document, diagnostics, new(scenario.PrefabIdentity,
+                scenario.Bindings, scenario.WidgetStates, scenario.KeyBoundsSelectors) { AssetModule = scenario.AssetModule });
             Assert.Equal(RenderCompletionStatus.Complete, diagnostics.CompletionStatus);
+            Assert.Empty(diagnostics.Messages);
             Assert.True(rendered.ActualWidth > 0); Assert.True(rendered.ActualHeight > 0);
             Assert.NotNull(diagnostics.Layout); Assert.NotNull(diagnostics.RenderStructure);
             var assets = new BannerlordAssetCatalog(new ImageAssetTests.Settings(root), new BannerlordInstallationIndex()).ForPrefab(path);
@@ -193,11 +195,19 @@ public sealed class InstalledImageTests
             Assert.Equal("960", document.Constants["Encyclopedia.Frame.Height"]);
             var popup = Assert.Single(diagnostics.Layout!.KeyBounds, b => b.ExpandedPath.EndsWith("BrushWidget[Id=TownManagementPopup]"));
             Assert.Equal(1500d, popup.Width); Assert.Equal(960d, popup.Height);
-            var clanFrame = assets.ResolveImage(new("clan_frame_small"));
-            Assert.Equal(ImageResolutionStatus.Missing, clanFrame.Status);
-            Assert.Null(clanFrame.Image);
-            Assert.Contains(clanFrame.Diagnostics, d => d.Code == "module.dependency.missing");
-            foreach (var name in new[] { "ae_gardens", "ae_granary", "ae_storehouse", "ae_irrigation", "ae_patrols" })
+            foreach (var (id, width, height) in new[]
+            {
+                ("EstateDashboard", 1400d, 696d), ("LandHolding0", 580d, 180d), ("LandHolding1", 580d, 180d),
+                ("EstateUpgrades", 800d, 380d), ("Upgrade0", 244d, 304d), ("Upgrade1", 244d, 304d), ("Upgrade2", 244d, 304d),
+                ("EstateWorkforce", 520d, 296d), ("EstateStockpile", 410d, 296d), ("EstateProject", 430d, 296d),
+                ("ProjectProgressTrack", 254d, 18d)
+            })
+            {
+                var bounds = Assert.Single(diagnostics.Layout.KeyBounds, b => b.ExpandedPath.EndsWith($"Widget[Id={id}]"));
+                Assert.Equal(width, bounds.Width); Assert.Equal(height, bounds.Height);
+            }
+            foreach (var name in Nodes(document.RootNode).Select(n => n.Attributes.GetValueOrDefault("Sprite"))
+                .OfType<string>().Where(name => !name.StartsWith('@')).Distinct())
                 Assert.Equal(ImageResolutionStatus.Resolved, assets.ResolveImage(new(name)).Status);
             WriteEvidence("land-management", diagnostics, []);
             return 0;
@@ -234,7 +244,10 @@ public sealed class InstalledImageTests
 
 public sealed class InstalledImageFactAttribute : FactAttribute
 {
-    public InstalledImageFactAttribute()
+    public InstalledImageFactAttribute(
+        [System.Runtime.CompilerServices.CallerFilePath] string? sourceFilePath = null,
+        [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = 0)
+        : base(sourceFilePath, sourceLineNumber)
     {
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BANNERLORD_ROOT")))
             Skip = "Installed M3 acceptance requires BANNERLORD_ROOT; portable M3 tests always run.";

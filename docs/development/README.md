@@ -37,24 +37,29 @@ Build/test/start commands are in [Contributing](../../CONTRIBUTING.md). App cont
 Run automated authoring tests and the three installed image-family Structure Only comparisons:
 
 ```powershell
-./tools/run_m4_validation.ps1 `
+./tools/run_installed_validation.ps1 `
   -BannerlordRoot 'C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord'
 ```
 
-This delegates to the image validation runner, which also supports publishing the fidelity matrix:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\run_m3_validation.ps1 `
-  -BannerlordRoot "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord"
-```
-
 This runs the solution tests, nine portable renderer cases, installed package assertions, and all three installed structural targets. The [image scenarios](../../test-data/visual-regression/m3-scenarios/README.md) explain explicit provider data, active asset module scope, Diagnostics and runtime-only limits. `-PublishFidelity` updates the local fidelity matrix only after validation passes.
+
+`run_installed_validation.ps1` replaces the former M3 and M4 commands and writes
+evidence under `artifacts/installed-validation/` by default. Historical extraction
+and TPAC investigation tools are retained in [tools/archive](../../tools/archive/README.md).
+The standalone widget coverage reporter was retired; preview Diagnostics and
+Behavior Traces describe the current Behavior Graph.
+
+Tests use xUnit.net v3 with `xunit.v3.mtp-off`, the Visual Studio adapter, and
+Microsoft.NET.Test.Sdk. This preserves VSTest-based `dotnet test --filter` and
+`--logger` commands on .NET 10, including the load measurement script. The default
+`xunit.v3` package enables Microsoft Testing Platform and requires different test
+runner configuration and commands.
 
 For interactive authoring checks, use the [manual testing guide](../testing/m4-steps-to-repeat.md). It includes a disposable fixture, expected outcomes, and a result sheet. For the leaderboard-specific layout and font checks, see [Tournament Leaderboard regression](../testing/tournament-leaderboard.md).
 
 Phase 9 checks six curated fixtures. `Complete` indicates success; timeouts, process failures, missing Diagnostics, `Partial`, and `Failed` produce a nonzero aggregate exit code. Per-fixture Diagnostics and `summary.md` are preserved even when validation fails.
 
-`tools/open_phase0_fixture.ps1` and `tools/run_phase9_validation.ps1` use the archived version at [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](../../fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml) for the `land-management` fixture. Its provenance and dependencies are described in the [fixture documentation](../../fixtures/README.md).
+`tools/open_phase0_fixture.ps1` and `tools/run_phase9_validation.ps1` use the checked-in dashboard layout at [`fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml`](../../fixtures/AgricultureEstate/GUI/Prefabs/LandManagement.xml) for the `land-management` fixture. Its provenance and dependencies are described in the [fixture documentation](../../fixtures/README.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\run_phase9_validation.ps1 `

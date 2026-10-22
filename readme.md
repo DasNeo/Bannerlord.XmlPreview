@@ -96,3 +96,8 @@ From the extracted application folder:
 ## Development
 
 For building, testing, architecture, and release instructions, see [Contributing](https://github.com/DasNeo/Bannerlord.XmlPreview/blob/main/CONTRIBUTING.md).
+
+## License
+
+Original project code and documentation are licensed under the [MIT License](LICENSE).
+Third-party components, game and mod content, and screenshots containing that content are excluded from this grant and retain their respective rights and license terms. See [third-party notices](THIRD-PARTY-NOTICES.md).

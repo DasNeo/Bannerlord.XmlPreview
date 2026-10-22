@@ -9,10 +9,10 @@ From the repository root in PowerShell:
 ```powershell
 dotnet restore ./Bannerlord.XmlPreview.sln
 dotnet build ./Bannerlord.XmlPreview.sln --no-restore -m:1
-./tools/run_m4_validation.ps1
+./tools/run_installed_validation.ps1
 ```
 
-If Bannerlord is installed elsewhere, pass `-BannerlordRoot 'D:\path\to\Bannerlord'`. The installed checks require Native and AgricultureEstate assets. Expected: the solution tests and all three installed Structure Only comparisons pass; optional in-game Reference Package coverage may be skipped. The structural reports must show pixels `NotRun`. Retain `artifacts/m4-validation/` and the test output.
+If Bannerlord is installed elsewhere, pass `-BannerlordRoot 'D:\path\to\Bannerlord'`. The installed checks require Native and AgricultureEstate assets. Expected: the solution tests and all three installed Structure Only comparisons pass; optional in-game Reference Package coverage may be skipped. The structural reports must show pixels `NotRun`. Retain `artifacts/installed-validation/` and the test output.
 
 For a focused portable M4 run without installed-asset acceptance:
 
@@ -124,7 +124,7 @@ These optional checks provide additional integration confidence beyond installed
 Use a **disposable copy of a Bannerlord installation with Native and AgricultureEstate**, preserving module paths, rather than altering the live game files. Select this copy in the app's Bannerlord controls and apply it. Open `Modules/AgricultureEstate/GUI/Prefabs/LandManagement.xml` from the copy.
 
 1. Pick a brush used by the selected widget from its debug information. In the copied `GUI/Brushes` definition, change a visible layer color and save a valid XML document. Expected: automatic reload, the brush path in changed dependencies, and the changed brush appearance. Restore it and check recovery.
-2. Identify a resolved image's package/payload path from its debug information or installed image artifacts under `artifacts/m4-validation/installed/`. Using a compatible asset tool, replace the copied TPAC/RDC pair with a valid version having a visible pixel change while retaining the sprite identity and valid metadata. Expected: automatic reload and changed pixels, without restarting the app. Restore the original pair afterward. Do not test this by changing arbitrary binary bytes.
+2. Identify a resolved image's package/payload path from its debug information or installed image artifacts under `artifacts/installed-validation/installed/`. Using a compatible asset tool, replace the copied TPAC/RDC pair with a valid version having a visible pixel change while retaining the sprite identity and valid metadata. Expected: automatic reload and changed pixels, without restarting the app. Restore the original pair afterward. Do not test this by changing arbitrary binary bytes.
 3. If these optional checks are skipped or the copied installation/valid replacement asset is unavailable, record **NotRun** and the reason. The focused `DependencyInvalidationReloadsMetadataAndImagePixels` test checks changed metadata dimensions and independently expected changed pixel channels using generated assets. The accepted live generated-asset checks are separate evidence; neither claims a copied-game mutation run occurred.
 
 ## 8. Check comparison modes, masks and difference navigation

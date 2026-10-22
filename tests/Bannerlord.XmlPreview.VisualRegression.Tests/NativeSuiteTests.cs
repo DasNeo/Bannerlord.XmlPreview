@@ -64,7 +64,7 @@ public sealed class NativeSuiteTests
         var scenario = ScenarioLoader.Load(scenarioPath);
         IVisualRegression regression = new VisualRegressionRunner(capture.CaptureAsync, Path.Combine(data, "issue-6-portable-baselines"));
         var report = await regression.CompareAsync(new(scenario.PrefabIdentity, scenarioPath, VisualRegressionMode.StructureOnly,
-            new(id, "v1.4.7", "v1.4.7", scenario.CaptureProfile.Id, 1), Path.Combine(fixture.Root, "native-actual")));
+            new(id, "v1.4.7", "v1.4.7", scenario.CaptureProfile.Id, 1), Path.Combine(fixture.Root, "native-actual")), cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(report.Outcome == VisualRegressionOutcome.Passed,
             $"{id}: {report.Outcome}; {report.FailureReason}; {report.Checks}; {report.Metrics}; {string.Join(" | ", report.DiagnosticDifferences.Select(d => d.Description))}");
         Assert.Equal(ComparisonStatus.NotRun, report.Checks.Pixels);
@@ -85,7 +85,7 @@ public sealed class NativeSuiteTests
         IVisualRegression regression = new VisualRegressionRunner(capture.CaptureAsync, metadataRoot,
             Environment.GetEnvironmentVariable("BANNERLORD_REFERENCE_PACKAGE"));
         var report = await regression.CompareAsync(new(scenario.PrefabIdentity, scenarioPath, VisualRegressionMode.Full,
-            new(id, manifest.GameVersion, manifest.ModuleVersion, scenario.CaptureProfile.Id, manifest.SchemaVersion), Path.Combine(fixture.Root, "full-actual")));
+            new(id, manifest.GameVersion, manifest.ModuleVersion, scenario.CaptureProfile.Id, manifest.SchemaVersion), Path.Combine(fixture.Root, "full-actual")), cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(VisualRegressionOutcome.Passed, report.Outcome);
     }
 
@@ -104,7 +104,10 @@ public sealed class NativeSuiteTests
 
 public sealed class NativeFullTheoryAttribute : TheoryAttribute
 {
-    public NativeFullTheoryAttribute()
+    public NativeFullTheoryAttribute(
+        [System.Runtime.CompilerServices.CallerFilePath] string? sourceFilePath = null,
+        [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = 0)
+        : base(sourceFilePath, sourceLineNumber)
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("BANNERLORD_RUN_PIXEL_TESTS"), "true", StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BANNERLORD_ROOT")) ||

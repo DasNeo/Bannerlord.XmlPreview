@@ -1,9 +1,10 @@
 param(
     [string]$BannerlordRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord',
-    [string]$OutputRoot = (Join-Path $PSScriptRoot '../artifacts/m3-validation'),
+    [string]$OutputRoot = (Join-Path $PSScriptRoot '../artifacts/installed-validation'),
     [switch]$PublishFidelity
 )
 $ErrorActionPreference = 'Stop'
+$OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $data = Join-Path $repoRoot 'test-data/visual-regression'
 $cli = Join-Path $repoRoot 'src/Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.exe'
@@ -14,16 +15,16 @@ try {
     $env:BANNERLORD_ROOT = $BannerlordRoot
     $env:BANNERLORD_M3_ARTIFACTS = Join-Path $OutputRoot 'installed'
     & dotnet test (Join-Path $repoRoot 'Bannerlord.XmlPreview.sln') --no-restore -m:1
-    if ($LASTEXITCODE -ne 0) { throw 'M3 unit, image, installed acceptance or portable tests failed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Unit, authoring, image, installed acceptance or portable tests failed.' }
     $reports = @()
     foreach ($id in @('m3-conversation', 'm3-banner-builder', 'm3-land-management')) {
         $metadata = if ($id -eq 'm3-land-management') { 'm3-mod-baselines' } else { 'm3-native-baselines' }
         $caseOutput = Join-Path $OutputRoot $id
         & $cli compare --scenario (Join-Path $data "m3-scenarios/$id.json") --metadata (Join-Path $data $metadata) `
             --bannerlord-root $BannerlordRoot --output $caseOutput --mode StructureOnly
-        if ($LASTEXITCODE -ne 0) { throw "M3 structural acceptance failed for $id. Artifacts retained in $caseOutput." }
+        if ($LASTEXITCODE -ne 0) { throw "Installed structural acceptance failed for $id. Artifacts retained in $caseOutput." }
         $report = Get-Content (Join-Path $caseOutput 'report.json') -Raw | ConvertFrom-Json
-        if ($report.Outcome -ne 'Passed') { throw "M3 requires Passed for $id, received $($report.Outcome)." }
+        if ($report.Outcome -ne 'Passed') { throw "Installed validation requires Passed for $id, received $($report.Outcome)." }
         $reports += [ordered]@{ Case=$id; Outcome=$report.Outcome; Pixels=$report.Checks.Pixels }
     }
     $rows = @(
@@ -44,7 +45,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $OutputRoot 'fidelity.json') -Destination (Join-Path $destination 'images.json')
         Copy-Item -LiteralPath (Join-Path $OutputRoot 'fidelity.md') -Destination (Join-Path $destination 'images.md')
     }
-    Write-Output "M3 acceptance and fidelity evidence: $OutputRoot"
+    Write-Output "Installed validation and fidelity evidence: $OutputRoot"
 } finally {
     $env:BANNERLORD_ROOT = $priorRoot
     $env:BANNERLORD_M3_ARTIFACTS = $priorArtifacts

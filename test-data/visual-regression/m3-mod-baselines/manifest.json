@@ -16,13 +16,13 @@
   "Cases": {
     "m3-land-management": {
       "PrefabIdentity": "fixtures/agricultureestate/gui/prefabs/landmanagement.xml",
-      "ScenarioSha256": "bb580bf242ffc2c20cc388fe925c850e8c662fa78e09ec00be37c8dbacee23a8",
-      "Scene": "Preserved AgricultureEstate prefab",
-      "DataState": "Adapter deterministic default data; all five mod sprites resolved from TPAC and companion RDC; clan_frame_small expected missing.",
+      "ScenarioSha256": "53f4365e401eb8365d521384c41327b186a31e2844f2b1bae254fa9a8e309c48",
+      "Scene": "AgricultureEstate dashboard prefab",
+      "DataState": "Explicit illustrative preview data; holdings, upgrade metadata, off switches, and empty project progress; Native and mod sprites resolved from TPAC and companion RDC.",
       "StructureFile": "m3-land-management.structure.json",
-      "StructureSha256": "929cafaa82496fafa0b41b11f82e1d2a585904737443fc28b0159397b2500562",
+      "StructureSha256": "5179ac5afb6dcaaba6c70dac3b038b74beb25c43232b898079d3534310d5efa4",
       "LayoutFile": "m3-land-management.layout.json",
-      "LayoutSha256": "60f1f90847e509966ab91bad2960f3610a374e41fd82bf0b86702dd6dce79bdb",
+      "LayoutSha256": "672095ccfbd5aab6c048fd8a3d5d7222e1b3ebe6eb97b22a15e1ca07d56fbc51",
       "ReferencePng": null,
       "ReferenceSha256": null
     }

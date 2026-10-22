@@ -1,14 +1,14 @@
 param(
     [string]$BannerlordRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord',
     [string]$ComparisonPngRoot,
-    [string]$OutputRoot = (Join-Path $PSScriptRoot '../artifacts/m3-spike/results')
+    [string]$OutputRoot = (Join-Path $PSScriptRoot '../../artifacts/m3-spike/results')
 )
 
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($ComparisonPngRoot) -or !(Test-Path -LiteralPath $ComparisonPngRoot -PathType Container)) {
     throw 'Supply -ComparisonPngRoot with an existing external PNG comparison directory. Production and required validation do not need comparison PNGs.'
 }
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $readerRoot = Join-Path $repoRoot 'artifacts/m3-spike/GauntletUI-LSP/tpac-tool'
 $readerCommit = '6b115ff3a6cebdbe25af424eb13926078ed22b2d'
 if (!(Test-Path -LiteralPath $readerRoot)) {

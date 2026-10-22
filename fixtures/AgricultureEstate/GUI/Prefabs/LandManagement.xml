@@ -1,523 +1,322 @@
 <Prefab>
-	<Constants>
-		<Constant Name="Encyclopedia.Frame.Width" BrushLayer="Default"
-				  BrushName="Encyclopedia.Frame" BrushValueType="Width" />
-		<Constant Name="Encyclopedia.Frame.Height" BrushLayer="Default"
-				  BrushName="Encyclopedia.Frame" BrushValueType="Height" />
-
-		<Constant Name="Top.Height" Value="240" />
-		<Constant Name="Top.VerticalDivider.Height" Value="!Top.Height" />
-		<Constant Name="Top.VerticalDivider.Width" Value="15" />
-		<Constant Name="Top.VerticalDivider.Thin.Width" Value="7" />
-
-		<Constant Name="Reference.AlphaFactor" Value="0" />
-	</Constants>
-	<Window>
-		<Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-				Sprite="BlankWhiteSquare_9" Color="#000000CC">
-			<Standard.PopupCloseButton HorizontalAlignment="Center" VerticalAlignment="Center"
-									   MarginTop="940" Command.Click="Close" Parameter.ButtonText="Leave" />
-			<Children>
-
-				<!--Background-->
-				<BrushWidget Id="TownManagementPopup" DoNotAcceptEvents="true"
-							 WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-							 SuggestedWidth="!Encyclopedia.Frame.Width"
-							 SuggestedHeight="!Encyclopedia.Frame.Height" HorizontalAlignment="Center"
-							 VerticalAlignment="Center" MarginBottom="35" Brush="Encyclopedia.Frame"
-							 ReserveManagementPopup="ReservePopup">
-					<Children>
-						<!--title-->
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="590" SuggestedHeight="155" HorizontalAlignment="Center"
-								VerticalAlignment="Top" PositionXOffset="6" PositionYOffset="-18"
-								Sprite="StdAssets\tabbar_popup" IsDisabled="true">
-							<Children>
-								<RichTextWidget WidthSizePolicy="CoverChildren"
-												HeightSizePolicy="CoverChildren" HorizontalAlignment="Center"
-												VerticalAlignment="Center" PositionYOffset="-25"
-												Brush="Recruitment.Popup.Title.Text" Brush.FontSize="36"
-												IsDisabled="true" Text="@LandManagementString" />
-							</Children>
-						</Widget>
-
-						<!-- Ledger -->
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Center"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionYOffset="95" Command.Click="Click11"
-									  Command.HoverBegin="ExecuteBeginHint18"
-									  Command.HoverEnd="ExecuteEndHint">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@LedgerString" />
-							</Children>
-						</ButtonWidget>
-
-						<!-- Land Plots -->
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="150" SuggestedHeight="150" PositionXOffset="40"
-								PositionYOffset="200" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="@SettlementImageID">
-						</Widget>
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="190" SuggestedHeight="190" PositionXOffset="20"
-								PositionYOffset="180" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ArmyManagement\clan_frame_small"
-								Command.HoverBegin="ExecuteBeginHint1" Command.HoverEnd="ExecuteEndHint">
-						</Widget>
-
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="200" PositionYOffset="200"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="32"
-										IsDisabled="true" Text="@LandPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="200" PositionYOffset="250"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@OwnedLandPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="310" PositionYOffset="250"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@OwnedPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="200" PositionYOffset="300"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@AvailableLandPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="310" PositionYOffset="300"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@AvaliblePlotsString" />
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="370" PositionYOffset="250"
-									  Command.HoverBegin="ExecuteBeginHint3" Command.HoverEnd="ExecuteEndHint"
-									  Command.Click="Click1">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@BuyString" />
-							</Children>
-						</ButtonWidget>
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush2" IsEnabled="true"
-									  PositionXOffset="370" PositionYOffset="300"
-									  Command.HoverBegin="ExecuteBeginHint4" Command.HoverEnd="ExecuteEndHint"
-									  Command.Click="Click2">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@SellString" />
-							</Children>
-						</ButtonWidget>
-
-						<!-- Undeveloped Plots -->
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="150" SuggestedHeight="150" PositionXOffset="40"
-								PositionYOffset="380" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="wait_hideout_forest">
-						</Widget>
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="190" SuggestedHeight="190" PositionXOffset="20"
-								PositionYOffset="360" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ArmyManagement\clan_frame_small"
-								Command.HoverBegin="ExecuteBeginHint2" Command.HoverEnd="ExecuteEndHint">
-						</Widget>
-
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="200" PositionYOffset="380"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="32"
-										IsDisabled="true" Text="@UndevLandPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="200" PositionYOffset="430"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@OwnedLandPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="310" PositionYOffset="430"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@OwnedUndevelopedPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="200" PositionYOffset="480"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@AvailableLandPlotsString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="310" PositionYOffset="480"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@AvalibleUndevelopedPlotsString" />
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="370" PositionYOffset="430"
-									  Command.HoverBegin="ExecuteBeginHint5" Command.HoverEnd="ExecuteEndHint"
-									  Command.Click="Click3">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@BuyString" />
-							</Children>
-						</ButtonWidget>
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush2" IsEnabled="true"
-									  PositionXOffset="370" PositionYOffset="480"
-									  Command.HoverBegin="ExecuteBeginHint6" Command.HoverEnd="ExecuteEndHint"
-									  Command.Click="Click4">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@SellString" />
-							</Children>
-						</ButtonWidget>
-
-						<!-- Slaves -->
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="590"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="32"
-										IsDisabled="true" Text="@SlavesTitle" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="30" PositionYOffset="650"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@CapacityText" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="135" PositionYOffset="650"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@SlaveCapacityString" />
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="250" PositionYOffset="650"
-									  Command.HoverBegin="ExecuteBeginHint7" Command.HoverEnd="ExecuteEndHint"
-									  Command.Click="ManageSlaves">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@ManageString" />
-							</Children>
-						</ButtonWidget>
-
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="150" SuggestedHeight="150" PositionXOffset="40"
-								PositionYOffset="710" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ae_gardens" Command.HoverBegin="ExecuteBeginHint8"
-								Command.HoverEnd="ExecuteEndHint">
-						</Widget>
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="210" PositionYOffset="710"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@SlaveDeclineTitleString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="360" PositionYOffset="710"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@SlaveDeclineString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="210" PositionYOffset="740"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@RevoltRiskTitleString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="360" PositionYOffset="740"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@RevoltRiskString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="210" PositionYOffset="770"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@LandUsageTitleString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="360" PositionYOffset="770"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@LandUsageString" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="210" PositionYOffset="810"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@BuySlavesTitleString" />
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="@BuySlavesButton" IsEnabled="true"
-									  PositionXOffset="340" PositionYOffset="810"
-									  Command.HoverBegin="ExecuteBeginHint17"
-									  Command.HoverEnd="ExecuteEndHint" Command.Click="Click10">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@BuySlavesString" />
-							</Children>
-						</ButtonWidget>
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="20" PositionYOffset="870"
-									  Command.HoverBegin="ExecuteBeginHint9" Command.HoverEnd="ExecuteEndHint">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@ProductionDetailsString" />
-							</Children>
-						</ButtonWidget>
-
-						<!-- Stockpile -->
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="650" PositionYOffset="590"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="32"
-										IsDisabled="true" Text="@StockpileTitle" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="530" PositionYOffset="650"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@CapacityText" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="635" PositionYOffset="650"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@StockpileCapacityString" />
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="750" PositionYOffset="650"
-									  Command.HoverBegin="ExecuteBeginHint10"
-									  Command.HoverEnd="ExecuteEndHint" Command.Click="ManageStockpile">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@ManageString" />
-							</Children>
-						</ButtonWidget>
-
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="150" SuggestedHeight="150" PositionXOffset="540"
-								PositionYOffset="710" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ae_granary" Command.HoverBegin="ExecuteBeginHint10"
-								Command.HoverEnd="ExecuteEndHint">
-						</Widget>
-
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="710" PositionYOffset="735"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@SellToMarketTitleString" />
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="@SellToMarketButton" IsEnabled="true"
-									  PositionXOffset="760" PositionYOffset="790"
-									  Command.HoverBegin="ExecuteBeginHint11"
-									  Command.HoverEnd="ExecuteEndHint" Command.Click="Click5">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@SellToMarketString" />
-							</Children>
-						</ButtonWidget>
-
-						<!-- Current Project  -->
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="1100" PositionYOffset="590"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="32"
-										IsDisabled="true" Text="@CurrentProjectTitle" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="1030" PositionYOffset="650"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@CurrentProjectString" />
-
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="150" SuggestedHeight="150" PositionXOffset="1040"
-								PositionYOffset="710" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="@CurrentProjectIconSting"
-								Command.HoverBegin="ExecuteBeginHint16"
-								Command.HoverEnd="ExecuteEndHint">
-						</Widget>
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush2" IsEnabled="true"
-									  PositionXOffset="1250" PositionYOffset="650"
-									  Command.HoverBegin="ExecuteBeginHint15"
-									  Command.HoverEnd="ExecuteEndHint" Command.Click="Click9">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@CancelString" />
-							</Children>
-						</ButtonWidget>
-
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="1210" PositionYOffset="735"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@ProgressTitle" />
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="1305" PositionYOffset="735"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@CurrentProjecProgressString" />
-
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="1200" PositionYOffset="790"
-									  Command.HoverBegin="ExecuteBeginHint16"
-									  Command.HoverEnd="ExecuteEndHint">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@ProjectQueueString" />
-							</Children>
-						</ButtonWidget>
-
-						<!-- Upgrades -->
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="870" PositionYOffset="210"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="32"
-										IsDisabled="true" Text="@UpgradesTitle" />
-
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="200" SuggestedHeight="200" PositionXOffset="540"
-								PositionYOffset="290" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ae_irrigation" Command.HoverBegin="ExecuteBeginHint12"
-								Command.HoverEnd="ExecuteEndHint">
-						</Widget>
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="565" PositionYOffset="485"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@LandClearanceString" />
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="565" PositionYOffset="520" Command.Click="Click6">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@UpgradeString" />
-							</Children>
-						</ButtonWidget>
-
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="200" SuggestedHeight="200" PositionXOffset="840"
-								PositionYOffset="290" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ae_patrols" Command.HoverBegin="ExecuteBeginHint13"
-								Command.HoverEnd="ExecuteEndHint" Command.Click="Click7">
-						</Widget>
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="875" PositionYOffset="485"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@UpgradePatrolsString" />
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="865" PositionYOffset="520" Command.Click="Click7">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@UpgradeString" />
-							</Children>
-						</ButtonWidget>
-
-						<Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-								SuggestedWidth="200" SuggestedHeight="200" PositionXOffset="1140"
-								PositionYOffset="290" HorizontalAlignment="Left" VerticalAlignment="Top"
-								Sprite="ae_storehouse" Command.HoverBegin="ExecuteBeginHint14"
-								Command.HoverEnd="ExecuteEndHint" Command.Click="Click8">
-						</Widget>
-						<RichTextWidget WidthSizePolicy="CoverChildren"
-										HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-										VerticalAlignment="Top" PositionXOffset="1155" PositionYOffset="485"
-										Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
-										IsDisabled="true" Text="@UpgradeStorehouseString" />
-						<ButtonWidget WidthSizePolicy="CoverChildren"
-									  HeightSizePolicy="CoverChildren" HorizontalAlignment="Left"
-									  VerticalAlignment="Top" Brush="ButtonBrush1" IsEnabled="true"
-									  PositionXOffset="1165" PositionYOffset="520" Command.Click="Click8">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="22"
-												Text="@UpgradeString" />
-							</Children>
-						</ButtonWidget>
-
-					</Children>
-				</BrushWidget>
-
-				<!--Close
-				Button-->
-				<ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-						   HorizontalAlignment="Center" MarginTop="950">
-					<Children>
-						<ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-									  SuggestedHeight="48" SuggestedWidth="240" HorizontalAlignment="Center"
-									  VerticalAlignment="Bottom" Brush="ButtonBrush1" Command.Click="Close"
-									  IsEnabled="true">
-							<Children>
-								<RichTextWidget DoNotAcceptEvents="true"
-												WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren"
-												HorizontalAlignment="Center" VerticalAlignment="Center"
-												Brush="OverlayPopup.ButtonText" Brush.FontSize="20"
-												Text="@CloseString" />
-							</Children>
-						</ButtonWidget>
-					</Children>
-				</ListPanel>
-
-			</Children>
-		</Widget>
-	</Window>
+  <Constants>
+    <Constant Name="Encyclopedia.Frame.Width" BrushLayer="Default" BrushName="Encyclopedia.Frame" BrushValueType="Width" />
+    <Constant Name="Encyclopedia.Frame.Height" BrushLayer="Default" BrushName="Encyclopedia.Frame" BrushValueType="Height" />
+  </Constants>
+  <Window>
+    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#000000CC">
+      <Children>
+        <BrushWidget Id="TownManagementPopup" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="!Encyclopedia.Frame.Width" SuggestedHeight="!Encyclopedia.Frame.Height" HorizontalAlignment="Center" VerticalAlignment="Center" MarginBottom="35" Brush="Encyclopedia.Frame" ReserveManagementPopup="ReservePopup">
+          <Children>
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="590" SuggestedHeight="155" HorizontalAlignment="Center" VerticalAlignment="Top" PositionXOffset="6" PositionYOffset="-18" Sprite="StdAssets\tabbar_popup" IsDisabled="true">
+              <Children>
+                <RichTextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" PositionYOffset="-25" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="36" IsDisabled="true" Text="@LandManagementString" />
+              </Children>
+            </Widget>
+            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="44" HorizontalAlignment="Right" VerticalAlignment="Top" MarginRight="70" PositionYOffset="92" Brush="ButtonBrush1" IsEnabled="true" Command.Click="Click11" Command.HoverBegin="ExecuteBeginHint18" Command.HoverEnd="ExecuteEndHint">
+              <Children>
+                <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@LedgerString" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Children>
+            </ButtonWidget>
+            <!-- 1400-wide grid: two holdings, three upgrades, then three operational panels. -->
+            <Widget Id="EstateDashboard" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="1400" SuggestedHeight="696" HorizontalAlignment="Center" VerticalAlignment="Top" PositionYOffset="180">
+              <Children>
+                <!-- Holdings: independent framed cards -->
+                <Widget Id="LandHolding0" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="580" SuggestedHeight="180" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="0" PositionYOffset="0">
+                  <Children>
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="140" SuggestedHeight="148" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="20" PositionYOffset="16" Sprite="@SettlementImageID" Command.HoverBegin="ExecuteBeginHint1" Command.HoverEnd="ExecuteEndHint" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="144" SuggestedHeight="152" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="18" PositionYOffset="14" Sprite="frame_small_9" DoNotAcceptEvents="true" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="376" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="28" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@LandPlotsString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="376" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="50" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="58" Sprite="General\Mission\house" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="236" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="216" PositionYOffset="54" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@OwnedLandPlotsString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="96" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="460" PositionYOffset="54" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@OwnedPlotsString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="90" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="236" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="216" PositionYOffset="86" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@AvailableLandPlotsString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="96" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="460" PositionYOffset="86" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@AvaliblePlotsString" />
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="178" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="126" Brush="ButtonBrush1" IsEnabled="true" Command.Click="Click1" Command.HoverBegin="ExecuteBeginHint3" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@BuyString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="178" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="378" PositionYOffset="126" Brush="ButtonBrush2" IsEnabled="true" Command.Click="Click2" Command.HoverBegin="ExecuteBeginHint4" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@SellString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </Widget>
+                <Widget Id="LandHolding1" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="580" SuggestedHeight="180" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="0" PositionYOffset="200">
+                  <Children>
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="140" SuggestedHeight="148" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="20" PositionYOffset="16" Sprite="wait_hideout_forest" Command.HoverBegin="ExecuteBeginHint2" Command.HoverEnd="ExecuteEndHint" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="144" SuggestedHeight="152" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="18" PositionYOffset="14" Sprite="frame_small_9" DoNotAcceptEvents="true" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="376" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@UndevLandPlotsString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="376" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="50" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="58" Sprite="General\Mission\house" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="236" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="216" PositionYOffset="54" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@OwnedLandPlotsString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="96" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="460" PositionYOffset="54" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@OwnedUndevelopedPlotsString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="90" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="236" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="216" PositionYOffset="86" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@AvailableLandPlotsString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="96" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="460" PositionYOffset="86" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@AvalibleUndevelopedPlotsString" />
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="178" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="126" Brush="ButtonBrush1" IsEnabled="true" Command.Click="Click3" Command.HoverBegin="ExecuteBeginHint5" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@BuyString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="178" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="378" PositionYOffset="126" Brush="ButtonBrush2" IsEnabled="true" Command.Click="Click4" Command.HoverBegin="ExecuteBeginHint6" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@SellString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </Widget>
+                <Widget Id="EstateUpgrades" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="800" SuggestedHeight="380" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="600" PositionYOffset="0">
+                  <Children>
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="28" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="270" PositionYOffset="17" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" DoNotAcceptEvents="true" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="270" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="312" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="30" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@UpgradesTitle" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="760" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="20" PositionYOffset="54" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget Id="Upgrade0" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="244" SuggestedHeight="304" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="64">
+                      <Children>
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="10" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="23" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@LandClearanceString" />
+                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="112" SuggestedHeight="112" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="66" PositionYOffset="50" Sprite="ae_irrigation" Command.HoverBegin="ExecuteBeginHint12" Command.HoverEnd="ExecuteEndHint" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="212" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="168" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="19" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@LandClearanceDescription" />
+                        <Widget Id="Upgrade0Metadata" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="212" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="224">
+                          <Children>
+                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="0" Sprite="General\Icons\Coin@2x" />
+                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="118" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="80" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="26" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@UpgradeCostString" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="68" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="144" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@UpgradeBuildTimeString" />
+                          </Children>
+                        </Widget>
+                        <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="10" PositionYOffset="252" Brush="ButtonBrush1" IsEnabled="true" Command.Click="Click6" Command.HoverBegin="ExecuteBeginHint12" Command.HoverEnd="ExecuteEndHint">
+                          <Children>
+                            <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                              <Children>
+                                <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                                <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@UpgradeString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </ButtonWidget>
+                      </Children>
+                    </Widget>
+                    <Widget Id="Upgrade1" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="244" SuggestedHeight="304" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="278" PositionYOffset="64">
+                      <Children>
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="10" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="23" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@UpgradePatrolsString" />
+                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="112" SuggestedHeight="112" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="66" PositionYOffset="50" Sprite="ae_patrols" Command.HoverBegin="ExecuteBeginHint13" Command.HoverEnd="ExecuteEndHint" Command.Click="Click7" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="212" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="168" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="19" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@PatrolsDescription" />
+                        <Widget Id="Upgrade1Metadata" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="212" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="224">
+                          <Children>
+                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="0" Sprite="General\Icons\Coin@2x" />
+                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="118" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="80" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="26" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@UpgradeCostString" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="68" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="144" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@UpgradeBuildTimeString" />
+                          </Children>
+                        </Widget>
+                        <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="10" PositionYOffset="252" Brush="ButtonBrush1" IsEnabled="true" Command.Click="Click7" Command.HoverBegin="ExecuteBeginHint13" Command.HoverEnd="ExecuteEndHint">
+                          <Children>
+                            <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                              <Children>
+                                <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                                <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@UpgradeString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </ButtonWidget>
+                      </Children>
+                    </Widget>
+                    <Widget Id="Upgrade2" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="244" SuggestedHeight="304" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="540" PositionYOffset="64">
+                      <Children>
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="10" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="23" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@UpgradeStorehouseString" />
+                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="112" SuggestedHeight="112" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="66" PositionYOffset="50" Sprite="ae_storehouse" Command.HoverBegin="ExecuteBeginHint14" Command.HoverEnd="ExecuteEndHint" Command.Click="Click8" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="212" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="168" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="19" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@StorehouseDescription" />
+                        <Widget Id="Upgrade2Metadata" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="212" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="16" PositionYOffset="224">
+                          <Children>
+                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="0" Sprite="General\Icons\Coin@2x" />
+                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="118" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="80" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="26" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@UpgradeCostString" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="68" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="144" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@UpgradeBuildTimeString" />
+                          </Children>
+                        </Widget>
+                        <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="10" PositionYOffset="252" Brush="ButtonBrush1" IsEnabled="true" Command.Click="Click8" Command.HoverBegin="ExecuteBeginHint14" Command.HoverEnd="ExecuteEndHint">
+                          <Children>
+                            <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                              <Children>
+                                <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                                <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@UpgradeString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </ButtonWidget>
+                      </Children>
+                    </Widget>
+                  </Children>
+                </Widget>
+                <Widget Id="EstateWorkforce" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="520" SuggestedHeight="296" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="0" PositionYOffset="400">
+                  <Children>
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="28" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="19" Sprite="General\Mission\prisoner" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="424" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="72" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="28" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@SlavesTitle" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="424" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="72" PositionYOffset="58" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="118" SuggestedHeight="118" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="74" Sprite="ae_gardens" Command.HoverBegin="ExecuteBeginHint8" Command.HoverEnd="ExecuteEndHint" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="22" SuggestedHeight="22" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="172" PositionYOffset="76" Sprite="SPGeneral\GameMenu\warehouse_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="196" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="204" PositionYOffset="72" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@CapacityText" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="92" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="404" PositionYOffset="72" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@SlaveCapacityString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="196" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="204" PositionYOffset="102" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@SlaveDeclineTitleString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="92" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="404" PositionYOffset="102" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@SlaveDeclineString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="196" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="204" PositionYOffset="132" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@RevoltRiskTitleString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="92" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="404" PositionYOffset="132" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@RevoltRiskString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="22" SuggestedHeight="22" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="172" PositionYOffset="169" Sprite="General\Icons\Production\wheat" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="196" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="204" PositionYOffset="162" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@LandUsageTitleString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="92" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="404" PositionYOffset="162" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@LandUsageString" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="340" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="194" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@BuySlavesTitleString" />
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="100" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="396" PositionYOffset="194" Command.Click="Click10" Command.HoverBegin="ExecuteBeginHint17" Command.HoverEnd="ExecuteEndHint" Brush="ButtonBrush2" Brush.AlphaFactor="0">
+                      <Children>
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="SquareWRoundedCorners_9" Color="#29251EFF" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="SquareWRoundedCornersFrame_9" Color="#A38C62FF" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="22" SuggestedHeight="22" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="@BuySlavesKnobOffset" Sprite="BlankWhiteCircle" Color="#DCCDB1FF" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="62" PositionXOffset="@BuySlavesTextOffset" Brush="OverlayPopup.ButtonText" Brush.FontSize="21" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@BuySlavesString" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="260" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="236" Brush="ButtonBrush1" IsEnabled="true" Command.HoverBegin="ExecuteBeginHint9" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="SPGeneral\TownManagement\production_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@ProductionDetailsString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="196" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="300" PositionYOffset="236" Brush="ButtonBrush1" IsEnabled="true" Command.Click="ManageSlaves" Command.HoverBegin="ExecuteBeginHint7" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="General\Mission\prisoner" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@ManageString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </Widget>
+                <Widget Id="EstateStockpile" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="410" SuggestedHeight="296" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="540" PositionYOffset="400">
+                  <Children>
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="28" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="19" Sprite="SPGeneral\GameMenu\warehouse_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="314" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="72" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="28" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@StockpileTitle" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="314" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="72" PositionYOffset="58" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="112" SuggestedHeight="112" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="80" Sprite="ae_granary" Command.HoverBegin="ExecuteBeginHint10" Command.HoverEnd="ExecuteEndHint" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="84" Sprite="SPGeneral\GameMenu\warehouse_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="116" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="78" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@CapacityText" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="88" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="298" PositionYOffset="78" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@StockpileCapacityString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="234" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="138" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="20" SuggestedHeight="20" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="158" Sprite="General\Icons\Coin@2x" DoNotAcceptEvents="true" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="206" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="152" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@SellToMarketTitleString" />
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="112" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="180" PositionYOffset="194" Command.Click="Click5" Command.HoverBegin="ExecuteBeginHint11" Command.HoverEnd="ExecuteEndHint" Brush="ButtonBrush2" Brush.AlphaFactor="0">
+                      <Children>
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="SquareWRoundedCorners_9" Color="#29251EFF" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="SquareWRoundedCornersFrame_9" Color="#A38C62FF" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="22" SuggestedHeight="22" HorizontalAlignment="Left" VerticalAlignment="Center" PositionXOffset="@SellToMarketKnobOffset" Sprite="BlankWhiteCircle" Color="#DCCDB1FF" />
+                        <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="62" PositionXOffset="@SellToMarketTextOffset" Brush="OverlayPopup.ButtonText" Brush.FontSize="21" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@SellToMarketString" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="314" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="48" PositionYOffset="236" Brush="ButtonBrush1" IsEnabled="true" Command.Click="ManageStockpile" Command.HoverBegin="ExecuteBeginHint10" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="SPGeneral\GameMenu\warehouse_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@ManageString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </Widget>
+                <Widget Id="EstateProject" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="430" SuggestedHeight="296" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="970" PositionYOffset="400">
+                  <Children>
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#080806B0" />
+                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_small_9" Color="#B9A27BFF" AlphaFactor="0.65" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="28" SuggestedHeight="28" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="19" Sprite="SPGeneral\TownManagement\project_popup_hammer_icon" DoNotAcceptEvents="true" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="334" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="72" PositionYOffset="12" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="28" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@CurrentProjectTitle" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="334" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="72" PositionYOffset="58" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="108" SuggestedHeight="112" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="80" Sprite="@CurrentProjectIconSting" Command.HoverBegin="ExecuteBeginHint16" Command.HoverEnd="ExecuteEndHint" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="254" SuggestedHeight="52" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="76" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@CurrentProjectString" />
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="254" SuggestedHeight="2" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="132" Sprite="SPGeneral\TownManagement\title_divider" DoNotAcceptEvents="true" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="124" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="142" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@ProgressTitle" />
+                    <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="126" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="280" PositionYOffset="142" Brush="Recruitment.Popup.Title.Text" Brush.FontSize="21" Brush.TextHorizontalAlignment="Right" Brush.TextVerticalAlignment="Center" Text="@CurrentProjecProgressString" />
+                    <Widget Id="ProjectProgressTrack" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="254" SuggestedHeight="18" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="152" PositionYOffset="182" Sprite="SquareWRoundedCorners_9" Color="#201D17FF">
+                      <Children>
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="@CurrentProjectProgressWidth" SuggestedHeight="10" PositionXOffset="6" PositionYOffset="4" Sprite="SquareWRoundedCorners_9" Color="#B79955FF" />
+                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="SquareWRoundedCornersFrame_9" Color="#A38C62FF" />
+                      </Children>
+                    </Widget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="224" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="24" PositionYOffset="236" Brush="ButtonBrush1" IsEnabled="true" Command.HoverBegin="ExecuteBeginHint16" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="SPGeneral\TownManagement\production_icon" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@ProjectQueueString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="140" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Top" PositionXOffset="266" PositionYOffset="236" Brush="ButtonBrush2" IsEnabled="true" Command.Click="Click9" Command.HoverBegin="ExecuteBeginHint15" Command.HoverEnd="ExecuteEndHint">
+                      <Children>
+                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="24" SuggestedHeight="24" HorizontalAlignment="Left" VerticalAlignment="Center" Sprite="General\MenuElements\Cross" DoNotAcceptEvents="true" Color="#DCC28AFF" />
+                            <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="OverlayPopup.ButtonText" Brush.FontSize="20" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@CancelString" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="8" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </Widget>
+              </Children>
+            </Widget>
+            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="240" SuggestedHeight="44" HorizontalAlignment="Center" VerticalAlignment="Bottom" MarginBottom="28" Brush="ButtonBrush2" Command.Click="Close">
+              <Children>
+                <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center" Brush="OverlayPopup.ButtonText" Brush.FontSize="22" Text="@CloseString" />
+              </Children>
+            </ButtonWidget>
+          </Children>
+        </BrushWidget>
+      </Children>
+    </Widget>
+  </Window>
 </Prefab>

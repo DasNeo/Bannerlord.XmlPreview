@@ -13,7 +13,7 @@ public sealed class ScenarioRepositoryTests
     public async Task PresenterLoadsVerifiedFullArtifactsAndRejectsAnotherScenarioAndStructureOnly()
     {
         using var fixture = new RegressionFixture();
-        var report = await fixture.Runner.CompareAsync(fixture.Request);
+        var report = await fixture.Runner.CompareAsync(fixture.Request, cancellationToken: TestContext.Current.CancellationToken);
         var presented = ComparisonPresenter.LoadArtifacts(report.Artifacts.ReportJson!, fixture.ScenarioPath);
         Assert.Equal("Full", presented.RunMode);
         Assert.Equal(fixture.ReferencePixels.Pixels, presented.Reference.Pixels);
@@ -23,7 +23,7 @@ public sealed class ScenarioRepositoryTests
         var scenarioPath = Path.Combine(fixture.Root, "other.json");
         File.WriteAllText(scenarioPath, JsonSerializer.Serialize(fixture.Scenario with { Id = "other" }, ScenarioLoader.JsonOptions));
         Assert.Throws<InvalidDataException>(() => ComparisonPresenter.LoadArtifacts(report.Artifacts.ReportJson!, scenarioPath));
-        var structural = await fixture.Runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly });
+        var structural = await fixture.Runner.CompareAsync(fixture.Request with { Mode = VisualRegressionMode.StructureOnly }, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Throws<InvalidDataException>(() => ComparisonPresenter.LoadArtifacts(structural.Artifacts.ReportJson!, fixture.ScenarioPath));
     }
 
