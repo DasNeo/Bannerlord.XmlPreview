@@ -114,6 +114,13 @@ public sealed partial class PrefabRenderContext
         }
     }
 
+    public void ApplyImageFlip(FrameworkElement image, IReadOnlyDictionary<string, string> attributes)
+    {
+        image.RenderTransformOrigin = new Point(0.5, 0.5);
+        image.RenderTransform = new ScaleTransform(ResolveBoolean(attributes, "HorizontalFlip") ? -1 : 1,
+            ResolveBoolean(attributes, "VerticalFlip") ? -1 : 1);
+    }
+
     private static Image ImageElement(BitmapSource source, string stretch, string? tint)
     {
         source = TintBitmap(source, tint);

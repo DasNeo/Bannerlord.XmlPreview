@@ -153,7 +153,7 @@ internal static class BannerlordAssetXml
             styleElement.Attribute("FontColor")?.Value,
             ParseDouble(styleElement.Attribute("FontSize")?.Value),
             ParseDouble(styleElement.Attribute("TextAlphaFactor")?.Value),
-            layerOverrides);
+            layerOverrides) { TextOutlineAmount = ParseDouble(styleElement.Attribute("TextOutlineAmount")?.Value), TextOutlineColor = styleElement.Attribute("TextOutlineColor")?.Value };
     }
 
     private static BrushLayerDefinition ParseBrushLayer(XElement layerElement)

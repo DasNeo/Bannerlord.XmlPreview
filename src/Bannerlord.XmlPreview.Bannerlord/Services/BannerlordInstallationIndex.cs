@@ -85,17 +85,9 @@ public sealed class BannerlordInstallationIndex : IBannerlordInstallationIndex
                     SearchOption.TopDirectoryOnly,
                     assemblyFiles);
 
-                foreach (var guiPath in Directory.EnumerateDirectories(
-                             modulePath,
-                             "*GUI",
-                             SearchOption.TopDirectoryOnly))
-                {
-                    AddFiles(
-                        guiPath,
-                        "*SpriteData.xml",
-                        SearchOption.AllDirectories,
-                        spriteDataFiles);
-                }
+                // LauncherGUI is a separate atlas namespace and reuses game sprite names.
+                AddFiles(Path.Combine(modulePath, "GUI"), "*SpriteData.xml",
+                    SearchOption.AllDirectories, spriteDataFiles);
             }
         }
 

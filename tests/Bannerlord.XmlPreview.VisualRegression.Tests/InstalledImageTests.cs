@@ -204,7 +204,7 @@ public sealed class InstalledImageTests
         });
     }
 
-    private static (IAssetCatalog, PrefabLoader, PrefabRenderer) EnvironmentFor(string root)
+    internal static (IAssetCatalog, PrefabLoader, PrefabRenderer) EnvironmentFor(string root)
     {
         var settings = new ImageAssetTests.Settings(root); var index = new BannerlordInstallationIndex();
         var assets = new BannerlordAssetCatalog(settings, index);

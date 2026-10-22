@@ -5,4 +5,8 @@ public sealed record BrushStyleDefinition(
     string? FontColor,
     double? FontSize,
     double? TextAlphaFactor,
-    IReadOnlyDictionary<string, BrushLayerDefinition> LayerOverrides);
+    IReadOnlyDictionary<string, BrushLayerDefinition> LayerOverrides)
+{
+    public double? TextOutlineAmount { get; init; }
+    public string? TextOutlineColor { get; init; }
+}

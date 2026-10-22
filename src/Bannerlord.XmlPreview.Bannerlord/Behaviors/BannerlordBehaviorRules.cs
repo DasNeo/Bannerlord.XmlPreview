@@ -17,6 +17,7 @@ public static class BannerlordBehaviorRules
         Add("image.masked", BehaviorPhase.Instantiate, new(ExactType: "MaskedTextureWidget"), new ProviderImage(true));
         Add("image.tableau", BehaviorPhase.Instantiate, new(ExactType: "BannerTableauWidget"), new RuntimeImage());
         Add("state.describe", BehaviorPhase.Describe, new(Capability: "preview-state"), new PreviewState());
+        Add("visibility.sibling", BehaviorPhase.Describe, new(TrustedBaseType: "SiblingIndexVisibilityWidget"), new SiblingVisibility());
         Add("visibility.value", BehaviorPhase.Describe, new(TrustedBaseType: "ValueBasedVisibilityWidget"), new ValueVisibility());
         Add("visibility.string", BehaviorPhase.Describe, new(TrustedBaseType: "StringBasedVisibilityWidget"), new StringVisibility());
         Add("scroll.connections", BehaviorPhase.Connect, new(Capability: "scroll-viewport"), new Connections([("ClipRect", ConnectionRequirement.Required), ("InnerPanel", ConnectionRequirement.Required), ("HorizontalScrollbar", ConnectionRequirement.Optional), ("VerticalScrollbar", ConnectionRequirement.Optional)]));
@@ -69,6 +70,16 @@ public static class BannerlordBehaviorRules
             var state = Value(input, "CurrentState");
             if (string.IsNullOrWhiteSpace(state)) state = Boolean(input, "IsDisabled") || !Boolean(input, "IsEnabled", true) ? "Disabled" : Boolean(input, "IsSelected") ? "Selected" : "Default";
             return [new DescriptionContribution("Preview.State", state)];
+        }
+    }
+    private sealed class SiblingVisibility : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input)
+        {
+            var values = Reference(input, "WidgetToWatch") is { } target ? input.RunValues[target] : input.Values;
+            if (!int.TryParse(values.GetValueOrDefault("Preview.SiblingIndex"), out var index)) return [];
+            var visible = Value(input, "WatchType") switch { "Odd" => index % 2 != 0, "Even" => index % 2 == 0, _ => true };
+            return [new DescriptionContribution("IsVisible", visible ? "true" : "false")];
         }
     }
     private sealed class ValueVisibility : IBehaviorHandler

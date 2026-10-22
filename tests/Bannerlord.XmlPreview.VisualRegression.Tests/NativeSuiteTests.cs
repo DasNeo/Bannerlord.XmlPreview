@@ -65,7 +65,7 @@ public sealed class NativeSuiteTests
         var report = await regression.CompareAsync(new(scenario.PrefabIdentity, scenarioPath, VisualRegressionMode.StructureOnly,
             new(id, "v1.4.7", "v1.4.7", scenario.CaptureProfile.Id, 1), Path.Combine(fixture.Root, "native-actual")));
         Assert.True(report.Outcome == VisualRegressionOutcome.Passed,
-            $"{id}: {report.Outcome}; {report.FailureReason}; {string.Join(" | ", report.DiagnosticDifferences.Select(d => d.Description))}");
+            $"{id}: {report.Outcome}; {report.FailureReason}; {report.Checks}; {report.Metrics}; {string.Join(" | ", report.DiagnosticDifferences.Select(d => d.Description))}");
         Assert.Equal(ComparisonStatus.NotRun, report.Checks.Pixels);
         Assert.Equal(0, report.ToExitCode());
     }
