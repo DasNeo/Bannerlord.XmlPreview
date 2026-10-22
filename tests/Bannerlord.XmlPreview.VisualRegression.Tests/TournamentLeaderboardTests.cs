@@ -133,7 +133,17 @@ public sealed class TournamentLeaderboardTests
                     $"Scrollbar paint {painted}; outer size {outer.RenderSize}");
                 var bands = elements.Where(e => PreviewElementDebugProperties.GetDebugInfo(e)?.NodeName == "SiblingIndexVisibilityWidget" && e.Visibility == Visibility.Visible).ToArray();
                 Assert.Equal(count, bands.Length);
-                Assert.All(bands, b => { Assert.True(b.ActualWidth > 600); Assert.Equal(60, b.ActualHeight); Assert.Equal(0.1, b.Opacity); });
+                Assert.All(bands, b =>
+                {
+                    Assert.True(b.ActualWidth > 600);
+                    Assert.Equal(60, b.ActualHeight);
+                    // AlphaFactor fades the band sprite, independently of the widget's children.
+                    Assert.Equal(1, b.Opacity);
+                    Assert.Equal(0.1, PreviewElementDebugProperties.GetOwnVisualAlpha(b));
+                    var sprite = Assert.Single(Assert.IsType<Grid>(Assert.IsType<Border>(b).Child).Children
+                        .OfType<FrameworkElement>(), e => e is not Canvas);
+                    Assert.Equal(0.1, sprite.Opacity);
+                });
                 var plaque = Assert.Single(elements, e => PreviewElementDebugProperties.GetDebugInfo(e)?.GetAttributeDisplayValue("Sprite") == @"StdAssets\tabbar_popup");
                 var plaqueImage = Assert.IsType<Grid>(Assert.IsType<Border>(plaque).Child).Children.OfType<FrameworkElement>().First();
                 Assert.Equal(-1, Assert.IsType<ScaleTransform>(plaqueImage.RenderTransform).ScaleY);

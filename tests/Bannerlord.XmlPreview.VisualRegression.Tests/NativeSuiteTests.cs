@@ -34,6 +34,7 @@ public sealed class NativeSuiteTests
     [InlineData("issue-6-portable-baselines", "m3-portable-scenarios")]
     [InlineData("native-baselines", "scenarios")]
     [InlineData("m3-native-baselines", "m3-scenarios")]
+    [InlineData("issue-11-native-baselines", "m3-scenarios")]
     [InlineData("m3-mod-baselines", "m3-scenarios")]
     public void AcceptedScenarioHashesMatchBothCheckoutLineEndings(string metadataDirectory, string scenarioDirectory)
     {

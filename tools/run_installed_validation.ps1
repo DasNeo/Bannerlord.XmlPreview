@@ -18,7 +18,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Unit, authoring, image, installed acceptance or portable tests failed.' }
     $reports = @()
     foreach ($id in @('m3-conversation', 'm3-banner-builder', 'm3-land-management')) {
-        $metadata = if ($id -eq 'm3-land-management') { 'm3-mod-baselines' } else { 'm3-native-baselines' }
+        $metadata = if ($id -eq 'm3-land-management') { 'm3-mod-baselines' } else { 'issue-11-native-baselines' }
         $caseOutput = Join-Path $OutputRoot $id
         & $cli compare --scenario (Join-Path $data "m3-scenarios/$id.json") --metadata (Join-Path $data $metadata) `
             --bannerlord-root $BannerlordRoot --output $caseOutput --mode StructureOnly
