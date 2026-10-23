@@ -75,6 +75,8 @@ Review the images as you go and steer the design with feedback such as “widen 
 
 **[Start here: Create Bannerlord UIs with an AI coding agent](docs/guides/create-ui-with-ai.md)** — includes setup, capture commands, and a prompt you can give your agent.
 
+For a reusable agent workflow, install the [Bannerlord UI skill](skills/bannerlord-ui/SKILL.md) using the guide's [installation instructions](docs/guides/create-ui-with-ai.md#optional-install-the-bannerlord-ui-skill).
+
 Both release packages include `Bannerlord.XmlPreview.VisualRegression.Cli.exe` for automatic PNG capture, along with the guide and sample scenarios. The self-contained package includes its runtime; no SDK or source build is needed.
 
 ## Compare with a reference

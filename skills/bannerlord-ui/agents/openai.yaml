@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bannerlord UI"
+  short_description: "Build and inspect Gauntlet UIs through rendered previews"
+  default_prompt: "Use $bannerlord-ui to help me build or refine a Bannerlord Gauntlet UI and inspect the rendered result."

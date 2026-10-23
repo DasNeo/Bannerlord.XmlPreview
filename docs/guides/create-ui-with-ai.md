@@ -4,6 +4,28 @@ Bannerlord XML Preview lets an AI coding agent see the UI it is building. You de
 
 This works best with an agent that can edit local files, run commands on Windows, and open local images. A text-only assistant can help write XML, but it needs you to provide visual feedback.
 
+## Optional: install the Bannerlord UI skill
+
+The reusable [bannerlord-ui skill](../../skills/bannerlord-ui/SKILL.md) teaches a compatible coding agent this workflow, including setup, prefab editing, rendered image inspection, and the final integration handoff. It uses the same [capture reference](../../skills/bannerlord-ui/references/capture-workflow.md) as this guide. The skill contains instructions and a scenario template; it requires the preview tool and a local game installation separately.
+
+For Codex, copy the whole `skills/bannerlord-ui` folder from this repository or a release that includes it into your mod project's `.agents/skills/` directory. In PowerShell, from the repository root or extracted release folder:
+
+```powershell
+$modProject = 'C:/path/to/your-mod-project'
+$skillDestination = Join-Path $modProject '.agents/skills/bannerlord-ui'
+if (Test-Path -LiteralPath $skillDestination) { throw 'A skill already exists here; review it before updating.' }
+New-Item -ItemType Directory -Path (Split-Path $skillDestination) -Force | Out-Null
+Copy-Item -LiteralPath ./skills/bannerlord-ui -Destination $skillDestination -Recurse
+```
+
+For personal installation across projects in Codex, use `Join-Path $env:USERPROFILE '.agents/skills/bannerlord-ui'` as the destination instead. Other agents may use different skill locations; follow their installation instructions and copy the complete folder, including `references/` and `assets/`.
+
+Open your mod project in a new agent session, then ask:
+
+> Use $bannerlord-ui to help me build a workshop management screen. I am new to Gauntlet UI work; guide me through setup and show me a first rendered preview.
+
+You can also ask it to edit an existing prefab or inspect a specific resolution. Compatible agents may select the skill automatically when its description matches the task. You can use the copyable prompt below without installing a skill.
+
 ## Let your AI agent guide you
 
 If you are unfamiliar with mod projects, XML, or command-line tools, paste the following prompt into your AI coding agent. It asks the agent to work through this guide with you and perform the setup it can handle. You do not need to understand every section before starting.
@@ -69,85 +91,17 @@ Tell the agent whether you want just the visual prefab or also the game-side cod
 
 ## 2. Set up image capture
 
-You can ask your agent to do this setup. Extract a release ZIP and open PowerShell in the extracted application folder. Confirm the CLI starts:
+You can ask your agent to do this setup. Follow the shared [capture workflow](../../skills/bannerlord-ui/references/capture-workflow.md#locate-the-renderer) for release and source-build options, then use its [capture command](../../skills/bannerlord-ui/references/capture-workflow.md#capture).
 
-```powershell
-.\Bannerlord.XmlPreview.VisualRegression.Cli.exe --help
-```
-
-Try a capture of the included EscapeMenu example before generating your own UI. Run these commands from the extracted application folder, changing the game path as needed:
-
-```powershell
-$game = 'C:/Program Files (x86)/Steam/steamapps/common/Mount & Blade II Bannerlord'
-$cli = Join-Path (Get-Location) 'Bannerlord.XmlPreview.VisualRegression.Cli.exe'
-$nativeVersion = ([xml](Get-Content -LiteralPath "$game/Modules/Native/SubModule.xml" -Raw)).Module.Version.value
-$run = Join-Path 'artifacts/ai-ui' ([guid]::NewGuid().ToString('N'))
-
-& $cli capture `
-  --scenario docs/images/previews/scenarios/escape-menu.json `
-  --metadata artifacts/ai-ui/metadata `
-  --output $run `
-  --bannerlord-root $game `
-  --game-version $nativeVersion `
-  --module-version $nativeVersion `
-  --mode Full
-
-$captureExitCode = $LASTEXITCODE
-Write-Output "Capture exit code: $captureExitCode"
-Write-Output "Review artifacts in: $run"
-```
-
-Use an unused metadata path with no `manifest.json` for this example. The explicit version arguments provide the metadata; an existing manifest takes precedence over those arguments. Each run needs a new output directory.
-
-Ask the agent to open `$run/actual.png` using its image-viewing tool. Also have it read `capture.json`, which records completion status and Diagnostics. Exit code 0 means the capture completed; exit code 1 requires investigation and can indicate a Partial capture. Some incomplete runs still produce images, so the existence of a PNG alone is not enough.
-
-Here, `capture --mode Full` requests pixels as well as structural artifacts. It does not require an in-game Reference Screenshot or compare against one. Use `capture` for the design loop; `compare` is for checking against previously established expectations.
-
-### Alternative: build from source
-
-Developers can use the .NET 10 SDK to build from the repository root:
-
-```powershell
-dotnet build src/Bannerlord.XmlPreview.VisualRegression.Cli -c Debug -m:1
-if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
-$cli = Join-Path (Get-Location) 'src/Bannerlord.XmlPreview.VisualRegression.Cli/bin/Debug/net10.0-windows/Bannerlord.XmlPreview.VisualRegression.Cli.exe'
-```
-
-Run the capture example from the repository root with this `$cli` value. The sample scenario has the same relative path in the source checkout and release ZIP.
+For a first check, capture the included `docs/images/previews/scenarios/escape-menu.json` and use Native as the owning module. Ask the agent to read `capture.json` and open `actual.png`. The capture reference explains exit codes, fresh output directories, version metadata, and the difference between capture and comparison.
 
 ## 3. Point the preview at your UI
 
-The agent needs two inputs: your prefab XML and a **Preview Scenario**, a JSON file containing the resolution, sample data, and widget states used for that render.
+The renderer needs your prefab XML and a **Preview Scenario**: a JSON file defining the resolution, sample data, and widget states for that render.
 
-For the installed-game capture workflow, put the working prefab inside your own installed mod module, such as `Modules/MyMod/GUI/Prefabs/WorkshopManager.xml`. The module must be discoverable and have a valid `SubModule.xml`. Keep the editable source in your mod project and copy changes into that module as needed. Leave Native files unchanged.
+Follow [Prepare a screen and scenario](../../skills/bannerlord-ui/references/capture-workflow.md#prepare-a-screen-and-scenario) and adapt the [scenario template](../../skills/bannerlord-ui/assets/scenario-template.json) in your mod project. Keep editable source there and copy working prefabs into your own installed module for capture. Leave Native files unchanged.
 
-Have the agent create a scenario like this, replacing the module and prefab names with yours:
-
-```json
-{
-  "SchemaVersion": 1,
-  "Id": "workshop-manager-populated",
-  "PrefabIdentity": "modules/mymod/gui/prefabs/workshopmanager.xml",
-  "CaptureProfile": {
-    "Id": "workshop-1920x1080",
-    "Width": 1920,
-    "Height": 1080
-  },
-  "Scene": "Workshop management screen",
-  "DataState": "Initial layout with sample title",
-  "Bindings": {
-    "Title": "Workshop Management"
-  },
-  "Lists": {},
-  "WidgetStates": {}
-}
-```
-
-`Title` is only an example: bindings must match the names used by your XML. The prefab identity is relative to the Bannerlord installation, uses forward slashes, and is not an absolute file path. Use the installed mod's actual version from its `SubModule.xml` for `--module-version`; keep `--game-version` tied to the game's Native version.
-
-Use the same capture command with your scenario path and a fresh output directory. The agent should populate additional bindings and template lists as your design develops. List and widget-state selectors must match expanded widget paths exactly; use the widget tree or captured structure to find them. Each list entry needs a unique, stable `__key` value. The [EscapeMenu scenario](../images/previews/scenarios/escape-menu.json) provides a populated-list example.
-
-Keep separate scenarios for empty, populated, long-text, selected, and disabled states, plus the resolutions you want to check. Use Capture Profiles with UI scale 1, English, sRGB, and FullFrame; those are the currently accepted settings.
+Bindings must match the names in your XML. List and widget-state selectors must match expanded widget paths; the capture reference explains how to find them. Add states and resolutions as the design develops, rather than trying to model every possible state before the first preview.
 
 ## 4. Ask the agent to render, inspect, and revise
 
