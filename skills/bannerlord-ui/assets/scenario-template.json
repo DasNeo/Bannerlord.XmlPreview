@@ -1,0 +1,17 @@
+{
+  "SchemaVersion": 1,
+  "Id": "my-screen-initial",
+  "PrefabIdentity": "modules/mymod/gui/prefabs/myscreen.xml",
+  "CaptureProfile": {
+    "Id": "my-screen-1920x1080",
+    "Width": 1920,
+    "Height": 1080
+  },
+  "Scene": "My mod screen",
+  "DataState": "Initial layout with sample title",
+  "Bindings": {
+    "Title": "My Screen"
+  },
+  "Lists": {},
+  "WidgetStates": {}
+}

@@ -82,9 +82,11 @@ jobs:
             New-Item -ItemType Directory -Path (Join-Path $output docs) -Force | Out-Null
             Copy-Item -LiteralPath docs/fidelity -Destination (Join-Path $output docs/fidelity) -Recurse
             Copy-Item -LiteralPath docs/guides -Destination (Join-Path $output docs/guides) -Recurse
+            New-Item -ItemType Directory -Path (Join-Path $output skills) -Force | Out-Null
+            Copy-Item -LiteralPath skills/bannerlord-ui -Destination (Join-Path $output skills/bannerlord-ui) -Recurse
             New-Item -ItemType Directory -Path (Join-Path $output docs/images/previews) -Force | Out-Null
             Copy-Item -LiteralPath docs/images/previews/scenarios -Destination (Join-Path $output docs/images/previews/scenarios) -Recurse
-            foreach ($required in @('Bannerlord.XmlPreview.exe', 'Bannerlord.XmlPreview.VisualRegression.Cli.exe', 'Bannerlord.XmlPreview.VisualRegression.Cli.deps.json', 'Bannerlord.XmlPreview.VisualRegression.Cli.runtimeconfig.json', 'docs/guides/create-ui-with-ai.md', 'docs/images/previews/scenarios/escape-menu.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'licenses')) {
+            foreach ($required in @('Bannerlord.XmlPreview.exe', 'Bannerlord.XmlPreview.VisualRegression.Cli.exe', 'Bannerlord.XmlPreview.VisualRegression.Cli.deps.json', 'Bannerlord.XmlPreview.VisualRegression.Cli.runtimeconfig.json', 'docs/guides/create-ui-with-ai.md', 'skills/bannerlord-ui/SKILL.md', 'skills/bannerlord-ui/references/capture-workflow.md', 'skills/bannerlord-ui/assets/scenario-template.json', 'docs/images/previews/scenarios/escape-menu.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'licenses')) {
               if (!(Test-Path -LiteralPath (Join-Path $output $required))) { throw "$variant is missing $required." }
             }
             $hasRuntime = Test-Path -LiteralPath (Join-Path $output hostfxr.dll)
@@ -149,7 +151,7 @@ jobs:
           - win-x64-framework-dependent.zip: smaller download; requires .NET 10 Desktop Runtime x64 installed separately.
           - win-x64-self-contained.zip: larger download; includes the .NET desktop runtime.
           Each ZIP has a matching SHA-256 checksum file.
-          Both packages include Bannerlord.XmlPreview.VisualRegression.Cli.exe for automated PNG capture and UI iteration, plus docs/guides/create-ui-with-ai.md and sample scenarios.
+          Both packages include Bannerlord.XmlPreview.VisualRegression.Cli.exe for automated PNG capture and UI iteration, plus docs/guides/create-ui-with-ai.md, sample scenarios, and the installable skills/bannerlord-ui agent skill.
           A local Bannerlord installation is required for game assets; no game assets are distributed.
           Validated game scope: Bannerlord v1.4.7, with AgricultureEstate v1.4.7.3 coverage.
           See the included docs/fidelity/images.md for widget Fidelity Status and limitations.
