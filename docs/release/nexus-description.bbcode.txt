@@ -6,6 +6,7 @@ Edit XML in your preferred editor, reload the preview, and investigate layout or
 
 [b][size=4]Features[/size][/b]
 [list]
+[*]Create and refine UIs with an AI coding agent using CLI-rendered preview images and structured Diagnostics.[/*]
 [*]Open Gauntlet XML prefabs from Bannerlord or installed mods.[/*]
 [*]Inspect the widget tree and Diagnostics to investigate layout, assets, bindings, and references.[/*]
 [*]Read textures directly from installed TPAC packages without manually exporting DDS files.[/*]
@@ -44,6 +45,20 @@ Gauntlet prefabs normally receive data from the game. Use [b]Bindings[/b] to sup
 Create or select a [b]Scenario[/b], edit the values, click outside an edited field to apply it, and click [b]Save[/b] to keep your setup. Save before switching scenarios. Scenarios are stored in [b]%LOCALAPPDATA%\Bannerlord.XmlPreview\Scenarios[/b]. Sample data affects the preview only and does not read or change your saved game.
 
 Edit prefab XML in your usual editor. Loaded dependencies are watched for changes; use [b]Reload[/b] to request a fresh preview.
+
+[b][size=4]Create Bannerlord UIs with AI[/size][/b]
+
+Give your AI coding agent a way to [b]see the UI it is building[/b]. Describe the screen you want, share a sketch or reference image, and let the agent write Gauntlet XML, render a preview, inspect the image, and improve the layout without launching Bannerlord for every revision.
+
+[b]Describe your idea → Generate XML → Render a preview → Inspect → Refine[/b]
+
+For example, ask for a workshop management screen with a scrollable list, a details panel, and an Upgrade button. The agent can populate it with sample data, check long names and empty lists, render different resolutions, and revise clipping, spacing, or alignment. Review the images as it works and steer the next revision: “Make the details panel wider” or “Move the upgrade cost above the button.”
+
+Both download packages include [b]Bannerlord.XmlPreview.VisualRegression.Cli.exe[/b], sample scenarios, and a user guide. An agent with access to your local files, a Windows terminal, and image viewing can use the CLI to generate preview PNGs and read structured Diagnostics. Choose the runtime-included download to get started without a separate .NET installation; no SDK or source build is needed.
+
+[url=https://github.com/DasNeo/Bannerlord.XmlPreview/blob/main/docs/guides/create-ui-with-ai.md][b]Get started: create a UI with your AI agent[/b][/url]
+
+The guide includes setup instructions, capture commands, and a prompt you can copy into your agent. Your agent generates and revises the code; this tool provides the visual feedback. Verify the finished screen, real game data, and button actions in Bannerlord.
 
 [b][size=4]Current limitations[/size][/b]
 

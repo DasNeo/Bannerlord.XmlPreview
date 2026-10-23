@@ -2,23 +2,6 @@
 
 Preview and inspect Mount & Blade II: Bannerlord Gauntlet XML prefabs without launching the game. Open a prefab, explore its widget tree, adjust preview data and resolution, and investigate layout, asset, binding, and reference issues.
 
-**Create UIs with an AI coding agent:** describe your screen and let your agent write XML, render it to an image, inspect the result, and refine the layout. Bannerlord.XmlPreview supplies the visual feedback for that loop.
-
-## Create UIs with AI
-
-Give your agent a design brief, a sketch, or an example screen. With terminal access and image viewing, it can:
-
-1. Create or edit Gauntlet XML in your mod.
-2. Render a PNG using the CLI and sample preview data.
-3. Inspect the image and Diagnostics for clipping, overlap, spacing, and missing assets.
-4. Revise the XML and repeat across different data states and resolutions.
-
-Review the images as you go and steer the design with feedback such as “widen the list” or “move the upgrade cost above the button.” Verify the finished screen and its game-side interactions in Bannerlord.
-
-**[Start here: Create Bannerlord UIs with an AI coding agent](docs/guides/create-ui-with-ai.md)** — includes setup, capture commands, and a prompt you can give your agent.
-
-Both release packages include `Bannerlord.XmlPreview.VisualRegression.Cli.exe` for automatic PNG capture, along with the guide and sample scenarios. The self-contained package includes its runtime; no SDK or source build is needed.
-
 ## Preview examples
 
 These comparisons show what to expect from the preview today. XML previews were captured at 1920 × 1080 using installed Bannerlord v1.4.7 assets and illustrative Preview Scenario data. The supplied in-game screenshots use different framing and resolutions. Live game backgrounds are replaced with black in the previews; text, values, fonts, and layout can also differ. These examples do not establish pixel-perfect fidelity.
@@ -76,6 +59,23 @@ Prefabs normally receive text, values, and lists from the game. Supply those val
 For example, open `Modules\Native\GUI\Prefabs\GameMenu\GameMenuTournamentLeaderboard.xml` and add an entry with `@Name` = `Caladog`, `@RankText` = `1`, `@Victories` = `24`, and `@IsMainHero` = `false`. Add another entry with `@IsMainHero` = `true` to inspect player highlighting. Keep each entry's automatically assigned `@__key` unique.
 
 These values affect the preview only; they do not read or change your saved game. Portraits and other runtime images need separate image inputs and may remain unavailable even when list text is populated.
+
+## Create UIs with AI
+
+**Create UIs with an AI coding agent:** describe your screen and let your agent write XML, render it to an image, inspect the result, and refine the layout. Bannerlord.XmlPreview supplies the visual feedback for that loop.
+
+Give your agent a design brief, a sketch, or an example screen. With terminal access and image viewing, it can:
+
+1. Create or edit Gauntlet XML in your mod.
+2. Render a PNG using the CLI and sample preview data.
+3. Inspect the image and Diagnostics for clipping, overlap, spacing, and missing assets.
+4. Revise the XML and repeat across different data states and resolutions.
+
+Review the images as you go and steer the design with feedback such as “widen the list” or “move the upgrade cost above the button.” Verify the finished screen and its game-side interactions in Bannerlord.
+
+**[Start here: Create Bannerlord UIs with an AI coding agent](docs/guides/create-ui-with-ai.md)** — includes setup, capture commands, and a prompt you can give your agent.
+
+Both release packages include `Bannerlord.XmlPreview.VisualRegression.Cli.exe` for automatic PNG capture, along with the guide and sample scenarios. The self-contained package includes its runtime; no SDK or source build is needed.
 
 ## Compare with a reference
 
