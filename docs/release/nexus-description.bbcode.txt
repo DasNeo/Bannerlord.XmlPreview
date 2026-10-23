@@ -1,0 +1,76 @@
+[b][size=5]Preview Bannerlord UI XML without launching the game[/size][/b]
+
+Working on a menu, panel, or other Gauntlet UI? Bannerlord XML Preview lets you open a prefab, inspect its widget tree, and try different text, list entries, states, and resolutions in a standalone Windows application.
+
+Edit XML in your preferred editor, reload the preview, and investigate layout or missing assets before checking the result in game.
+
+[b][size=4]Features[/size][/b]
+[list]
+[*]Open Gauntlet XML prefabs from Bannerlord or installed mods.[/*]
+[*]Inspect the widget tree and Diagnostics to investigate layout, assets, bindings, and references.[/*]
+[*]Read textures directly from installed TPAC packages without manually exporting DDS files.[/*]
+[*]Change preview width and height to investigate layouts at different resolutions.[/*]
+[*]Supply sample text, values, visibility flags, and list entries through Bindings and Mocks.[/*]
+[*]Save named Preview Scenarios containing your data, widget states, and resolution.[/*]
+[*]Reload after XML changes. If a load fails, the Last Good Preview stays visible and is clearly marked as stale.[/*]
+[*]Compare a preview with a reference image using side-by-side, overlay, and diff views.[/*]
+[/list]
+
+[b][size=4]Requirements[/size][/b]
+[list]
+[*]Windows x64.[/*]
+[*]A local Mount & Blade II: Bannerlord installation. Game assets are loaded from your installation and are not included in the download.[/*]
+[*]The framework-dependent download additionally requires the [url=https://dotnet.microsoft.com/en-us/download/dotnet/10.0].NET 10 Desktop Runtime x64[/url]. Choose the self-contained download to get the runtime included.[/*]
+[*]To preview a mod's UI, you also need that mod's relevant prefabs and assets installed.[/*]
+[/list]
+
+[b][size=4]Installation and first preview[/size][/b]
+[list=1]
+[*]Download the self-contained ZIP, or choose the smaller framework-dependent ZIP if you already have the required runtime.[/*]
+[*]Extract the entire ZIP to a separate folder and run [b]Bannerlord.XmlPreview.exe[/b]. Keep the included files together.[/*]
+[*]In the [b]Bannerlord[/b] field, select your game installation folder and click [b]Apply[/b].[/*]
+[*]Click [b]Open Prefab[/b] and choose a Gauntlet XML prefab from the game or a mod.[/*]
+[*]Explore the widget tree, check Diagnostics, and adjust the preview resolution or sample data.[/*]
+[/list]
+
+For a first example, open [b]Modules\Native\GUI\Prefabs\Standard\Standard.Window.xml[/b] inside your Bannerlord installation.
+
+This is a standalone authoring tool. Run it directly; it does not need a launcher entry or a load-order position. Use manual download and extraction.
+
+[b][size=4]Populating a screen[/size][/b]
+
+Gauntlet prefabs normally receive data from the game. Use [b]Bindings[/b] to supply shared values and [b]Mocks[/b] to add entries to discovered template lists. For example, populate a leaderboard with names, ranks, and victory counts, or test a menu with different button labels.
+
+Create or select a [b]Scenario[/b], edit the values, click outside an edited field to apply it, and click [b]Save[/b] to keep your setup. Save before switching scenarios. Scenarios are stored in [b]%LOCALAPPDATA%\Bannerlord.XmlPreview\Scenarios[/b]. Sample data affects the preview only and does not read or change your saved game.
+
+Edit prefab XML in your usual editor. Loaded dependencies are watched for changes; use [b]Reload[/b] to request a fresh preview.
+
+[b][size=4]Current limitations[/size][/b]
+
+The preview is a development aid. Always verify your finished UI in game.
+[list]
+[*]Pixel-perfect agreement with Bannerlord is not guaranteed. Fonts, layout, text, and values can differ.[/*]
+[*]Mod-specific executable Code Widgets appear as labeled placeholders. Their code is not executed.[/*]
+[*]Portraits, banners, scene backgrounds, and other images requiring live game state may be unavailable. Runtime images need explicit scenario inputs and may remain Partial.[/*]
+[*]Missing assets and references appear in Diagnostics. Check your installation path and the relevant module assets when a preview is incomplete.[/*]
+[*]A successful structural comparison does not certify in-game pixel fidelity. Reference comparison defaults are uncalibrated.[/*]
+[/list]
+
+The example images use sample preview data. In-game references can have different framing, resolutions, and data; they illustrate current results rather than a pixel-perfect match.
+
+[b][size=4]Support and source[/size][/b]
+
+[url=https://github.com/DasNeo/Bannerlord.XmlPreview]Source code and documentation[/url]
+[url=https://github.com/DasNeo/Bannerlord.XmlPreview/issues]Report a problem[/url]
+
+Please include your tool version, game and mod versions, prefab path, Preview Scenario, Diagnostics, and a description or screenshot of the expected result. Remove personal information before sharing files or logs.
+
+[b][size=4]Credits and permissions[/size][/b]
+
+By DasNeo. Original project code and documentation are available under the MIT License. Third-party components and game or mod content retain their own rights and license terms; see the included LICENSE, THIRD-PARTY-NOTICES.md, and licenses folder.
+
+The TPAC texture reader adapts work from szszss/TpacTool. Additional component credits and notices are included with the download. Agriculture Estate examples credit Agriculture Estate Updated, maintained by DasNeo (DasNeoxx), continuing the original mod credited to LL Muse and uploaded by kz14365.
+
+[b][size=4]AI Disclosure[/size][/b]
+
+Developed with assistance from AI coding tools. The maintainer is responsible for the published code, testing, and releases.
