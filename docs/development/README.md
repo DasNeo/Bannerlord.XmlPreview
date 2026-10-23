@@ -30,6 +30,8 @@ The workflow builds and tests Release, runs the nine portable Structure Only cas
 
 Choose one ZIP, extract it, and run `Bannerlord.XmlPreview.exe`. Each ZIP has a matching SHA-256 checksum and includes third-party notices/licenses and the fidelity matrix, but no game assets. A new tag points to the selected run's commit; an existing tag must already point to that commit. Existing releases are not overwritten. The built-in GitHub token supplies release permissions; no extra secret is required.
 
+Both ZIPs also include `Bannerlord.XmlPreview.VisualRegression.Cli.exe`, the [AI UI creation guide](../guides/create-ui-with-ai.md), and sample scenarios under `docs/images/previews/scenarios/`. The workflow publishes the desktop app and CLI into the same folder with the same version, runtime variant, and ReadyToRun setting; their shared dependencies and runtime are included once. It checks the CLI entry-point files and runs `--help` for both variants before archiving. The self-contained CLI needs no separately installed .NET runtime or SDK; the framework-dependent CLI uses .NET 10 Desktop Runtime x64.
+
 ## Technical regression
 
 Build/test/start commands are in [Contributing](../../CONTRIBUTING.md). App controls and command-line arguments are in the [README](../../readme.md).

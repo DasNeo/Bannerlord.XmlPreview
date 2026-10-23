@@ -75,14 +75,22 @@ jobs:
             dotnet publish src/Bannerlord.XmlPreview/Bannerlord.XmlPreview.csproj --configuration Release --runtime win-x64 --self-contained $selfContained `
               -p:PublishReadyToRun=true "-p:Version=$version" --output $output
             if ($LASTEXITCODE -ne 0) { throw "Publishing $variant failed." }
+            dotnet publish src/Bannerlord.XmlPreview.VisualRegression.Cli/Bannerlord.XmlPreview.VisualRegression.Cli.csproj --configuration Release --runtime win-x64 --self-contained $selfContained `
+              -p:PublishReadyToRun=true "-p:Version=$version" --output $output
+            if ($LASTEXITCODE -ne 0) { throw "Publishing CLI ($variant) failed." }
             Copy-Item -LiteralPath readme.md -Destination (Join-Path $output README.md)
             New-Item -ItemType Directory -Path (Join-Path $output docs) -Force | Out-Null
             Copy-Item -LiteralPath docs/fidelity -Destination (Join-Path $output docs/fidelity) -Recurse
-            foreach ($required in @('Bannerlord.XmlPreview.exe', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'licenses')) {
+            Copy-Item -LiteralPath docs/guides -Destination (Join-Path $output docs/guides) -Recurse
+            New-Item -ItemType Directory -Path (Join-Path $output docs/images/previews) -Force | Out-Null
+            Copy-Item -LiteralPath docs/images/previews/scenarios -Destination (Join-Path $output docs/images/previews/scenarios) -Recurse
+            foreach ($required in @('Bannerlord.XmlPreview.exe', 'Bannerlord.XmlPreview.VisualRegression.Cli.exe', 'Bannerlord.XmlPreview.VisualRegression.Cli.deps.json', 'Bannerlord.XmlPreview.VisualRegression.Cli.runtimeconfig.json', 'docs/guides/create-ui-with-ai.md', 'docs/images/previews/scenarios/escape-menu.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'licenses')) {
               if (!(Test-Path -LiteralPath (Join-Path $output $required))) { throw "$variant is missing $required." }
             }
             $hasRuntime = Test-Path -LiteralPath (Join-Path $output hostfxr.dll)
             if ($hasRuntime -ne ($variant -eq 'self-contained')) { throw "Unexpected runtime contents in $variant." }
+            & (Join-Path (Resolve-Path $output) Bannerlord.XmlPreview.VisualRegression.Cli.exe) --help
+            if ($LASTEXITCODE -ne 0) { throw "Packaged CLI ($variant) failed to start." }
           }
 
       - name: Create both ZIPs and SHA-256 checksums
@@ -141,6 +149,7 @@ jobs:
           - win-x64-framework-dependent.zip: smaller download; requires .NET 10 Desktop Runtime x64 installed separately.
           - win-x64-self-contained.zip: larger download; includes the .NET desktop runtime.
           Each ZIP has a matching SHA-256 checksum file.
+          Both packages include Bannerlord.XmlPreview.VisualRegression.Cli.exe for automated PNG capture and UI iteration, plus docs/guides/create-ui-with-ai.md and sample scenarios.
           A local Bannerlord installation is required for game assets; no game assets are distributed.
           Validated game scope: Bannerlord v1.4.7, with AgricultureEstate v1.4.7.3 coverage.
           See the included docs/fidelity/images.md for widget Fidelity Status and limitations.
