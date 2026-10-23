@@ -4,6 +4,48 @@ Bannerlord XML Preview lets an AI coding agent see the UI it is building. You de
 
 This works best with an agent that can edit local files, run commands on Windows, and open local images. A text-only assistant can help write XML, but it needs you to provide visual feedback.
 
+## Let your AI agent guide you
+
+If you are unfamiliar with mod projects, XML, or command-line tools, paste the following prompt into your AI coding agent. It asks the agent to work through this guide with you and perform the setup it can handle. You do not need to understand every section before starting.
+
+```text
+Help me create a Bannerlord UI using Bannerlord.XmlPreview. I am new to
+this workflow, so guide me from setup to a first rendered preview.
+
+Read this guide before starting:
+https://github.com/DasNeo/Bannerlord.XmlPreview/blob/master/docs/guides/create-ui-with-ai.md
+If you cannot access it, ask me to provide the guide.
+
+Start by asking what screen I want to build and whether I already have
+a mod project. Ask only the questions needed for the next step, using
+plain language. Explain terms such as prefab, binding, and scenario
+briefly when we first need them.
+
+Check which tools and files you can access. Locate my Bannerlord
+installation, preview release package, and mod project where possible;
+ask me for paths you cannot find. If something is missing, help me set
+it up using the guide. Prefer the self-contained release for a first
+preview. If I have no mod project, help me create a minimal working
+module for the preview.
+
+Perform the file edits and commands you can run yourself. For steps
+only I can do, give me specific instructions and wait for the result.
+Keep Native files unchanged and work in my own mod files.
+
+Start with a simple version of my screen and sample data. Render it
+with the CLI, read capture.json, and inspect actual.png. Show me the
+image and ask for design feedback before expanding the screen. If
+you cannot run commands or view images, explain what I need to run
+or share so we can continue.
+
+As we refine the design, check the requested states and resolutions.
+Explain incomplete captures and preview limitations. Distinguish
+sample data from working game integration, and finish by explaining
+what still needs to be connected and tested in Bannerlord.
+```
+
+The remaining sections are the detailed reference for you and your agent. The first goal is a rendered image you can discuss together; a working screen in the game also needs data and interaction code.
+
 ## What you need
 
 - Windows x64 and a local Bannerlord installation for game assets.
