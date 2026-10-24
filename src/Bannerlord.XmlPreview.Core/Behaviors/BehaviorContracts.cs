@@ -32,7 +32,10 @@ public sealed record MatcherCriteria(string? ExactType = null, string? TrustedBa
 }
 
 public sealed record BehaviorInput(WidgetDescription Widget, ImmutableDictionary<string, string> Values,
-    ImmutableDictionary<string, WidgetId> References, ImmutableDictionary<WidgetId, ImmutableDictionary<string, string>> RunValues);
+    ImmutableDictionary<string, WidgetId> References, ImmutableDictionary<WidgetId, ImmutableDictionary<string, string>> RunValues)
+{
+    public ImmutableDictionary<WidgetId, ImmutableArray<WidgetId>> Children { get; init; } = ImmutableDictionary<WidgetId, ImmutableArray<WidgetId>>.Empty;
+}
 public interface IBehaviorHandler
 {
     ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input);
@@ -40,7 +43,8 @@ public interface IBehaviorHandler
 public sealed record BehaviorRule(RuleId Id, BehaviorPhase Phase, MatcherCriteria Matcher, IBehaviorHandler Handler,
     ImmutableArray<RuleId> Before = default, ImmutableArray<RuleId> After = default);
 public abstract record BehaviorContribution(BehaviorPhase Phase);
-public sealed record DescriptionContribution(string Property, string Value, CollectionMerge Merge = CollectionMerge.Replace) : BehaviorContribution(BehaviorPhase.Describe);
+public sealed record DescriptionContribution(string Property, string Value, CollectionMerge Merge = CollectionMerge.Replace,
+    WidgetId? Target = null) : BehaviorContribution(BehaviorPhase.Describe);
 public sealed record ImageBlueprint(Bannerlord.XmlPreview.Models.Assets.ImageRequest Request, string? Brush = null,
     string? Mask = null, bool Masked = false, bool HideWhenNull = false, string Stretch = "Fill", string? Color = null);
 public sealed record ElementBlueprint(ElementKind Kind, string? Explanation = null, string? Text = null, ImageBlueprint? Image = null) : BehaviorContribution(BehaviorPhase.Instantiate);

@@ -107,7 +107,7 @@ public sealed class PrefabRenderer : IPrefabRenderer
         diagnostics.BehaviorGraph = plan.Summary;
         diagnostics.BehaviorTrace = options?.TraceBehaviors == true || options is not null ? plan.Trace : [];
         foreach (var message in plan.Diagnostics) diagnostics.Add(message);
-        context.SetBehaviorPlan(inputs, plan);
+        context.SetBehaviorPlan(inputs, plan, document.RootNode);
         try
         {
             var rootSize = options?.PreviewSize ?? _rootLayoutHints.ResolveRootSize(context.ResolveDouble);

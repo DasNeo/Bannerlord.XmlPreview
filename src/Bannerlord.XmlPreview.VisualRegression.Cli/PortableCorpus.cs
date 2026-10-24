@@ -10,7 +10,11 @@ using System.Windows.Media.Imaging;
 
 namespace Bannerlord.XmlPreview.VisualRegression.Cli;
 
-internal sealed record CorpusNode(string ModelType, string Name, IReadOnlyDictionary<string, string> Attributes, IReadOnlyList<CorpusNode> Children);
+internal sealed record CorpusNode(string ModelType, string Name, IReadOnlyDictionary<string, string> Attributes, IReadOnlyList<CorpusNode> Children)
+{
+    public PrefabVisualDefinition? VisualDefinition { get; init; }
+    public bool RendersBrush { get; init; }
+}
 internal sealed record PortableCorpus(int SchemaVersion, string PrefabIdentity, string OriginalSourceSha256, string ModuleVersion,
     CorpusNode Root, IReadOnlyDictionary<string, string> Constants, IReadOnlyList<string> BindingKeys,
     IReadOnlyList<ResolvedWidgetProperty> Properties, IReadOnlyList<ResolvedWidgetReference> References,
@@ -55,18 +59,21 @@ internal sealed record PortableCorpus(int SchemaVersion, string PrefabIdentity, 
             throw new InvalidDataException("Invalid portable model type.");
         var attributes = new Dictionary<string, string>(node.Attributes, StringComparer.OrdinalIgnoreCase);
         var children = node.Children.Select(CreateNode).ToArray();
+        if (node.RendersBrush && type == typeof(ListPanelNode))
+            return new ListPanelNode(node.Name, attributes, children, true).WithVisualDefinition(node.VisualDefinition);
         var constructor = type.GetConstructors().OrderByDescending(c => c.GetParameters().Length)
             .FirstOrDefault(c => c.GetParameters().Length is 2 or 3)
             ?? throw new InvalidDataException("Portable model has no supported constructor.");
-        return (PrefabNode)constructor.Invoke(constructor.GetParameters().Length == 3
-            ? [node.Name, attributes, children] : [attributes, children]);
+        return ((PrefabNode)constructor.Invoke(constructor.GetParameters().Length == 3
+            ? [node.Name, attributes, children] : [attributes, children])).WithVisualDefinition(node.VisualDefinition);
     }
 
     public static PortableCorpus FromDocument(PrefabDocument document, string identity, RecordingAssets assets, IReadOnlyList<string> loaderDiagnostics,
         string moduleVersion)
     {
         static CorpusNode Node(PrefabNode node) => new(node.GetType().FullName!, node.Name,
-            new SortedDictionary<string, string>(node.Attributes.ToDictionary(p => p.Key, p => p.Value), StringComparer.Ordinal), node.Children.Select(Node).ToArray());
+            new SortedDictionary<string, string>(node.Attributes.ToDictionary(p => p.Key, p => p.Value), StringComparer.Ordinal), node.Children.Select(Node).ToArray())
+            { VisualDefinition = node.VisualDefinition, RendersBrush = node is ListPanelNode { RendersBrush: true } };
         static IEnumerable<PrefabNode> Nodes(PrefabNode node) => new[] { node }.Concat(node.Children.SelectMany(Nodes));
         var all = Nodes(document.RootNode).ToArray();
         var paths = all.Select(n => n.Attributes.GetValueOrDefault(PrefabVisualTreeHelper.DebugWidgetPathAttributeName, n.Name)).ToArray();
@@ -99,6 +106,7 @@ internal sealed class RecordingAssets(IAssetCatalog source) : IAssetCatalog
     public BrushDefinition? FindBrush(string? name)
     { var result = source.FindBrush(name); if (!string.IsNullOrWhiteSpace(name)) Brushes[name] = result; return result; }
     public ImageSource? GetSpriteImage(string? name) => source.GetSpriteImage(name);
+    public BitmapFontDefinition? FindFont(string name) => source.FindFont(name);
     public SpriteAssetResolution ResolveSpriteAsset(string? name)
     { var result = source.ResolveSpriteAsset(name); if (!string.IsNullOrWhiteSpace(name)) Sprites[name] = result.SpriteDefinition; return result; }
 }

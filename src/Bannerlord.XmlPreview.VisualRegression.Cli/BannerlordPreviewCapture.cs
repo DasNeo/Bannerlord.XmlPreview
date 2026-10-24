@@ -112,7 +112,7 @@ public sealed class BannerlordPreviewCapture : IDisposable
         var provider = new ScenarioDataSource(scenario);
         var renderer = new PrefabRenderer(assets, metrics, new BannerlordBrushOverlayFeatureHandler(), provider,
             new FixedRootLayout(new Size(scenario.CaptureProfile.Width, scenario.CaptureProfile.Height)),
-            new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider(), new Bannerlord.XmlPreview.Behaviors.Bannerlord.BannerlordBehaviorRuleProvider());
+            new BannerlordWidgetTextSourceProvider(), new BannerlordWidgetDebugMetadataProvider(), new Bannerlord.XmlPreview.Behaviors.Bannerlord.BannerlordBehaviorRuleProvider(_environment?.Reflection));
         token.ThrowIfCancellationRequested();
         watch.Restart();
         var root = renderer.Render(document, diagnostics, new RegressionRenderOptions(scenario.PrefabIdentity, scenario.Bindings,
@@ -156,10 +156,10 @@ public sealed class BannerlordPreviewCapture : IDisposable
         var factory = new BannerlordWidgetNodeFactory(reflection);
         var loader = new PrefabLoader(assets, metrics, new BannerlordPrefabReferenceResolver(settings, index),
             new BannerlordWidgetPropertyResolver(settings, reflection), new WidgetReferenceResolver(), factory);
-        return new(assets, metrics, loader);
+        return new(assets, metrics, loader, reflection);
     }
 
-    private sealed record CaptureEnvironment(IAssetCatalog Assets, IBrushMetricsProvider Metrics, PrefabLoader Loader);
+    private sealed record CaptureEnvironment(IAssetCatalog Assets, IBrushMetricsProvider Metrics, PrefabLoader Loader, IBannerlordWidgetReflectionService Reflection);
 
     public static string ResolvePrefab(string root, string identity)
     {

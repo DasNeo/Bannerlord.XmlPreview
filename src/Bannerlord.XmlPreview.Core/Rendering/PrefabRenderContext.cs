@@ -238,6 +238,7 @@ public sealed partial class PrefabRenderContext
         string attributeName,
         bool fallback = false)
     {
+        if (TryGetDescription(attributes, attributeName, out var described)) return ResolveBoolean(described, fallback);
         if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
             property.TryGetBoolean(out var typedValue))
         {
@@ -279,6 +280,7 @@ public sealed partial class PrefabRenderContext
         string attributeName,
         double fallback)
     {
+        if (TryGetDescription(attributes, attributeName, out var described)) return ResolveDouble(described, fallback);
         if (TryGetResolvedWidgetProperty(attributes, attributeName, out var property) &&
             property.TryGetDouble(out var typedValue))
         {
@@ -370,6 +372,7 @@ public sealed partial class PrefabRenderContext
         IReadOnlyDictionary<string, string> attributes,
         string attributeName)
     {
+        if (TryGetDescription(attributes, attributeName, out var described)) return described;
         if (!attributes.TryGetValue(attributeName, out var rawValue))
         {
             return null;
@@ -384,9 +387,9 @@ public sealed partial class PrefabRenderContext
         return rawValue;
     }
 
-    private static bool HasAttribute(IReadOnlyDictionary<string, string> attributes, string attributeName)
+    private bool HasAttribute(IReadOnlyDictionary<string, string> attributes, string attributeName)
     {
-        return attributes.ContainsKey(attributeName);
+        return attributes.ContainsKey(attributeName) || TryGetDescription(attributes, attributeName, out _);
     }
 
     private bool TryResolveReferencedWidget(
@@ -1544,6 +1547,9 @@ public sealed partial class PrefabRenderContext
         Size parentSize,
         RenderedPrefabNode renderedNode)
     {
+        attributes = EffectiveAttributes(attributes);
+        if (TryGetDescription(attributes, "Preview.State", out var state))
+            PreviewElementDebugProperties.SetPreviewState(renderedNode.Element, state);
         _renderedNodeCount++;
         var widgetPath = TryGetWidgetPath(attributes);
         if (!string.IsNullOrWhiteSpace(widgetPath))
@@ -1592,19 +1598,42 @@ public sealed partial class PrefabRenderContext
     private readonly Dictionary<WidgetId, string> _graphInstanceKeys = [];
     private WidgetId? _activeGraphWidget;
     private IReadOnlyDictionary<WidgetId, System.Collections.Immutable.ImmutableDictionary<string, WidgetId>> _graphReferences = new Dictionary<WidgetId, System.Collections.Immutable.ImmutableDictionary<string, WidgetId>>();
-    private IReadOnlyDictionary<WidgetId, IReadOnlyDictionary<string, string>> _graphDescriptions = new Dictionary<WidgetId, IReadOnlyDictionary<string, string>>();
+    private IReadOnlyDictionary<WidgetId, Dictionary<string, string>> _graphDescriptions = new Dictionary<WidgetId, Dictionary<string, string>>();
     private IReadOnlyDictionary<WidgetId, ElementBlueprint> _graphBlueprints = new Dictionary<WidgetId, ElementBlueprint>();
-    internal void SetBehaviorPlan(System.Collections.Immutable.ImmutableArray<BehaviorInput> inputs, BehaviorGraphPlan plan)
+    private readonly Dictionary<string, PrefabVisualDefinition> _visualDefinitions = new(StringComparer.OrdinalIgnoreCase);
+    internal void SetBehaviorPlan(System.Collections.Immutable.ImmutableArray<BehaviorInput> inputs, BehaviorGraphPlan plan, PrefabNode root)
     {
         _graphBlueprints = plan.Contributions.Where(c => c.Contribution is ElementBlueprint).ToDictionary(c => c.Widget, c => (ElementBlueprint)c.Contribution);
         _graphReferences = inputs.ToDictionary(i => i.Widget.Id, i => i.References);
-        _graphDescriptions = inputs.ToDictionary(i => i.Widget.Id, i => (IReadOnlyDictionary<string, string>)plan.Contributions
-            .Where(c => c.Widget == i.Widget.Id && c.Contribution is DescriptionContribution)
+        _graphDescriptions = inputs.ToDictionary(i => i.Widget.Id, i => plan.Contributions
+            .Where(c => c.Contribution is DescriptionContribution d && (d.Target ?? c.Widget) == i.Widget.Id)
             .Select(c => (DescriptionContribution)c.Contribution).GroupBy(c => c.Property, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => string.Concat(g.Select(c => c.Value)), StringComparer.OrdinalIgnoreCase));
+        // Connection states are planned before materialization, including visual-state geometry.
+        foreach (var connection in plan.Contributions.Select(c => c.Contribution).OfType<ConnectionContribution>()
+                     .Where(c => c.StateSource is not null && c.Target is not null))
+            _graphDescriptions[connection.Target!.Value]["Preview.State"] = connection.StateValue ?? "Default";
+        void Visit(PrefabNode node)
+        {
+            if (node.VisualDefinition is { } definition && TryGetWidgetPath(node.Attributes) is { } path)
+                _visualDefinitions[path] = definition;
+            foreach (var child in node.Children) Visit(child);
+        }
+        Visit(root);
     }
 
+    private string _renderState = "Default";
     internal RenderedPrefabNode RenderNode(PrefabNode node, Size parentSize)
+    {
+        var previous = _renderState;
+        var attributes = EffectiveAttributes(node.Attributes);
+        _renderState = TryGetDescription(node.Attributes, "Preview.State", out var state) ? state
+            : attributes.GetValueOrDefault("CurrentState", "Default");
+        try { return RenderEffectiveNode(node.WithAttributes(attributes), parentSize); }
+        finally { _renderState = previous; }
+    }
+
+    private RenderedPrefabNode RenderEffectiveNode(PrefabNode node, Size parentSize)
     {
         var path = TryGetWidgetPath(node.Attributes) ?? node.Name;
         var id = new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path)));
@@ -1656,13 +1685,15 @@ public sealed partial class PrefabRenderContext
                         case LayoutIntent.SliderFill: MaterializeSliderFill(widget); break;
                         case LayoutIntent.SetState: ApplyPreviewState(widget, layout.Value ?? "Default", ResolveBoolean(widget.Attributes, "UpdateChildrenStates")); break;
                         case LayoutIntent.RangeValue:
-                            var handle = _graphElements[layout.Source!.Value];
                             var hostSize = Measure(widget.Element, widget.Attributes, ResolveRegisteredParentSize(widget));
-                            var handleSize = Measure(handle.Element, handle.Attributes, hostSize);
                             var fraction = double.Parse(layout.Value!, CultureInfo.InvariantCulture);
                             var vertical = layout.Axis == "Vertical";
-                            if (vertical) Canvas.SetTop(handle.Element, Math.Max(0, hostSize.Height - handleSize.Height) * fraction);
-                            else Canvas.SetLeft(handle.Element, Math.Max(0, hostSize.Width - handleSize.Width) * fraction);
+                            if (layout.Source is { } handleId && _graphElements.TryGetValue(handleId, out var handle))
+                            {
+                                var handleSize = Measure(handle.Element, handle.Attributes, hostSize);
+                                if (vertical) Canvas.SetTop(handle.Element, Math.Max(0, hostSize.Height - handleSize.Height) * fraction);
+                                else Canvas.SetLeft(handle.Element, Math.Max(0, hostSize.Width - handleSize.Width) * fraction);
+                            }
                             if (layout.SecondaryTarget is { } fillerId && _graphElements.TryGetValue(fillerId, out var filler))
                             {
                                 if (vertical) filler.Element.Height = hostSize.Height * fraction;
@@ -1683,9 +1714,32 @@ public sealed partial class PrefabRenderContext
     private bool TryGetDescription(IReadOnlyDictionary<string, string> attributes, string property, out string value)
     {
         var path = TryGetWidgetPath(attributes);
-        if (path is not null && _graphDescriptions.TryGetValue(new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path))), out var description) && description.TryGetValue(property, out value!)) return true;
+        if (path is not null)
+        {
+            _graphDescriptions.TryGetValue(new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path))), out var description);
+            if (description is not null && description.TryGetValue(property, out value!)) return true;
+            if (_visualDefinitions.TryGetValue(path, out var definition))
+            {
+                var state = description?.GetValueOrDefault("Preview.State", "Default") ?? "Default";
+                if (definition.States.TryGetValue(state, out var active) && active.TryGetValue(property, out value!)) return true;
+                if (definition.States.TryGetValue("Default", out var defaults) && defaults.TryGetValue(property, out value!)) return true;
+            }
+        }
         value = "";
         return false;
+    }
+
+    internal IReadOnlyDictionary<string, string> EffectiveAttributes(IReadOnlyDictionary<string, string> attributes)
+    {
+        var path = TryGetWidgetPath(attributes);
+        if (path is null) return attributes;
+        var result = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase);
+        if (_visualDefinitions.TryGetValue(path, out var definition))
+            foreach (var key in definition.States.Values.SelectMany(s => s.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
+                if (TryGetDescription(attributes, key, out var value)) result[key] = value;
+        if (_graphDescriptions.TryGetValue(new WidgetId(StableWidgetId.Create(GraphPrefabIdentity, path, BuildInstanceKey(path))), out var description))
+            foreach (var pair in description.Where(p => p.Key != "Preview.State")) result[pair.Key] = pair.Value;
+        return result;
     }
 
     public bool IsVisible(IReadOnlyDictionary<string, string> attributes)
@@ -2126,7 +2180,7 @@ public sealed partial class PrefabRenderContext
             ? Math.Clamp(ResolveDouble(alphaFactor, 1), 0, 1)
             : 1d;
 
-        element.Opacity = IsDisabled(attributes) ? 0.88 : 1;
+        element.Opacity = IsDisabled(attributes) ? Math.Clamp(ResolveDouble(attributes, "Preview.DisabledOpacity", 0.88), 0, 1) : 1;
         PreviewElementDebugProperties.SetOwnVisualAlpha(element, childHost is null ? 1 : opacity);
         if (childHost is null)
             element.Opacity *= opacity;
@@ -2546,7 +2600,7 @@ public sealed partial class PrefabRenderContext
         return false;
     }
 
-    public Rect MeasureCanvasChildrenBounds(Canvas canvas)
+    public Rect MeasureCanvasChildrenBounds(Canvas canvas, bool excludeCollapsed = false)
     {
         var hasChildren = false;
         var minLeft = 0d;
@@ -2554,7 +2608,7 @@ public sealed partial class PrefabRenderContext
         double maxRight = 0;
         double maxBottom = 0;
 
-        foreach (var child in canvas.Children.OfType<FrameworkElement>())
+        foreach (var child in canvas.Children.OfType<FrameworkElement>().Where(child => !excludeCollapsed || child.Visibility != Visibility.Collapsed))
         {
             var left = Canvas.GetLeft(child);
             if (double.IsNaN(left))
@@ -2762,6 +2816,7 @@ public sealed partial class PrefabRenderContext
         Size elementSize,
         Rect? alignmentBounds = null)
     {
+        attributes = EffectiveAttributes(attributes);
         var horizontalAlignment = attributes.TryGetValue("HorizontalAlignment", out var horizontalValue)
             ? ResolveDebugValue(attributes, "HorizontalAlignment", horizontalValue)
             : "Left";
@@ -3011,9 +3066,11 @@ public sealed partial class PrefabRenderContext
             return null;
         }
 
-        var state = isDisabled ? "Disabled" : "Default";
+        var state = isDisabled ? "Disabled" : _renderState;
         if (brush.Styles.TryGetValue(state, out var style))
         {
+            if (state != "Default" && brush.Styles.TryGetValue("Default", out var defaults))
+                style = defaults.Merge(style);
             return style;
         }
 
@@ -3080,9 +3137,9 @@ public sealed partial class PrefabRenderContext
         return true;
     }
 
-    private static string CreateBrushStateCacheKey(string brushName, bool isDisabled)
+    private string CreateBrushStateCacheKey(string brushName, bool isDisabled)
     {
-        return $"{(isDisabled ? '1' : '0')}|{brushName}";
+        return $"{(isDisabled ? "Disabled" : _renderState)}|{brushName}";
     }
 
     private FrameworkElement? CreateBrushLayerVisual(BrushLayerDefinition layer, double referenceWidth, double referenceHeight)
@@ -3746,6 +3803,7 @@ public sealed partial class PrefabRenderContext
 
     private string? ResolveSizePolicy(IReadOnlyDictionary<string, string> attributes, string policyKey)
     {
+        if (TryGetDescription(attributes, policyKey, out var described)) return described;
         attributes.TryGetValue(policyKey, out var policy);
         if (TryGetResolvedWidgetProperty(attributes, policyKey, out var resolvedPolicy) &&
             resolvedPolicy.ParsedValue is not null)
@@ -4315,6 +4373,7 @@ public sealed partial class PrefabRenderContext
 
     public void ApplyFlowLayout(FrameworkElement element, IReadOnlyDictionary<string, string> attributes)
     {
+        attributes = EffectiveAttributes(attributes);
         var marginLeft = ResolveDouble(attributes, "MarginLeft", 0);
         var marginTop = ResolveDouble(attributes, "MarginTop", 0);
         var marginRight = ResolveDouble(attributes, "MarginRight", 0);
@@ -4409,7 +4468,8 @@ public sealed partial class PrefabRenderContext
         Canvas host,
         IReadOnlyList<PrefabNode> children,
         Size parentSize,
-        Point origin)
+        Point origin,
+        bool excludeCollapsed = false)
     {
         host.RenderTransform = Transform.Identity;
         host.Margin = new Thickness(0);
@@ -4436,7 +4496,7 @@ public sealed partial class PrefabRenderContext
                 alignmentBounds);
         }
 
-        var contentBounds = MeasureCanvasChildrenBounds(host);
+        var contentBounds = MeasureCanvasChildrenBounds(host, excludeCollapsed);
         ApplyCanvasLayout(host, contentBounds);
     }
 

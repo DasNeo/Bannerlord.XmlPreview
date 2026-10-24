@@ -13,10 +13,21 @@ public static class BannerlordBehaviorRules
         var rules = new List<BehaviorRule>();
         void Add(string id, BehaviorPhase phase, MatcherCriteria matcher, IBehaviorHandler handler) => rules.Add(new(new("bannerlord." + id), phase, matcher, handler));
         Add("image.static", BehaviorPhase.Instantiate, new(ExactType: "ImageWidget"), new StaticImage());
-        Add("image.provider", BehaviorPhase.Instantiate, new(ExactType: "ImageIdentifierWidget"), new ProviderImage(false));
+        Add("image.provider", BehaviorPhase.Instantiate, new(TrustedBaseType: "ImageIdentifierWidget"), new ProviderImage(false));
+        Add("image.loading", BehaviorPhase.Describe, new(TrustedBaseType: "ImageIdentifierWidget", Attribute: "LoadingIconWidget"), new ImageLoading());
+        Add("image.loading-connection", BehaviorPhase.Connect, new(TrustedBaseType: "ImageIdentifierWidget", Attribute: "LoadingIconWidget"), new Connections([("LoadingIconWidget", ConnectionRequirement.Required)]));
         Add("image.masked", BehaviorPhase.Instantiate, new(ExactType: "MaskedTextureWidget"), new ProviderImage(true));
         Add("image.tableau", BehaviorPhase.Instantiate, new(ExactType: "BannerTableauWidget"), new RuntimeImage());
         Add("state.describe", BehaviorPhase.Describe, new(Capability: "preview-state"), new PreviewState());
+        Add("state.boolean", BehaviorPhase.Describe, new(TrustedBaseType: "BoolStateChangerWidget"), new BooleanState());
+        Add("state.boolean-container", BehaviorPhase.Instantiate, new(TrustedBaseType: "BoolStateChangerWidget"), new StaticContainer());
+        Add("state.boolean-connection", BehaviorPhase.Connect, new(TrustedBaseType: "BoolStateChangerWidget", Attribute: "TargetWidget"), new Connections([("TargetWidget", ConnectionRequirement.Required)]));
+        Add("inventory.tuple", BehaviorPhase.Describe, new(ExactType: "InventoryItemTupleWidget"), new InventoryTuple());
+        Add("inventory.container", BehaviorPhase.Instantiate, new(ExactType: "InventoryItemTupleWidget"), new StaticContainer());
+        Add("inventory.connections", BehaviorPhase.Connect, new(ExactType: "InventoryItemTupleWidget"), new Connections([
+            ("MainContainer", ConnectionRequirement.Required), ("ExtendedControlsContainer", ConnectionRequirement.Required),
+            ("NameTextWidget", ConnectionRequirement.Required), ("EquipButton", ConnectionRequirement.Required)]));
+        Add("inventory.value", BehaviorPhase.Describe, new(ExactType: "InventoryItemValueTextWidget"), new InventoryValue());
         Add("visibility.sibling", BehaviorPhase.Describe, new(TrustedBaseType: "SiblingIndexVisibilityWidget"), new SiblingVisibility());
         Add("visibility.value", BehaviorPhase.Describe, new(TrustedBaseType: "ValueBasedVisibilityWidget"), new ValueVisibility());
         Add("visibility.string", BehaviorPhase.Describe, new(TrustedBaseType: "StringBasedVisibilityWidget"), new StringVisibility());
@@ -32,7 +43,7 @@ public static class BannerlordBehaviorRules
         Add("scroll.handle", BehaviorPhase.PrepareLayout, new(Capability: "scroll-handle"), new Intent(LayoutIntent.ScrollHandle));
         Add("fill", BehaviorPhase.PrepareLayout, new(Attribute: "FillWidget"), new Intent(LayoutIntent.Fill));
         Add("sort", BehaviorPhase.PrepareLayout, new(Attribute: "SortVisualWidget"), new SortPresentation());
-        Add("slider.connections", BehaviorPhase.Connect, new(TrustedBaseType: "SliderWidget"), new Connections([("Handle", ConnectionRequirement.Required), ("Filler", ConnectionRequirement.Optional)]));
+        Add("slider.connections", BehaviorPhase.Connect, new(TrustedBaseType: "SliderWidget"), new Connections([("Handle", ConnectionRequirement.Optional), ("Filler", ConnectionRequirement.Optional)]));
         Add("slider.range", BehaviorPhase.PrepareLayout, new(TrustedBaseType: "SliderWidget"), new RangeValue());
         Add("editable.instantiate", BehaviorPhase.Instantiate, new(TrustedBaseType: "EditableTextWidget"), new TextEntry());
         Add("key.instantiate", BehaviorPhase.Instantiate, new(TrustedBaseType: "InputKeyVisualWidget"), new KeyVisual());
@@ -50,6 +61,8 @@ public static class BannerlordBehaviorRules
         // Scroll handling consumes final handle placement rather than being overwritten by it.
         var handle = new RuleId("bannerlord.scroll.handle");
         rules = rules.Select(r => r.Id.Value == "bannerlord.scroll.layout" ? r with { After = [handle] } : r).ToList();
+        rules = rules.Select(r => r.Id.Value is "bannerlord.inventory.tuple" or "bannerlord.inventory.value" or "bannerlord.state.boolean"
+            ? r with { Before = [new("bannerlord.state.describe")] } : r).ToList();
         return rules.ToImmutableArray();
     }
 
@@ -68,8 +81,78 @@ public static class BannerlordBehaviorRules
         public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input)
         {
             var state = Value(input, "CurrentState");
-            if (string.IsNullOrWhiteSpace(state)) state = Boolean(input, "IsDisabled") || !Boolean(input, "IsEnabled", true) ? "Disabled" : Boolean(input, "IsSelected") ? "Selected" : "Default";
+            if (string.IsNullOrWhiteSpace(state)) state = Boolean(input, "IsDisabled") || !Boolean(input, "IsEnabled", true) ? "Disabled" : Boolean(input, "IsPressed") ? "Pressed" : Boolean(input, "IsHovered") ? "Hovered" : Boolean(input, "IsSelected") ? "Selected" : "Default";
             return [new DescriptionContribution("Preview.State", state)];
+        }
+    }
+    private sealed class BooleanState : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input)
+        {
+            var target = Reference(input, "TargetWidget") ?? input.Widget.Id;
+            var state = Value(input, Boolean(input, "BooleanCheck") ? "TrueState" : "FalseState");
+            if (string.IsNullOrWhiteSpace(state)) throw new InvalidOperationException("Boolean state changer requires the selected TrueState or FalseState.");
+            var contributions = ImmutableArray.CreateBuilder<BehaviorContribution>();
+            void Set(WidgetId id)
+            {
+                contributions.Add(new DescriptionContribution("CurrentState", state, Target: id));
+                if (Boolean(input, "IncludeChildren"))
+                    foreach (var child in input.Children.GetValueOrDefault(id, [])) Set(child);
+            }
+            Set(target);
+            return contributions.ToImmutable();
+        }
+    }
+    private sealed class ImageLoading : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) => Reference(input, "LoadingIconWidget") is { } target
+            ? [new DescriptionContribution("IsVisible", "false", Target: target)] : [];
+    }
+    private sealed class InventoryTuple : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input)
+        {
+            var result = ImmutableArray.CreateBuilder<BehaviorContribution>();
+            // The hidden drag image and closed controls must not enlarge an inventory row.
+            result.Add(new DescriptionContribution("Preview.ExcludeCollapsedChildren", "true"));
+            void Set(string role, string property, string value)
+            {
+                if (Reference(input, role) is { } target) result.Add(new DescriptionContribution(property, value, Target: target));
+            }
+            var selected = Boolean(input, "IsSelected");
+            var state = Value(input, "CurrentState");
+            if (state.Length == 0) state = Boolean(input, "IsDisabled") || !Boolean(input, "IsEnabled", true) ? "Disabled"
+                : Boolean(input, "IsPressed") ? "Pressed" : Boolean(input, "IsHovered") ? "Hovered" : selected ? "Selected" : "Default";
+            Set("MainContainer", "CurrentState", state);
+            Set("NameTextWidget", "CurrentState", state == "Pressed" ? "Pressed" : "Default");
+            Set("ExtendedControlsContainer", "CurrentState", selected ? "Selected" : "Default");
+            Set("ExtendedControlsContainer", "IsVisible", selected ? "true" : "false");
+            Set("ExtendedControlsContainer", "IsDisabled", selected ? "false" : "true");
+            var equipable = Boolean(input, "IsEquipable");
+            var cannotUse = equipable && !Boolean(input, "CanCharacterUseItem", true);
+            // EquipmentMode: 0 civilian, 1 battle, 2 stealth. Standalone rows default to battle.
+            var mode = Value(input, "Preview.EquipmentMode", "1");
+            var wrongSet = equipable && (mode == "0" && !Boolean(input, "IsCivilian") || mode == "2" && !Boolean(input, "IsStealth"));
+            Set("MainContainer", "Brush", Value(input, cannotUse ? "CharacterCantUseBrush" : wrongSet ? "CantUseInSetBrush" : "DefaultBrush"));
+            Set("EquipButton", "IsVisible", equipable ? "true" : "false");
+            Set("EquipButton", "IsEnabled", equipable && !cannotUse && !wrongSet ? "true" : "false");
+            Set("EquipButton", "IsDisabled", equipable && !cannotUse && !wrongSet ? "false" : "true");
+            return result.ToImmutable();
+        }
+    }
+    private sealed class StaticContainer : IBehaviorHandler
+    {
+        // These widgets supply their own layout; inherited generic chrome would add padding or a frame.
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) => [new ElementBlueprint(ElementKind.Container)];
+    }
+    private sealed class InventoryValue : IBehaviorHandler
+    {
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input)
+        {
+            var state = Value(input, "CurrentState");
+            if (state.Length > 0) return [];
+            state = Value(input, "ProfitType", "0") switch { "-2" => "VeryBad", "-1" => "Bad", "1" => "Good", "2" => "VeryGood", _ => "Default" };
+            return [new DescriptionContribution("CurrentState", state)];
         }
     }
     private sealed class SiblingVisibility : IBehaviorHandler
@@ -147,7 +230,9 @@ public static class BannerlordBehaviorRules
     private sealed class Intent(LayoutIntent intent) : IBehaviorHandler
     {
         private readonly LayoutIntent _intent = intent;
-        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) => [new LayoutContribution(_intent, Value: _intent == LayoutIntent.Fill && input.Widget.Type.Contains("Vertical", StringComparison.Ordinal) ? "Vertical" : null)];
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) =>
+            _intent == LayoutIntent.TargetState && (input.Widget.Type == "BoolStateChangerWidget" || input.Widget.TrustedBaseTypes.Contains("BoolStateChangerWidget"))
+                ? [] : [new LayoutContribution(_intent, Value: _intent == LayoutIntent.Fill && input.Widget.Type.Contains("Vertical", StringComparison.Ordinal) ? "Vertical" : null)];
     }
     private sealed class SortPresentation : IBehaviorHandler
     {
@@ -169,8 +254,10 @@ public static class BannerlordBehaviorRules
             if (Boolean(input, "IsDiscrete") && Number(input, "DiscreteIncrementInterval") is > 0 and var step)
                 value = min + Math.Round((value - min) / step) * step;
             var fraction = max <= min ? 0 : Math.Clamp((value - min) / (max - min), 0, 1);
-            return Reference(input, "Handle") is { } handle ? [new LayoutContribution(LayoutIntent.RangeValue, Source: handle,
-                Axis: Value(input, "AlignmentAxis", "Horizontal"), Value: fraction.ToString("R", CultureInfo.InvariantCulture), SecondaryTarget: Reference(input, "Filler"))] : [];
+            var handle = Reference(input, "Handle");
+            var filler = Reference(input, "Filler");
+            return handle is not null || filler is not null ? [new LayoutContribution(LayoutIntent.RangeValue, Source: handle,
+                Axis: Value(input, "AlignmentAxis", "Horizontal"), Value: fraction.ToString("R", CultureInfo.InvariantCulture), SecondaryTarget: filler)] : [];
         }
     }
     private sealed class TextEntry : IBehaviorHandler
@@ -193,7 +280,8 @@ public static class BannerlordBehaviorRules
     }
     private sealed class HiddenHelper : IBehaviorHandler
     {
-        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) => [new DescriptionContribution("IsVisible", "false"), new DescriptionContribution("IsEnabled", "false"), new DescriptionContribution("IsHitTestVisible", "false")];
+        // Navigation helpers have no disabled visual treatment; disabling input must not add a visual fade.
+        public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) => [new DescriptionContribution("IsVisible", "false"), new DescriptionContribution("IsEnabled", "false"), new DescriptionContribution("IsHitTestVisible", "false"), new DescriptionContribution("Preview.DisabledOpacity", "1")];
     }
     private sealed class Placeholder : IBehaviorHandler
     {

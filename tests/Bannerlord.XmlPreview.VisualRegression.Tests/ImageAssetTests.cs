@@ -12,6 +12,71 @@ namespace Bannerlord.XmlPreview.VisualRegression.Tests;
 
 public sealed class ImageAssetTests
 {
+    [Fact]
+    public void BrushInheritanceResolvesModuleOverridesLayersStylesAndInvalidation()
+    {
+        using var fixture = new RegressionFixture();
+        Module(fixture.Root, "Native", "", 0xF800);
+        Module(fixture.Root, "Mod", "Native", 0x07E0);
+        var native = Path.Combine(fixture.Root, "Modules/Native/GUI/Brushes");
+        var mod = Path.Combine(fixture.Root, "Modules/Mod/GUI/Brushes");
+        Directory.CreateDirectory(native); Directory.CreateDirectory(mod);
+        File.WriteAllText(Path.Combine(native, "base.xml"), """
+            <Brushes>
+              <Brush Name="base" Font="Galahad"><Layers><BrushLayer Name="Default" Sprite="icon" ExtendLeft="2"/></Layers></Brush>
+              <Brush Name="middle" BaseBrush="base"><Layers><BrushLayer Name="Default" ExtendRight="4"/></Layers></Brush>
+            </Brushes>
+            """);
+        var overrides = Path.Combine(mod, "overrides.xml");
+        File.WriteAllText(overrides, """
+            <Brushes>
+              <Brush Name="base" Font="FiraSansExtraCondensed-Regular" TextHorizontalAlignment="Center">
+                <Layers><BrushLayer Name="Default" Sprite="icon" ExtendLeft="2"/></Layers>
+                <Styles><Style Name="Default" FontSize="20" FontColor="#FFFFFFFF"/>
+                  <Style Name="Hovered" FontColor="#FFD987FF"/></Styles>
+              </Brush>
+              <Brush Name="leaf" BaseBrush="middle"><Layers><BrushLayer Name="Default" Color="#FF0000FF"/></Layers>
+                <Styles><Style Name="Default" FontColor="#00FF00FF"/></Styles></Brush>
+            </Brushes>
+            """);
+        var catalog = new BannerlordAssetCatalog(new Settings(fixture.Root), new BannerlordInstallationIndex());
+        var path = Path.Combine(fixture.Root, "Modules/Mod/GUI/Prefabs/screen.xml");
+        var scoped = catalog.ForPrefab(path);
+        var leaf = scoped.FindBrush("leaf")!;
+        Assert.Equal("FiraSansExtraCondensed-Regular", leaf.FontName);
+        Assert.Equal("Center", leaf.TextHorizontalAlignment);
+        Assert.Equal(20, leaf.Styles["Default"].FontSize);
+        Assert.Equal("#00FF00FF", leaf.Styles["Default"].FontColor);
+        Assert.Equal("#FFD987FF", leaf.Styles["Hovered"].FontColor);
+        var layer = Assert.Single(leaf.Layers);
+        Assert.Equal("icon", layer.SpriteName); Assert.Equal(2, layer.ExtendLeft); Assert.Equal(4, layer.ExtendRight);
+        Assert.Equal("#FF0000FF", layer.Color);
+        Assert.Null(Assert.Single(scoped.FindBrush("base")!.Layers).Color);
+        Assert.Equal("#FFFFFFFF", scoped.FindBrush("base")!.Styles["Default"].FontColor);
+        Parallel.For(0, 12, _ => Assert.Same(leaf, scoped.FindBrush("leaf")));
+        File.WriteAllText(overrides, File.ReadAllText(overrides).Replace("FontSize=\"20\"", "FontSize=\"26\""));
+        catalog.Invalidate();
+        Assert.Equal(26, catalog.ForPrefab(path).FindBrush("leaf")!.Styles["Default"].FontSize);
+        Assert.Equal(20, leaf.Styles["Default"].FontSize);
+    }
+
+    [Fact]
+    public void BrushInheritanceReportsMissingParentsAndCyclesOnlyWhenRequested()
+    {
+        using var fixture = new RegressionFixture();
+        Module(fixture.Root, "Native", "", 0xF800);
+        var directory = Path.Combine(fixture.Root, "Modules/Native/GUI/Brushes"); Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "invalid.xml"), """
+            <Brushes><Brush Name="a" BaseBrush="b"/><Brush Name="b" BaseBrush="a"/>
+              <Brush Name="orphan" BaseBrush="absent"/><Brush Name="valid"/></Brushes>
+            """);
+        var catalog = new BannerlordAssetCatalog(new Settings(fixture.Root), new BannerlordInstallationIndex());
+        Assert.NotNull(catalog.FindBrush("valid"));
+        Assert.Contains("cycle", Assert.Throws<InvalidDataException>(() => catalog.FindBrush("a")).Message);
+        Assert.Contains("missing BaseBrush 'absent'", Assert.Throws<InvalidDataException>(() => catalog.FindBrush("orphan")).Message);
+        Assert.Null(catalog.FindBrush("unknown"));
+    }
+
     [Theory]
     [InlineData("DXT1", "00F8000000000000", 255, 0, 0, 255)]
     [InlineData("DXT5", "FF0000000000000000F8000000000000", 255, 0, 0, 255)]

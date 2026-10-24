@@ -74,6 +74,7 @@ public abstract class ContainerPrefabNode : PrefabNode
         var containerSize = context.Measure(border, Attributes, parentSize);
         Rect childLayoutRect = Rect.Empty;
         Rect selectionRect = Rect.Empty;
+        var excludeCollapsed = context.ResolveBoolean(Attributes, "Preview.ExcludeCollapsedChildren");
 
         Size LayoutContent(bool renderChildren, Size? overrideContainerSize = null)
         {
@@ -99,10 +100,11 @@ public abstract class ContainerPrefabNode : PrefabNode
                     childCanvas,
                     Children,
                     childLayoutRect.Size,
-                    childLayoutRect.Location);
+                    childLayoutRect.Location,
+                    excludeCollapsed);
             }
 
-            var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
+            var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas, excludeCollapsed);
             if (renderChildren)
                 context.ApplyCanvasLayout(childCanvas, contentBounds);
             return context.TryMeasureReferencedElement(Attributes, "InnerPanel", childLayoutRect.Size, out var innerPanelSize)

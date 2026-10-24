@@ -106,6 +106,8 @@ public sealed class BehaviorGraph
                 switch (value)
                 {
                     case DescriptionContribution d:
+                        target = d.Target ?? target;
+                        if (!ids.Contains(target)) throw Fail("MissingDescriptionTarget", "Description target must be in the expanded tree.", input.Widget.Id, rule.Id);
                         if (!Enum.IsDefined(d.Merge)) throw Fail("UnknownMerge", "Unknown collection merge contract.");
                         var key = (target, d.Property.ToUpperInvariant());
                         if (merges.TryGetValue(key, out var merge) && (merge != CollectionMerge.Append || d.Merge != CollectionMerge.Append))
@@ -138,7 +140,8 @@ public sealed class BehaviorGraph
                     case LayoutContribution l:
                         if (!Enum.IsDefined(l.Intent)) throw Fail("UnknownLayoutIntent", "Unknown layout intent.");
                         if (!double.IsFinite(l.Padding)) throw Fail("InvalidLayoutValue", "Layout padding must be finite.");
-                        if (l.Intent is LayoutIntent.CopyDimensions or LayoutIntent.RangeValue && l.Source is null)
+                        if ((l.Intent == LayoutIntent.CopyDimensions && l.Source is null) ||
+                            (l.Intent == LayoutIntent.RangeValue && l.Source is null && l.SecondaryTarget is null))
                             throw Fail("MissingLayoutSource", "This layout intent requires a source.", input.Widget.Id, rule.Id);
                         if (l.Intent == LayoutIntent.CopyDimensions && l.Axis is not ("Horizontal" or "Vertical" or "HorizontalAndVertical"))
                             throw Fail("UnknownAxis", "Dimension copying requires a reviewed axis.", input.Widget.Id, rule.Id);
@@ -166,7 +169,7 @@ public sealed class BehaviorGraph
                     }
                     if (layout.Intent == LayoutIntent.RangeValue)
                     {
-                        footprints.Add((layout.Source!.Value, layout.Axis == "Vertical" ? "Canvas.Top" : "Canvas.Left"));
+                        if (layout.Source is { } handle) footprints.Add((handle, layout.Axis == "Vertical" ? "Canvas.Top" : "Canvas.Left"));
                         if (layout.SecondaryTarget is { } filler) footprints.Add((filler, layout.Axis == "Vertical" ? "Height" : "Width"));
                     }
                     foreach (var footprint in footprints)
@@ -177,8 +180,8 @@ public sealed class BehaviorGraph
                     throw Fail("MultipleWriters", $"Multiple writers for {target.Value}.{property} in {rule.Phase}.", input.Widget.Id, rule.Id);
                 if (value is DescriptionContribution description)
                 {
-                    var previous = runValues[input.Widget.Id].GetValueOrDefault(description.Property, "");
-                    runValues = runValues.SetItem(input.Widget.Id, runValues[input.Widget.Id].SetItem(description.Property,
+                    var previous = runValues[target].GetValueOrDefault(description.Property, "");
+                    runValues = runValues.SetItem(target, runValues[target].SetItem(description.Property,
                         description.Merge == CollectionMerge.Append ? previous + description.Value : description.Value));
                 }
                 contributions.Add(new(input.Widget.Id, rule.Id, value));

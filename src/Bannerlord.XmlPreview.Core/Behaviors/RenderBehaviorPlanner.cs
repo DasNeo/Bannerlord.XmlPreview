@@ -26,6 +26,8 @@ internal static class RenderBehaviorPlanner
                 Flatten(node.Children[i], node.Kind == "ItemTemplate" ? index : i);
         }
         Flatten(structure.Root, 0);
+        var children = expanded.ToImmutableDictionary(w => new WidgetId(w.WidgetId),
+            w => w.Children.Select(c => new WidgetId(c.WidgetId)).ToImmutableArray());
         var runValues = expanded.ToImmutableDictionary(w => new WidgetId(w.WidgetId), w => w.Properties.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase)
             .SetItem("Preview.SiblingIndex", siblingIndices[w.WidgetId].ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return expanded.Select(widget =>
@@ -48,7 +50,7 @@ internal static class RenderBehaviorPlanner
             foreach (var pair in options?.OptionalConnectionExplanations ?? (IReadOnlyDictionary<string, string>)snapshot.OptionalConnectionExplanations)
                 if (pair.Key.StartsWith(widget.ExpandedPath + ":", StringComparison.Ordinal))
                     values = values.SetItem("Preview.Optional." + pair.Key[(widget.ExpandedPath.Length + 1)..], pair.Value);
-            return new BehaviorInput(description, values, references.ToImmutable(), runValues);
+            return new BehaviorInput(description, values, references.ToImmutable(), runValues) { Children = children };
         }).ToImmutableArray();
     }
 }

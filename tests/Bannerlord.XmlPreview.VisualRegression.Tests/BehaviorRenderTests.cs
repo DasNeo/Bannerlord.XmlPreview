@@ -14,6 +14,51 @@ namespace Bannerlord.XmlPreview.VisualRegression.Tests;
 
 public sealed class BehaviorRenderTests
 {
+    [Theory]
+    [InlineData(false, false, 12, 10)]
+    [InlineData(false, true, 12, 6)]
+    [InlineData(true, true, 20, 10)]
+    public void BooleanStateSelectsVisualGeometryBeforeLayoutAndPropagatesOnlyWhenRequested(bool flag, bool includeChildren, double targetWidth, double childWidth)
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            PrefabVisualDefinition Definition(string active, string passive) => new(new Dictionary<string, ImmutableDictionary<string, string>>
+            {
+                ["Default"] = new Dictionary<string, string> { ["SuggestedWidth"] = active }.ToImmutableDictionary(),
+                ["Active"] = new Dictionary<string, string> { ["SuggestedWidth"] = active }.ToImmutableDictionary(),
+                ["Passive"] = new Dictionary<string, string> { ["SuggestedWidth"] = passive }.ToImmutableDictionary()
+            }.ToImmutableDictionary());
+            const string path = "Widget[Id=target]";
+            var child = new WidgetNode(Attributes(path + " > Widget[Id=child]", ("Id", "child")), []).WithVisualDefinition(Definition("10", "6"));
+            var changer = new BrushWidgetNode("BoolStateChangerWidget", Attributes(path + " > BoolStateChangerWidget", ("TargetWidget", "..\\."),
+                ("BooleanCheck", "@Flag"), ("TrueState", "Active"), ("FalseState", "Passive"), ("IncludeChildren", includeChildren.ToString())), []);
+            var target = new WidgetNode(Attributes(path, ("Id", "target")), [child, changer]).WithVisualDefinition(Definition("20", "12"));
+            var diagnostics = new PreviewDiagnostics();
+            var rendered = SnapshotCaptureTests.Renderer(new SnapshotCaptureTests.EmptyData(), new BannerlordBehaviorRuleProvider())
+                .Render(Document(target), diagnostics, Options() with { Bindings = new Dictionary<string, string> { ["Flag"] = flag.ToString() } });
+            Assert.Equal(targetWidth, rendered.ActualWidth);
+            Assert.Equal(childWidth, Assert.Single(diagnostics.Layout!.KeyBounds, b => b.ExpandedPath.EndsWith("[Id=child]")).Width);
+            Assert.Equal(flag ? "Active" : "Passive", PreviewElementDebugProperties.GetPreviewState(rendered));
+            Assert.Null(rendered.Effect);
+            Assert.DoesNotContain(diagnostics.BehaviorTrace.SelectMany(t => t.Contributions), c => c.Contribution is LayoutContribution { Intent: LayoutIntent.TargetState });
+            Assert.False(target.Attributes.ContainsKey("CurrentState"));
+            return 0;
+        });
+    }
+
+    [Fact]
+    public void BooleanStateMissingDeclaredTargetFailsBeforeMaterialization()
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var node = new MustNotRenderNode("BoolStateChangerWidget", Attributes("BoolStateChangerWidget", ("TargetWidget", "missing"), ("TrueState", "Active"), ("FalseState", "Passive")));
+            var renderer = SnapshotCaptureTests.Renderer(new SnapshotCaptureTests.EmptyData(), new BannerlordBehaviorRuleProvider());
+            Assert.Equal("MissingRequiredConnection", Assert.Throws<BehaviorGraphException>(() => renderer.Render(Document(node), new PreviewDiagnostics(), Options())).Error.Code);
+            Assert.False(node.Rendered);
+            return 0;
+        });
+    }
+
     [Fact]
     public void CoverChildrenStackCountsEmptyPersuasionMarginsOnce()
     {
@@ -154,6 +199,33 @@ public sealed class BehaviorRenderTests
         var values = await Task.WhenAll(Render("1", "1"), Render("1", "2"));
         Assert.Equal(new[] { Visibility.Visible, Visibility.Collapsed }, values); Assert.Equal("2", attrs["IndexToBeVisible"]);
     }
+    [Theory]
+    [InlineData(false, 0, 0)]
+    [InlineData(false, 25, 5)]
+    [InlineData(false, 100, 20)]
+    [InlineData(true, 25, 2.5)]
+    public void DisplayOnlySliderFillsWithoutAHandleWhenScenarioExplainsItsAbsence(bool vertical, double value, double expectedExtent)
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var filler = new WidgetNode(Attributes("SliderWidget > Widget[Id=filler]", ("Id", "filler")), []);
+            var node = new WidgetNode("SliderWidget", Attributes("SliderWidget", ("Handle", "missing"), ("Filler", "filler"),
+                ("AlignmentAxis", vertical ? "Vertical" : "Horizontal"), ("MaxValueFloat", "100"),
+                ("ValueFloat", value.ToString(System.Globalization.CultureInfo.InvariantCulture))), [filler]);
+            var renderer = SnapshotCaptureTests.Renderer(new SnapshotCaptureTests.EmptyData(), new BannerlordBehaviorRuleProvider());
+            Assert.Equal("MissingOptionalExplanation", Assert.Throws<BehaviorGraphException>(() => renderer.Render(Document(node), new PreviewDiagnostics(), Options())).Error.Code);
+            var diagnostics = new PreviewDiagnostics();
+            renderer.Render(Document(node), diagnostics, Options() with
+            {
+                OptionalConnectionExplanations = new Dictionary<string, string> { ["SliderWidget:Handle"] = "Display-only progress indicator has no handle." }
+            });
+            var bounds = Assert.Single(diagnostics.Layout!.KeyBounds, b => b.ExpandedPath.EndsWith("[Id=filler]"));
+            Assert.Equal(expectedExtent, vertical ? bounds.Height : bounds.Width, 6);
+            Assert.Contains(diagnostics.Messages, m => m.Contains("Display-only progress indicator"));
+            return 0;
+        });
+    }
+
     [Theory]
     [InlineData(-1, 0, 0, false)] [InlineData(5, 9, 10, false)] [InlineData(20, 18, 20, false)] [InlineData(3, 7.2, 8, true)]
     public void SliderRangeHasExplicitHandleAndFillerBounds(double value, double expectedX, double expectedFillWidth, bool discrete)
