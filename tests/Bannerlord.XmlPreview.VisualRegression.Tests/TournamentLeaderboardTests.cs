@@ -118,7 +118,8 @@ public sealed class TournamentLeaderboardTests
                 Assert.All(ranks, t =>
                 {
                     Assert.Equal(HorizontalAlignment.Left, t.HorizontalAlignment);
-                    Assert.Equal(655, t.TranslatePoint(new Point(), rendered).X);
+                    // Declared column placement without the former preview-only brush border inset.
+                    Assert.Equal(652.5, t.TranslatePoint(new Point(), rendered).X);
                 });
                 if (count > 0)
                 {

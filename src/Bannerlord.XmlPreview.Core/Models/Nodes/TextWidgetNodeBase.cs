@@ -16,6 +16,7 @@ public abstract class TextWidgetNodeBase : PrefabNode
     }
 
     protected abstract double FallbackFontSize { get; }
+    protected virtual bool SupportsRichText => false;
 
     public sealed override RenderedPrefabNode Render(PrefabRenderContext context, Size parentSize)
     {
@@ -61,7 +62,7 @@ public abstract class TextWidgetNodeBase : PrefabNode
         }
 
         context.ApplyTextStyle(text, brushId, Attributes, FallbackFontSize);
-        var textVisual = context.CreateTextVisual(text, brushId, Attributes);
+        var textVisual = SupportsRichText ? context.CreateRichTextVisual(text, brushId, Attributes) : context.CreateTextVisual(text, brushId, Attributes);
         var visualOffset = textVisual == text ? context.ApplyVisualTextCentering(text, parentSize.Width) : 0;
         var textMeasureInput = context.ResolveChildMeasureSize(Attributes, parentSize);
         var widthCoversContent = context.UsesCoverChildren(Attributes, "WidthSizePolicy");

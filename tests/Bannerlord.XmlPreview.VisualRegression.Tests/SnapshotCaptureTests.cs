@@ -114,6 +114,43 @@ public sealed class SnapshotCaptureTests
     }
 
     [Fact]
+    public void NestedListWidgetIdsPreserveParentInstancesAndRestoreOuterScope()
+    {
+        Sta(() =>
+        {
+            const string outer = "Window > ListPanel[Id=rows]";
+            const string row = outer + " > ItemTemplate > Widget";
+            const string inner = row + " > ListPanel[Id=columns]";
+            const string cell = inner + " > ItemTemplate > TextWidget[Id=cell]";
+            TextWidgetNode Label(string path, string id)
+            {
+                var attributes = Attributes(path, id);
+                attributes["Text"] = "@StringItem";
+                return new TextWidgetNode(attributes, []);
+            }
+            var columns = new ListPanelNode(Attributes(inner, "columns"),
+                [new ItemTemplateNode(Attributes(inner + " > ItemTemplate"), [Label(cell, "cell")])]);
+            var rowNode = new WidgetNode(Attributes(row), [Label(row + " > TextWidget[Id=before]", "before"), columns,
+                Label(row + " > TextWidget[Id=after]", "after")]);
+            var rows = new ListPanelNode(Attributes(outer, "rows"),
+                [new ItemTemplateNode(Attributes(outer + " > ItemTemplate"), [rowNode])]);
+            var diagnostics = new PreviewDiagnostics();
+            var rendered = Renderer(new NestedKeyedData()).Render(Document(rows), diagnostics, Options());
+            var texts = Visuals(rendered).OfType<TextBlock>().Select(t => t.Text).ToArray();
+            Assert.Equal(new[] { "alice", "one", "two", "alice", "bob", "one", "two", "bob" }, texts);
+            foreach (var parent in new[] { "alice", "bob" })
+            {
+                foreach (var child in new[] { "one", "two" })
+                    Assert.Contains(diagnostics.Layout!.KeyBounds, b => b.WidgetId == StableWidgetId.Create("fixture.xml", cell,
+                        $"/{outer}={parent}/{inner}={child}"));
+                Assert.Contains(diagnostics.Layout!.KeyBounds, b => b.WidgetId == StableWidgetId.Create("fixture.xml",
+                    row + " > TextWidget[Id=after]", $"/{outer}={parent}"));
+            }
+            return 0;
+        });
+    }
+
+    [Fact]
     public void WidgetStateAndBindingScopesDoNotLeakBetweenRuns()
     {
         Sta(() =>
@@ -255,6 +292,16 @@ public sealed class SnapshotCaptureTests
     {
         public override bool TryGetTemplateItemBindings(PrefabNode node, out IReadOnlyList<IReadOnlyDictionary<string, string>> items)
         { items = keys.Select(key => (IReadOnlyDictionary<string, string>)new Dictionary<string, string> { ["__key"] = key, ["StringItem"] = key }).ToArray(); return true; }
+    }
+    private sealed class NestedKeyedData : EmptyData
+    {
+        public override bool TryGetTemplateItemBindings(PrefabNode node, out IReadOnlyList<IReadOnlyDictionary<string, string>> items)
+        {
+            var keys = node.Attributes.GetValueOrDefault("Id") == "rows" ? new[] { "alice", "bob" } : new[] { "one", "two" };
+            items = keys.Select(key => (IReadOnlyDictionary<string, string>)new Dictionary<string, string>
+                { ["__key"] = key, ["StringItem"] = key }).ToArray();
+            return true;
+        }
     }
     private sealed class EmptyAssets : IAssetCatalog
     {

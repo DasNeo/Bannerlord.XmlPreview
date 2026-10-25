@@ -28,11 +28,21 @@ public static class WpfPreviewCapture
 {
     public static RgbImage Capture(FrameworkElement root, CaptureProfile profile)
     {
-        root.Measure(new Size(profile.Width, profile.Height));
-        root.Arrange(new Rect(0, 0, profile.Width, profile.Height));
+        if (!double.IsFinite(profile.UiScale) || profile.UiScale is < 0.25 or > 4) throw new ArgumentOutOfRangeException(nameof(profile));
+        var logicalSize = new Size(profile.Width / profile.UiScale, profile.Height / profile.UiScale);
+        root.Measure(logicalSize);
+        root.Arrange(new Rect(new Point(), logicalSize));
         root.UpdateLayout();
         var content = new RenderTargetBitmap(profile.Width, profile.Height, 96, 96, PixelFormats.Pbgra32);
-        content.Render(root);
+        if (profile.UiScale == 1) content.Render(root);
+        else
+        {
+            var scaled = new DrawingVisual();
+            using (var drawing = scaled.RenderOpen())
+                drawing.DrawRectangle(new VisualBrush(root) { Stretch = Stretch.Fill, ViewboxUnits = BrushMappingMode.Absolute,
+                    Viewbox = new Rect(new Point(), logicalSize) }, null, new Rect(0, 0, profile.Width, profile.Height));
+            content.Render(scaled);
+        }
         var bitmap = new RenderTargetBitmap(profile.Width, profile.Height, 96, 96, PixelFormats.Pbgra32);
         var visual = new DrawingVisual();
         using (var drawing = visual.RenderOpen())

@@ -72,6 +72,7 @@ public sealed class BannerlordWidgetNodeFactory : IWidgetNodeFactory
             BannerlordWidgetRenderKind.ListPanel => new ListPanelNode(name, attributes, children),
             BannerlordWidgetRenderKind.BrushListPanel => new ListPanelNode(name, attributes, children, renderBrush: true),
             BannerlordWidgetRenderKind.TextWidget => new PreviewTextNode(name, attributes, children),
+            BannerlordWidgetRenderKind.RichTextWidget => new RichTextWidgetNode(name, attributes, children),
             BannerlordWidgetRenderKind.NavigationScopeTargeter => new NavigationScopeTargeterNode(name, attributes, children),
             BannerlordWidgetRenderKind.GridWidget => new GridWidgetNode(name, attributes, children),
             BannerlordWidgetRenderKind.ScrollablePanel => new WidgetNode(name, attributes, children),

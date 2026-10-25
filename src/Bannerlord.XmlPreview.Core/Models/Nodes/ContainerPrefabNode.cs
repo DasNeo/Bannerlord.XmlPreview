@@ -33,9 +33,7 @@ public abstract class ContainerPrefabNode : PrefabNode
                                   (!string.IsNullOrWhiteSpace(brushId) && !context.BrushExists(brushId));
         var borderColor = hasMissingReference
             ? new SolidColorBrush(Colors.Red)
-            : _frameBrush
-                ? context.CreateSolidBrush(context.FrameBorderColor)
-                : Brushes.Transparent;
+            : Brushes.Transparent;
         
         var border = new Border
         {
@@ -45,14 +43,16 @@ public abstract class ContainerPrefabNode : PrefabNode
                     : brush
                 : new SolidColorBrush(backgroundColor.Value),
             BorderBrush = borderColor,
-            BorderThickness = hasMissingReference ? new Thickness(1) : _frameBrush ? new Thickness(2) : new Thickness(0),
-            CornerRadius = _frameBrush ? new CornerRadius(6) : new CornerRadius(2)
+            BorderThickness = hasMissingReference ? new Thickness(1) : new Thickness(0)
         };
 
         var layout = new Grid();
 
         if (!string.IsNullOrWhiteSpace(spriteId) && sprite is not null)
+        {
+            context.ApplySpriteExtensions(sprite, Attributes);
             layout.Children.Add(sprite);
+        }
 
         var childCanvas = new Canvas
         {
@@ -65,7 +65,6 @@ public abstract class ContainerPrefabNode : PrefabNode
 
         context.ApplySizing(border, Attributes, parentSize);
         context.ApplyAssetSizing(border, spriteId, brushId, isDisabled);
-        context.ApplyBrushBorderStyle(border, brushId, isDisabled, _frameBrush);
         context.ApplyVisibility(border, Attributes);
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, [spriteId], [brushId], isDisabled);

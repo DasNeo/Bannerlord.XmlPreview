@@ -29,6 +29,7 @@ internal static class RenderBehaviorPlanner
         var children = expanded.ToImmutableDictionary(w => new WidgetId(w.WidgetId),
             w => w.Children.Select(c => new WidgetId(c.WidgetId)).ToImmutableArray());
         var runValues = expanded.ToImmutableDictionary(w => new WidgetId(w.WidgetId), w => w.Properties.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase)
+            .SetItems((provider?.Describe(definitions[w.ExpandedPath]).Capabilities ?? []).Select(c => new KeyValuePair<string, string>("Preview.Capability." + c, "true")))
             .SetItem("Preview.SiblingIndex", siblingIndices[w.WidgetId].ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return expanded.Select(widget =>
         {

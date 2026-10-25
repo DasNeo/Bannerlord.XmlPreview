@@ -63,7 +63,9 @@ public sealed partial class PrefabRenderContext
         {
             // Replace the generic sprite overlay to honor stretch and tint explicitly.
             foreach (var old in grid.Children.OfType<FrameworkElement>().Where(e => e != rendered.ChildHost).ToArray()) grid.Children.Remove(old);
-            grid.Children.Insert(0, CreateSpriteImageVisual(resolution.Image, ResolveCatalogSprite(request.Identity), blueprint.Stretch, blueprint.Color));
+            var spriteVisual = CreateSpriteImageVisual(resolution.Image, ResolveCatalogSprite(request.Identity), blueprint.Stretch, blueprint.Color);
+            ApplySpriteExtensions(spriteVisual, node.Attributes);
+            grid.Children.Insert(0, spriteVisual);
         }
         if (dynamicImage && resolution.Status == ImageResolutionStatus.Resolved && resolution.Image is not null &&
             (UsesCoverChildren(node.Attributes, "WidthSizePolicy") || UsesCoverChildren(node.Attributes, "HeightSizePolicy")))
@@ -93,8 +95,9 @@ public sealed partial class PrefabRenderContext
             border.BorderBrush = new SolidColorBrush(color);
             border.BorderThickness = new Thickness(2);
             border.Background = new SolidColorBrush(Color.FromArgb(50, color.R, color.G, color.B));
-            grid.Children.Add(new TextBlock { Text = $"{resolution.Status}: {request.Provider ?? request.Identity}",
-                Foreground = new SolidColorBrush(color), TextWrapping = TextWrapping.Wrap, FontSize = 11 });
+            grid.Children.Add(new TextBlock { Text = $"{resolution.Status}: {request.Provider ?? request.Identity}\n{node.Name}",
+                Foreground = new SolidColorBrush(color), TextWrapping = TextWrapping.Wrap, FontSize = 11,
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center });
         }
         ApplyOpacity(border, node.Attributes, rendered.ChildHost);
         if (node.Attributes.TryGetValue("Brush.AlphaFactor", out var alpha))

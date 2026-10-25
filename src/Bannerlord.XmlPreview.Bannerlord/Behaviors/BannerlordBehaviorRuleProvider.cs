@@ -15,9 +15,11 @@ public sealed class BannerlordBehaviorRuleProvider(IBannerlordWidgetReflectionSe
             for (var parent = type.BaseType; parent is not null; parent = parent.BaseType) bases.Add(parent.Name);
         var caps = ImmutableHashSet.CreateBuilder<string>(StringComparer.Ordinal);
         caps.Add("preview-state");
+        if (node is BrushWidgetNode or TextWidgetNodeBase or ButtonWidgetNode || node is ListPanelNode { RendersBrush: true } || bases.Contains("BrushWidget")) caps.Add("brush");
+        if (node.Name.EndsWith("TableauWidget", StringComparison.Ordinal) || bases.Any(b => b.EndsWith("TableauWidget", StringComparison.Ordinal))) caps.Add("runtime-tableau");
         if (node is ScrollablePanelNode || node.Name == "ScrollablePanel" || bases.Contains("ScrollablePanel")) caps.Add("scroll-viewport");
         if (node is ScrollbarWidgetNode || node.Name == "ScrollbarWidget" || bases.Contains("ScrollbarWidget")) caps.Add("scroll-handle");
-        if (node is FallbackNode && node.Name is not ("EditableTextWidget" or "InputKeyVisualWidget" or "ImageWidget" or "ImageIdentifierWidget" or "MaskedTextureWidget" or "BannerTableauWidget") && !node.Name.Contains("CodeWidget", StringComparison.Ordinal)) caps.Add("unknown");
+        if (node is FallbackNode && node.Name is not ("EditableTextWidget" or "InputKeyVisualWidget" or "ImageWidget" or "ImageIdentifierWidget" or "MaskedTextureWidget") && !caps.Contains("runtime-tableau") && !node.Name.Contains("CodeWidget", StringComparison.Ordinal)) caps.Add("unknown");
         if (node.Name.Contains("CodeWidget", StringComparison.Ordinal)) caps.Add("code-widget");
         return new(bases.ToImmutable(), caps.ToImmutable());
     }

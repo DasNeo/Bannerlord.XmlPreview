@@ -5,7 +5,7 @@ using Bannerlord.XmlPreview.Core.Behaviors;
 namespace Bannerlord.XmlPreview.Behaviors.Bannerlord;
 
 /// <summary>Trusted executable rules ship with the adapter, never with mod XML.</summary>
-public static class BannerlordBehaviorRules
+public static partial class BannerlordBehaviorRules
 {
     public static ImmutableArray<BehaviorRule> All { get; } = Build();
     private static ImmutableArray<BehaviorRule> Build()
@@ -17,7 +17,7 @@ public static class BannerlordBehaviorRules
         Add("image.loading", BehaviorPhase.Describe, new(TrustedBaseType: "ImageIdentifierWidget", Attribute: "LoadingIconWidget"), new ImageLoading());
         Add("image.loading-connection", BehaviorPhase.Connect, new(TrustedBaseType: "ImageIdentifierWidget", Attribute: "LoadingIconWidget"), new Connections([("LoadingIconWidget", ConnectionRequirement.Required)]));
         Add("image.masked", BehaviorPhase.Instantiate, new(ExactType: "MaskedTextureWidget"), new ProviderImage(true));
-        Add("image.tableau", BehaviorPhase.Instantiate, new(ExactType: "BannerTableauWidget"), new RuntimeImage());
+        Add("image.tableau", BehaviorPhase.Instantiate, new(Capability: "runtime-tableau"), new RuntimeImage());
         Add("state.describe", BehaviorPhase.Describe, new(Capability: "preview-state"), new PreviewState());
         Add("state.boolean", BehaviorPhase.Describe, new(TrustedBaseType: "BoolStateChangerWidget"), new BooleanState());
         Add("state.boolean-container", BehaviorPhase.Instantiate, new(TrustedBaseType: "BoolStateChangerWidget"), new StaticContainer());
@@ -58,6 +58,8 @@ public static class BannerlordBehaviorRules
         Add("instantiate.code", BehaviorPhase.Instantiate, new(Capability: "code-widget"), new Placeholder());
         Add("support.unknown", BehaviorPhase.Inspect, new(Capability: "unknown"), new Partial("Unknown widget rendered as a visible placeholder."));
         Add("support.code", BehaviorPhase.Inspect, new(Capability: "code-widget"), new Partial("Code Widget executable behavior is unavailable in preview."));
+        AddNumericTextRules(rules);
+        AddPresentationRules(rules);
         // Scroll handling consumes final handle placement rather than being overwritten by it.
         var handle = new RuleId("bannerlord.scroll.handle");
         rules = rules.Select(r => r.Id.Value == "bannerlord.scroll.layout" ? r with { After = [handle] } : r).ToList();
@@ -305,7 +307,8 @@ public static class BannerlordBehaviorRules
     private sealed class RuntimeImage : IBehaviorHandler
     {
         public ImmutableArray<BehaviorContribution> Contribute(BehaviorInput input) =>
-            [new ElementBlueprint(ElementKind.Image, Image: new(new(Value(input, "BannerCodeText", ""), "Runtime.Tableau")))];
+            [new ElementBlueprint(ElementKind.Image, Image: new(new(Value(input, "StringId", Value(input, "BannerCodeText", "")),
+                "Runtime.Tableau", ScenarioSprite: input.Values.GetValueOrDefault("Preview.ImageSprite"))))];
     }
     private sealed class Partial(string diagnostic) : IBehaviorHandler
     {

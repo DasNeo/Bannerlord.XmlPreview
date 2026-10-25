@@ -30,7 +30,8 @@ public enum BannerlordWidgetRenderKind
     ScrollablePanel,
     ScrollbarWidget,
     TextWidget,
-    BrushListPanel
+    BrushListPanel,
+    RichTextWidget
 }
 
 public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflectionService
@@ -320,6 +321,8 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         {
             switch (current.FullName)
             {
+                case "TaleWorlds.GauntletUI.BaseTypes.RichTextWidget":
+                    return BannerlordWidgetRenderKind.RichTextWidget;
                 case "TaleWorlds.GauntletUI.BaseTypes.TextWidget":
                     return BannerlordWidgetRenderKind.TextWidget;
                 case "TaleWorlds.GauntletUI.BrushListPanel":

@@ -78,7 +78,8 @@ public sealed class BehaviorGraph
         var runValues = widgets.ToImmutableDictionary(w => w.Widget.Id, w => w.Values);
         var writers = new HashSet<(WidgetId, BehaviorPhase, string)>();
         var ids = widgets.Select(w => w.Widget.Id).ToHashSet();
-        foreach (var input in widgets.OrderBy(w => w.Widget.Id.Value, StringComparer.Ordinal))
+        var orderedWidgets = widgets.OrderBy(w => w.Widget.Id.Value, StringComparer.Ordinal).ToArray();
+        foreach (var input in orderedWidgets)
         {
             var selected = matches[input.Widget.Id];
             if (selected.Count(r => r.Phase == BehaviorPhase.Instantiate) > 1)
@@ -86,7 +87,7 @@ public sealed class BehaviorGraph
         }
         // Phase ordering is global, not one widget at a time.
         foreach (var rule in orderedRules)
-        foreach (var input in widgets.OrderBy(w => w.Widget.Id.Value, StringComparer.Ordinal))
+        foreach (var input in orderedWidgets)
         {
             if (!matches[input.Widget.Id].Contains(rule)) continue;
             cancellationToken.ThrowIfCancellationRequested();
@@ -224,7 +225,9 @@ public sealed class BehaviorGraph
             edges += transfers.Sum(c => transfers.Count(other => Target(other) == Source(c)));
         }
         sorting.Stop();
-        var support = widgets.ToImmutableDictionary(w => w.Widget.Id, w => contributions.Any(c => c.Widget == w.Widget.Id && c.Contribution is InspectionContribution { Support: BehaviorSupport.Partial }) ? BehaviorSupport.Partial : BehaviorSupport.Supported);
+        var partialWidgets = contributions.Where(c => c.Contribution is InspectionContribution { Support: BehaviorSupport.Partial })
+            .Select(c => c.Widget).ToHashSet();
+        var support = widgets.ToImmutableDictionary(w => w.Widget.Id, w => partialWidgets.Contains(w.Widget.Id) ? BehaviorSupport.Partial : BehaviorSupport.Supported);
         return new(contributions.OrderBy(c => c.Contribution.Phase).ToImmutableArray(),
             new(rules.Length, matches.Sum(p => p.Value.Length), edges,
                 Enum.GetValues<BehaviorPhase>().ToImmutableDictionary(p => p, p => contributions.Count(c => c.Contribution.Phase == p)),
