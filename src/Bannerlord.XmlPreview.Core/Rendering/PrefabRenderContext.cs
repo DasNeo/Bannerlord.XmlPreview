@@ -29,6 +29,7 @@ public sealed partial class PrefabRenderContext
     private readonly Dictionary<string, BrushDebugInfo> _brushDebugInfoCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<BrushLayerDefinition>> _visibleBrushLayersCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Brush> _renderBrushCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly BitmapFontGlyphCache _glyphCache = new();
     private readonly Dictionary<string, SpriteAssetResolution> _spriteAssetResolutionCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RenderedWidgetRegistration> _renderedWidgetsByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<IReadOnlyDictionary<string, string>> _bindingScopes = [];
@@ -61,6 +62,7 @@ public sealed partial class PrefabRenderContext
     private readonly List<string> _instanceKeys = [];
     private readonly Dictionary<string, string> _instanceKeyCache = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Prefab, string Path, string Instance), WidgetId> _widgetIdCache = [];
+    private readonly Dictionary<IReadOnlyDictionary<string, string>, DescriptionLookup> _descriptionLookups = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, int> _snapshotIndices = new(StringComparer.Ordinal);
     internal List<SnapshotElement> SnapshotElements { get; } = [];
 
@@ -171,7 +173,8 @@ public sealed partial class PrefabRenderContext
         _bindingScopes.Add(values);
         _instanceKeys.Add(instanceKey ?? values.GetValueOrDefault("__key", "0"));
         _instanceKeyCache.Clear();
-        return new SnapshotScopeHandle(new BindingScopeHandle(_bindingScopes, values), _instanceKeys, _instanceKeyCache);
+        _descriptionLookups.Clear();
+        return new SnapshotScopeHandle(new BindingScopeHandle(_bindingScopes, values), _instanceKeys, _instanceKeyCache, _descriptionLookups);
     }
 
     internal IReadOnlyDictionary<string, string> SnapshotAttributes(IReadOnlyDictionary<string, string> attributes)
@@ -194,9 +197,10 @@ public sealed partial class PrefabRenderContext
         return raw;
     }
 
-    private sealed class SnapshotScopeHandle(IDisposable binding, List<string> keys, Dictionary<string, string> instanceKeyCache) : IDisposable
+    private sealed class SnapshotScopeHandle(IDisposable binding, List<string> keys, Dictionary<string, string> instanceKeyCache,
+        Dictionary<IReadOnlyDictionary<string, string>, DescriptionLookup> descriptionLookups) : IDisposable
     {
-        public void Dispose() { binding.Dispose(); keys.RemoveAt(keys.Count - 1); instanceKeyCache.Clear(); }
+        public void Dispose() { binding.Dispose(); keys.RemoveAt(keys.Count - 1); instanceKeyCache.Clear(); descriptionLookups.Clear(); }
     }
 
     public bool ResolveBoolean(string? rawValue, bool fallback = false)
@@ -1633,6 +1637,8 @@ public sealed partial class PrefabRenderContext
             foreach (var child in node.Children) Visit(child);
         }
         Visit(root);
+        _descriptionLookups.Clear();
+        PlanHiddenSubtreeMaterialization(inputs, plan, root);
     }
 
     private string _renderState = "Default";
@@ -1641,11 +1647,29 @@ public sealed partial class PrefabRenderContext
     {
         var previous = _renderState;
         var previousSelection = _brushLayerSelection;
+        var previousHidden = _hiddenByAncestor;
+        var previousPreserveHiddenLayout = _preserveHiddenLayout;
         var attributes = PreparePresentationAttributes(EffectiveAttributes(node.Attributes));
         _renderState = TryGetDescription(node.Attributes, "Preview.State", out var state) ? state
             : attributes.GetValueOrDefault("CurrentState", "Default");
-        try { return RenderEffectiveNode(node.WithAttributes(attributes), parentSize); }
-        finally { _renderState = previous; _brushLayerSelection = previousSelection; }
+        try
+        {
+            var locallyVisible = IsVisible(attributes);
+            _hiddenByAncestor = previousHidden || !locallyVisible;
+            if (_deferHiddenSubtrees && _hiddenByAncestor && NeedsHiddenContentForLayout(attributes, parentSize))
+                _preserveHiddenLayout = true;
+            var effectiveNode = node.WithAttributes(attributes);
+            if (_hiddenByAncestor && CanDeferHiddenSubtree(attributes))
+                return RenderDeferredHiddenSubtree(effectiveNode, parentSize, locallyVisible);
+            return RenderEffectiveNode(effectiveNode, parentSize);
+        }
+        finally
+        {
+            _renderState = previous;
+            _brushLayerSelection = previousSelection;
+            _hiddenByAncestor = previousHidden;
+            _preserveHiddenLayout = previousPreserveHiddenLayout;
+        }
     }
 
     private RenderedPrefabNode RenderEffectiveNode(PrefabNode node, Size parentSize)
@@ -1726,19 +1750,30 @@ public sealed partial class PrefabRenderContext
         _activeGraphWidget = null;
     }
 
+    private readonly record struct DescriptionLookup(Dictionary<string, string>? Description, PrefabVisualDefinition? VisualDefinition);
+
+    private DescriptionLookup LookupDescription(IReadOnlyDictionary<string, string> attributes)
+    {
+        if (_descriptionLookups.TryGetValue(attributes, out var cached)) return cached;
+        var path = TryGetWidgetPath(attributes);
+        if (path is null) return default;
+        _graphDescriptions.TryGetValue(ResolveWidgetId(path), out var description);
+        _visualDefinitions.TryGetValue(path, out var definition);
+        var lookup = new DescriptionLookup(description, definition);
+        _descriptionLookups.Add(attributes, lookup);
+        return lookup;
+    }
+
     private bool TryGetDescription(IReadOnlyDictionary<string, string> attributes, string property, out string value)
     {
-        var path = TryGetWidgetPath(attributes);
-        if (path is not null)
+        var lookup = LookupDescription(attributes);
+        var description = lookup.Description;
+        if (description is not null && description.TryGetValue(property, out value!)) return true;
+        if (lookup.VisualDefinition is { } definition)
         {
-            _graphDescriptions.TryGetValue(ResolveWidgetId(path), out var description);
-            if (description is not null && description.TryGetValue(property, out value!)) return true;
-            if (_visualDefinitions.TryGetValue(path, out var definition))
-            {
-                var state = description?.GetValueOrDefault("Preview.State", "Default") ?? "Default";
-                if (definition.States.TryGetValue(state, out var active) && active.TryGetValue(property, out value!)) return true;
-                if (definition.States.TryGetValue("Default", out var defaults) && defaults.TryGetValue(property, out value!)) return true;
-            }
+            var state = description?.GetValueOrDefault("Preview.State", "Default") ?? "Default";
+            if (definition.States.TryGetValue(state, out var active) && active.TryGetValue(property, out value!)) return true;
+            if (definition.States.TryGetValue("Default", out var defaults) && defaults.TryGetValue(property, out value!)) return true;
         }
         value = "";
         return false;
@@ -1746,13 +1781,15 @@ public sealed partial class PrefabRenderContext
 
     internal IReadOnlyDictionary<string, string> EffectiveAttributes(IReadOnlyDictionary<string, string> attributes)
     {
-        var path = TryGetWidgetPath(attributes);
-        if (path is null) return attributes;
+        var lookup = LookupDescription(attributes);
+        var description = lookup.Description;
+        if (lookup.VisualDefinition is null && (description is null || description.Count == 0 ||
+            (description.Count == 1 && description.First().Key == "Preview.State"))) return attributes;
         var result = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase);
-        if (_visualDefinitions.TryGetValue(path, out var definition))
+        if (lookup.VisualDefinition is { } definition)
             foreach (var key in definition.States.Values.SelectMany(s => s.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
                 if (TryGetDescription(attributes, key, out var value)) result[key] = value;
-        if (_graphDescriptions.TryGetValue(ResolveWidgetId(path), out var description))
+        if (description is not null)
             foreach (var pair in description.Where(p => p.Key != "Preview.State")) result[pair.Key] = pair.Value;
         return result;
     }
@@ -1760,11 +1797,11 @@ public sealed partial class PrefabRenderContext
     public bool IsVisible(IReadOnlyDictionary<string, string> attributes)
     {
         if (ResolveBoolean(attributes, "IsHidden")) return false;
-        var path = TryGetWidgetPath(attributes);
-        if (path is not null && _graphDescriptions.TryGetValue(ResolveWidgetId(path), out var description) && description.TryGetValue("IsVisible", out var visible))
+        var description = LookupDescription(attributes).Description;
+        if (description is not null && description.TryGetValue("IsVisible", out var visible))
             return visible == "true";
         return !HasAttribute(attributes, "IsVisible") ||
-               ResolveBoolean(attributes, "IsVisible", true);
+               ResolveBoolean(attributes, "IsVisible", false);
     }
 
     public Brush ResolvePanelBrush(string? brushId, bool isDisabled = false)
@@ -2245,7 +2282,7 @@ public sealed partial class PrefabRenderContext
         var font = _assetCatalog.FindFont(ResolveCatalogBrush(brushId)?.FontName ?? "Galahad");
         if (font is null) return text;
         var style = ResolveBrushStyle(ResolveCatalogBrush(brushId), IsDisabled(attributes));
-        return new BitmapFontTextBlock { StyleSource = text, BitmapFont = font,
+        return new BitmapFontTextBlock { StyleSource = text, BitmapFont = font, GlyphCache = _glyphCache,
             HorizontalAlignment = text.HorizontalAlignment, VerticalAlignment = text.VerticalAlignment,
             OutlineAmount = style?.TextOutlineAmount ?? (brushId == "DefaultBrush" ? 1 : 0),
             OutlineColor = ParseBannerlordColor(style?.TextOutlineColor) ?? Colors.Black };

@@ -113,6 +113,8 @@ public sealed class PrefabRenderer : IPrefabRenderer
             var rootSize = options?.PreviewSize ?? _rootLayoutHints.ResolveRootSize(context.ResolveDouble);
             if (options is not null)
                 diagnostics.RenderStructure = RegressionSnapshotProducer.Structure(document, context, options.PrefabIdentity);
+            else
+                diagnostics.RenderStructure = structure;
             RenderedPrefabNode renderedRoot;
             using (diagnostics.MeasurePhase("PrefabRenderer.Render.RootNodeRender"))
             {
@@ -127,7 +129,7 @@ public sealed class PrefabRenderer : IPrefabRenderer
             context.ExecuteBehaviorPhase(plan, BehaviorPhase.Connect);
             context.ExecuteBehaviorPhase(plan, BehaviorPhase.PrepareLayout);
 
-            if (diagnostics.RenderStructure is not null)
+            if (options is not null && diagnostics.RenderStructure is not null)
                 diagnostics.RenderStructure = RegressionSnapshotProducer.ResolveBehavior(diagnostics.RenderStructure, context.SnapshotElements);
 
             Size measuredRootSize;

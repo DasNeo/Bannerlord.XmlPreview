@@ -16,6 +16,12 @@ public abstract class ContainerPrefabNode : PrefabNode
     }
 
     public override RenderedPrefabNode Render(PrefabRenderContext context, Size parentSize)
+        => RenderContainer(context, parentSize, requireLayerHost: false);
+
+    internal RenderedPrefabNode RenderWithLayerHost(PrefabRenderContext context, Size parentSize)
+        => RenderContainer(context, parentSize, requireLayerHost: true);
+
+    private RenderedPrefabNode RenderContainer(PrefabRenderContext context, Size parentSize, bool requireLayerHost)
     {
         var spriteId = context.ResolveBinding(GetAttribute("Sprite"));
         var brushId = context.ResolveBinding(GetAttribute("Brush"));
@@ -46,12 +52,12 @@ public abstract class ContainerPrefabNode : PrefabNode
             BorderThickness = hasMissingReference ? new Thickness(1) : new Thickness(0)
         };
 
-        var layout = new Grid();
+        var layout = Children.Count > 0 || sprite is not null || _frameBrush || requireLayerHost ? new Grid() : null;
 
         if (!string.IsNullOrWhiteSpace(spriteId) && sprite is not null)
         {
             context.ApplySpriteExtensions(sprite, Attributes);
-            layout.Children.Add(sprite);
+            layout!.Children.Add(sprite);
         }
 
         var childCanvas = new Canvas
@@ -59,9 +65,13 @@ public abstract class ContainerPrefabNode : PrefabNode
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        layout.Children.Add(childCanvas);
-
-        border.Child = layout;
+        if (layout is not null)
+        {
+            layout.Children.Add(childCanvas);
+            border.Child = layout;
+        }
+        else
+            border.Child = childCanvas;
 
         context.ApplySizing(border, Attributes, parentSize);
         context.ApplyAssetSizing(border, spriteId, brushId, isDisabled);
@@ -126,7 +136,7 @@ public abstract class ContainerPrefabNode : PrefabNode
         {
             var overlayWidth = double.IsNaN(border.Width) || border.Width <= 0 ? containerSize.Width : border.Width;
             var overlayHeight = double.IsNaN(border.Height) || border.Height <= 0 ? containerSize.Height : border.Height;
-            context.AddBrushOverlay(layout, brushId, isDisabled, overlayWidth, overlayHeight, 0);
+            context.AddBrushOverlay(layout!, brushId, isDisabled, overlayWidth, overlayHeight, 0);
         }
 
         context.ApplyOpacity(border, Attributes, childCanvas);

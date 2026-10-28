@@ -10,6 +10,8 @@ public sealed partial class PrefabRenderContext
     private IReadOnlyDictionary<string, string> PreparePresentationAttributes(IReadOnlyDictionary<string, string> attributes)
     {
         _brushLayerSelection = null;
+        if (!attributes.ContainsKey("Preview.SpriteVariant") && !attributes.ContainsKey("Preview.BrushTargetLayers"))
+            return attributes;
         var result = new Dictionary<string, string>(attributes, StringComparer.OrdinalIgnoreCase);
         if (result.TryGetValue("Preview.SpriteVariant", out var variants) && result.TryGetValue("Sprite", out var sprite))
             foreach (var variant in variants.Split('|', StringSplitOptions.RemoveEmptyEntries))

@@ -17,7 +17,7 @@ public sealed class BitmapFontTextBlock : FrameworkElement
     public BitmapFontDefinition? BitmapFont { get; set; }
     public Color OutlineColor { get; set; } = Colors.Black;
     public double OutlineAmount { get; set; }
-    private readonly Dictionary<int, BitmapSource> glyphImages = new();
+    internal BitmapFontGlyphCache GlyphCache { get; init; } = new();
     private readonly List<(BitmapFontGlyph Glyph, double X, double Y)> layout = [];
     protected override Size MeasureOverride(Size constraint)
     {
@@ -44,33 +44,48 @@ public sealed class BitmapFontTextBlock : FrameworkElement
     {
         if (BitmapFont is not { } font) return;
         var scale = FontSize / font.Size;
+        var color = (Foreground as SolidColorBrush)?.Color ?? Colors.White;
         foreach (var (glyph, x, y) in layout)
         {
             if (glyph.Width == 0 || glyph.Height == 0) continue;
-            if (!glyphImages.TryGetValue(glyph.Id, out var image))
-            {
-                var crop = new CroppedBitmap(font.Atlas, new Int32Rect(glyph.X, glyph.Y, glyph.Width, glyph.Height));
-                var source = new FormatConvertedBitmap(crop, PixelFormats.Bgra32, null, 0);
-                var pixels = new byte[glyph.Width * glyph.Height * 4];
-                source.CopyPixels(pixels, glyph.Width * 4, 0);
-                var color = (Foreground as SolidColorBrush)?.Color ?? Colors.White;
-                var smoothing = Math.Min(0.25, 0.08 / scale);
-                for (var i = 0; i < pixels.Length; i += 4)
-                {
-                    var distance = pixels[i + 2] / 255d;
-                    var fill = Math.Clamp((distance - font.Smoothing) / smoothing + 0.5, 0, 1);
-                    var outline = Math.Clamp((distance - font.Smoothing + OutlineAmount * 0.05) / smoothing + 0.5, 0, 1);
-                    var a = fill * color.A / 255d;
-                    var b = Math.Max(0, outline - fill) * OutlineColor.A / 255d;
-                    pixels[i] = (byte)(color.B * a + OutlineColor.B * b);
-                    pixels[i + 1] = (byte)(color.G * a + OutlineColor.G * b);
-                    pixels[i + 2] = (byte)(color.R * a + OutlineColor.R * b);
-                    pixels[i + 3] = (byte)(255 * Math.Min(1, a + b));
-                }
-                image = BitmapSource.Create(glyph.Width, glyph.Height, 96, 96, PixelFormats.Pbgra32, null, pixels, glyph.Width * 4);
-                image.Freeze(); glyphImages[glyph.Id] = image;
-            }
+            var image = GlyphCache.GetImage(font, glyph, scale, color, OutlineAmount, OutlineColor);
             drawing.DrawImage(image, new Rect((x + glyph.OffsetX * scale), (y + glyph.OffsetY * scale), glyph.Width * scale, glyph.Height * scale));
         }
+    }
+}
+
+internal sealed class BitmapFontGlyphCache
+{
+    private readonly record struct Key(BitmapFontDefinition Font, BitmapFontGlyph Glyph, double Scale,
+        Color Color, double OutlineAmount, Color OutlineColor);
+    private readonly Dictionary<Key, BitmapSource> images = new();
+
+    public BitmapSource GetImage(BitmapFontDefinition font, BitmapFontGlyph glyph, double scale,
+        Color color, double outlineAmount, Color outlineColor)
+    {
+        var key = new Key(font, glyph, scale, color, outlineAmount, outlineColor);
+        if (!images.TryGetValue(key, out var image))
+        {
+            var crop = new CroppedBitmap(font.Atlas, new Int32Rect(glyph.X, glyph.Y, glyph.Width, glyph.Height));
+            var source = new FormatConvertedBitmap(crop, PixelFormats.Bgra32, null, 0);
+            var pixels = new byte[glyph.Width * glyph.Height * 4];
+            source.CopyPixels(pixels, glyph.Width * 4, 0);
+            var smoothing = Math.Min(0.25, 0.08 / scale);
+            for (var i = 0; i < pixels.Length; i += 4)
+            {
+                var distance = pixels[i + 2] / 255d;
+                var fill = Math.Clamp((distance - font.Smoothing) / smoothing + 0.5, 0, 1);
+                var outline = Math.Clamp((distance - font.Smoothing + outlineAmount * 0.05) / smoothing + 0.5, 0, 1);
+                var a = fill * color.A / 255d;
+                var b = Math.Max(0, outline - fill) * outlineColor.A / 255d;
+                pixels[i] = (byte)(color.B * a + outlineColor.B * b);
+                pixels[i + 1] = (byte)(color.G * a + outlineColor.G * b);
+                pixels[i + 2] = (byte)(color.R * a + outlineColor.R * b);
+                pixels[i + 3] = (byte)(255 * Math.Min(1, a + b));
+            }
+            image = BitmapSource.Create(glyph.Width, glyph.Height, 96, 96, PixelFormats.Pbgra32, null, pixels, glyph.Width * 4);
+            image.Freeze(); images.Add(key, image);
+        }
+        return image;
     }
 }

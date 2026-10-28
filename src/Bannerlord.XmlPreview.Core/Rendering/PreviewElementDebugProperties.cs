@@ -5,6 +5,13 @@ namespace Bannerlord.XmlPreview.Rendering;
 
 public static class PreviewElementDebugProperties
 {
+    public static readonly DependencyProperty DeferredHiddenSubtreeProperty = DependencyProperty.RegisterAttached(
+        "DeferredHiddenSubtree", typeof(DeferredHiddenSubtree), typeof(PreviewElementDebugProperties), new PropertyMetadata(null));
+    public static DeferredHiddenSubtree? GetDeferredHiddenSubtree(DependencyObject element) =>
+        (DeferredHiddenSubtree?)element.GetValue(DeferredHiddenSubtreeProperty);
+    public static void SetDeferredHiddenSubtree(DependencyObject element, DeferredHiddenSubtree value) =>
+        element.SetValue(DeferredHiddenSubtreeProperty, value);
+
     // Alpha applied to a widget's own visuals, independently of its child host.
     public static readonly DependencyProperty OwnVisualAlphaProperty = DependencyProperty.RegisterAttached(
         "OwnVisualAlpha", typeof(double), typeof(PreviewElementDebugProperties), new PropertyMetadata(1d));

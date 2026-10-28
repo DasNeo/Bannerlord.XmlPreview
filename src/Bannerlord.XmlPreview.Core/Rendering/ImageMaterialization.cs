@@ -22,7 +22,7 @@ public sealed partial class PrefabRenderContext
         {
             attributes.Remove("Brush"); attributes.Remove("Sprite");
         }
-        var rendered = new WidgetNode(node.Name, attributes, node.Children).Render(this, parentSize);
+        var rendered = new WidgetNode(node.Name, attributes, node.Children).RenderWithLayerHost(this, parentSize);
         var border = (Border)rendered.Element;
         var grid = (Grid)border.Child;
         var request = blueprint.Request;
