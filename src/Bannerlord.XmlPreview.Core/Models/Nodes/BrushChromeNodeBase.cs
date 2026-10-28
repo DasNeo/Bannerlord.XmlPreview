@@ -30,7 +30,6 @@ public abstract class BrushChromeNodeBase : PrefabNode
 
         context.ApplySizing(border, Attributes, parentSize);
         context.ApplyButtonSizing(border, Attributes, chrome.PrimaryBrushId, chrome.IsDisabled);
-        context.ApplyBrushBorderStyle(border, chrome.PrimaryBrushId, chrome.IsDisabled, false);
         context.ApplyVisibility(border, Attributes);
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, null, chrome.DebugBrushIds, chrome.IsDisabled);

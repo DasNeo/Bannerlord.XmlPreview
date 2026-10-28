@@ -14,6 +14,8 @@ public sealed record RegressionRenderOptions(
     public string? AssetModule { get; init; }
     public Size? PreviewSize { get; init; }
     public bool TraceBehaviors { get; init; }
+    // Strict captures materialize hidden content unless the caller explicitly opts in.
+    public bool DeferHiddenSubtrees { get; init; }
     public IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyDictionary<string, string>>>? Lists { get; init; }
     public CancellationToken CancellationToken { get; init; }
     public IReadOnlyDictionary<string, string> OptionalConnectionExplanations { get; init; } = new Dictionary<string, string>();
@@ -77,7 +79,14 @@ internal static class RegressionSnapshotProducer
             var properties = new SortedDictionary<string, string>(node.Properties.ToDictionary(p => p.Key, p => p.Value), StringComparer.Ordinal);
             if (registrations.TryGetValue(node.WidgetId, out var registration))
             {
-                properties["Resolved.IsVisible"] = registration.Element.Visibility == Visibility.Visible ? "true" : "false";
+                var deferred = PreviewElementDebugProperties.GetDeferredHiddenSubtree(registration.Element);
+                properties["Resolved.IsVisible"] = (deferred?.IsLocallyVisible ?? registration.Element.Visibility == Visibility.Visible) ? "true" : "false";
+                if (deferred is not null)
+                {
+                    properties["Resolved.Materialization"] = "DeferredHiddenSubtree";
+                    return node with { Properties = new ReadOnlyDictionary<string, string>(properties),
+                        Children = Array.AsReadOnly(node.Children.Select(Resolve).ToArray()) };
+                }
                 properties["Resolved.IsEnabled"] = registration.Element.IsEnabled ? "true" : "false";
                 // Render Structure describes widget visual opacity, independent of WPF host composition.
                 properties["Resolved.Opacity"] = (registration.Element.Opacity *

@@ -28,7 +28,10 @@ public enum BannerlordWidgetRenderKind
     NavigationScopeTargeter,
     GridWidget,
     ScrollablePanel,
-    ScrollbarWidget
+    ScrollbarWidget,
+    TextWidget,
+    BrushListPanel,
+    RichTextWidget
 }
 
 public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflectionService
@@ -318,6 +321,12 @@ public sealed class BannerlordWidgetReflectionService : IBannerlordWidgetReflect
         {
             switch (current.FullName)
             {
+                case "TaleWorlds.GauntletUI.BaseTypes.RichTextWidget":
+                    return BannerlordWidgetRenderKind.RichTextWidget;
+                case "TaleWorlds.GauntletUI.BaseTypes.TextWidget":
+                    return BannerlordWidgetRenderKind.TextWidget;
+                case "TaleWorlds.GauntletUI.BrushListPanel":
+                    return BannerlordWidgetRenderKind.BrushListPanel;
                 case "TaleWorlds.GauntletUI.BaseTypes.ScrollbarWidget":
                     return BannerlordWidgetRenderKind.ScrollbarWidget;
                 case "TaleWorlds.GauntletUI.BaseTypes.ScrollablePanel":

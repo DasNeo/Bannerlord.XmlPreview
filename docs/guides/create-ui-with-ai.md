@@ -147,7 +147,7 @@ Have the agent create a scenario like this, replacing the module and prefab name
 
 Use the same capture command with your scenario path and a fresh output directory. The agent should populate additional bindings and template lists as your design develops. List and widget-state selectors must match expanded widget paths exactly; use the widget tree or captured structure to find them. Each list entry needs a unique, stable `__key` value. The [EscapeMenu scenario](../images/previews/scenarios/escape-menu.json) provides a populated-list example.
 
-Keep separate scenarios for empty, populated, long-text, selected, and disabled states, plus the resolutions you want to check. Use Capture Profiles with UI scale 1, English, sRGB, and FullFrame; those are the currently accepted settings.
+Keep separate scenarios for empty, populated, long-text, selected, and disabled states, plus the resolutions you want to check. Capture Profiles support English, sRGB, FullFrame, and an explicit `UiScale` from 0.25 to 4 (default 1). The renderer uses a logical viewport of `Width / UiScale` by `Height / UiScale`; output pixels and Key Bounds use the requested physical resolution. Record the effective scale used for comparison instead of inferring it from resolution alone.
 
 ## 4. Ask the agent to render, inspect, and revise
 

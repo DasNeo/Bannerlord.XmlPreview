@@ -16,6 +16,12 @@ public abstract class ContainerPrefabNode : PrefabNode
     }
 
     public override RenderedPrefabNode Render(PrefabRenderContext context, Size parentSize)
+        => RenderContainer(context, parentSize, requireLayerHost: false);
+
+    internal RenderedPrefabNode RenderWithLayerHost(PrefabRenderContext context, Size parentSize)
+        => RenderContainer(context, parentSize, requireLayerHost: true);
+
+    private RenderedPrefabNode RenderContainer(PrefabRenderContext context, Size parentSize, bool requireLayerHost)
     {
         var spriteId = context.ResolveBinding(GetAttribute("Sprite"));
         var brushId = context.ResolveBinding(GetAttribute("Brush"));
@@ -33,9 +39,7 @@ public abstract class ContainerPrefabNode : PrefabNode
                                   (!string.IsNullOrWhiteSpace(brushId) && !context.BrushExists(brushId));
         var borderColor = hasMissingReference
             ? new SolidColorBrush(Colors.Red)
-            : _frameBrush
-                ? context.CreateSolidBrush(context.FrameBorderColor)
-                : Brushes.Transparent;
+            : Brushes.Transparent;
         
         var border = new Border
         {
@@ -45,27 +49,32 @@ public abstract class ContainerPrefabNode : PrefabNode
                     : brush
                 : new SolidColorBrush(backgroundColor.Value),
             BorderBrush = borderColor,
-            BorderThickness = hasMissingReference ? new Thickness(1) : _frameBrush ? new Thickness(2) : new Thickness(0),
-            CornerRadius = _frameBrush ? new CornerRadius(6) : new CornerRadius(2)
+            BorderThickness = hasMissingReference ? new Thickness(1) : new Thickness(0)
         };
 
-        var layout = new Grid();
+        var layout = Children.Count > 0 || sprite is not null || _frameBrush || requireLayerHost ? new Grid() : null;
 
         if (!string.IsNullOrWhiteSpace(spriteId) && sprite is not null)
-            layout.Children.Add(sprite);
+        {
+            context.ApplySpriteExtensions(sprite, Attributes);
+            layout!.Children.Add(sprite);
+        }
 
         var childCanvas = new Canvas
         {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top
         };
-        layout.Children.Add(childCanvas);
-
-        border.Child = layout;
+        if (layout is not null)
+        {
+            layout.Children.Add(childCanvas);
+            border.Child = layout;
+        }
+        else
+            border.Child = childCanvas;
 
         context.ApplySizing(border, Attributes, parentSize);
         context.ApplyAssetSizing(border, spriteId, brushId, isDisabled);
-        context.ApplyBrushBorderStyle(border, brushId, isDisabled, _frameBrush);
         context.ApplyVisibility(border, Attributes);
         context.ApplyToolTip(border, Name, Attributes);
         context.AttachElementDebugMetadata(border, Name, Attributes, [spriteId], [brushId], isDisabled);
@@ -74,6 +83,7 @@ public abstract class ContainerPrefabNode : PrefabNode
         var containerSize = context.Measure(border, Attributes, parentSize);
         Rect childLayoutRect = Rect.Empty;
         Rect selectionRect = Rect.Empty;
+        var excludeCollapsed = context.ResolveBoolean(Attributes, "Preview.ExcludeCollapsedChildren");
 
         Size LayoutContent(bool renderChildren, Size? overrideContainerSize = null)
         {
@@ -99,10 +109,11 @@ public abstract class ContainerPrefabNode : PrefabNode
                     childCanvas,
                     Children,
                     childLayoutRect.Size,
-                    childLayoutRect.Location);
+                    childLayoutRect.Location,
+                    excludeCollapsed);
             }
 
-            var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas);
+            var contentBounds = context.MeasureCanvasChildrenBounds(childCanvas, excludeCollapsed);
             if (renderChildren)
                 context.ApplyCanvasLayout(childCanvas, contentBounds);
             return context.TryMeasureReferencedElement(Attributes, "InnerPanel", childLayoutRect.Size, out var innerPanelSize)
@@ -125,7 +136,7 @@ public abstract class ContainerPrefabNode : PrefabNode
         {
             var overlayWidth = double.IsNaN(border.Width) || border.Width <= 0 ? containerSize.Width : border.Width;
             var overlayHeight = double.IsNaN(border.Height) || border.Height <= 0 ? containerSize.Height : border.Height;
-            context.AddBrushOverlay(layout, brushId, isDisabled, overlayWidth, overlayHeight, 0);
+            context.AddBrushOverlay(layout!, brushId, isDisabled, overlayWidth, overlayHeight, 0);
         }
 
         context.ApplyOpacity(border, Attributes, childCanvas);

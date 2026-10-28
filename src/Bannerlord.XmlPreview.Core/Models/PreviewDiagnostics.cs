@@ -23,6 +23,7 @@ public sealed class PreviewDiagnostics
     private readonly List<ElementLayoutSnapshot> _elementLayoutSnapshots = [];
     private readonly Dictionary<string, TimingAggregate> _timings = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _truncationReasons = [];
+    private readonly List<DeferredHiddenSubtree> _deferredHiddenSubtrees = [];
     private string? _sourcePath;
     private string? _rootNodeName;
     private int _bindingCount;
@@ -41,6 +42,13 @@ public sealed class PreviewDiagnostics
     public RenderCompletionStatus CompletionStatus { get; private set; } = RenderCompletionStatus.Complete;
 
     public IReadOnlyList<string> TruncationReasons => _truncationReasons;
+    public IReadOnlyList<DeferredHiddenSubtree> DeferredHiddenSubtrees => _deferredHiddenSubtrees;
+
+    internal void DeferHiddenSubtree(DeferredHiddenSubtree subtree)
+    {
+        _deferredHiddenSubtrees.Add(subtree);
+        if (CompletionStatus != RenderCompletionStatus.Failed) CompletionStatus = RenderCompletionStatus.Partial;
+    }
 
     public IReadOnlyList<string> Messages => _messages;
     public HashSet<string> Dependencies { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -166,6 +174,16 @@ public sealed class PreviewDiagnostics
             {
                 sections.Add(sample);
             }
+        }
+
+        if (_deferredHiddenSubtrees.Count > 0)
+        {
+            AddSectionSeparator(sections);
+            sections.Add("HiddenSubtreesDeferred");
+            sections.Add($"Roots: {_deferredHiddenSubtrees.Count}; logical widgets: {_deferredHiddenSubtrees.Sum(s => s.LogicalWidgetCount)}");
+            sections.Add("Hidden visual construction and asset validation are deferred until visible. The logical Render Structure and Behavior Graph are retained.");
+            foreach (var subtree in _deferredHiddenSubtrees)
+                sections.Add($"{subtree.ExpandedPath}: {subtree.LogicalWidgetCount} logical widgets ({subtree.WidgetId}).");
         }
 
         if (_elementLayoutSnapshots.Count > 0)

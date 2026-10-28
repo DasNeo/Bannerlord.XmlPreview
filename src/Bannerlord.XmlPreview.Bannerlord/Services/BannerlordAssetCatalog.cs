@@ -73,7 +73,32 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
             }
         }, token);
     public SpriteDefinition? FindSprite(string? name) => GetSnapshot().Sprites.GetValueOrDefault(Normalize(name));
-    public BrushDefinition? FindBrush(string? name) => name is null ? null : GetSnapshot().Brushes.GetValueOrDefault(name);
+    public BrushDefinition? FindBrush(string? name) => name is null ? null : ResolveBrush(GetSnapshot(), name, new(StringComparer.OrdinalIgnoreCase));
+
+    private static BrushDefinition? ResolveBrush(Snapshot snapshot, string name, HashSet<string> active)
+    {
+        if (snapshot.ResolvedBrushes.TryGetValue(name, out var resolved)) return resolved;
+        if (!snapshot.Brushes.TryGetValue(name, out var brush)) return null;
+        if (string.IsNullOrWhiteSpace(brush.BaseBrushName)) return brush;
+        if (!active.Add(name)) throw new InvalidDataException($"Brush inheritance cycle at '{name}'.");
+        var parent = ResolveBrush(snapshot, brush.BaseBrushName, active)
+            ?? throw new InvalidDataException($"Brush '{name}' references missing BaseBrush '{brush.BaseBrushName}'.");
+        active.Remove(name);
+        var layers = parent.Layers.ToList();
+        foreach (var layer in brush.Layers)
+        {
+            var index = layers.FindIndex(l => l.Name.Equals(layer.Name, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) layers.Add(layer);
+            else layers[index] = layers[index].Merge(layer);
+        }
+        var styles = parent.Styles.ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in brush.Styles)
+            styles[pair.Key] = styles.TryGetValue(pair.Key, out var inherited) ? inherited.Merge(pair.Value) : pair.Value;
+        resolved = brush with { Layers = layers.ToArray(), Styles = styles, FontName = brush.FontName ?? parent.FontName,
+            TextHorizontalAlignment = brush.TextHorizontalAlignment ?? parent.TextHorizontalAlignment,
+            TextVerticalAlignment = brush.TextVerticalAlignment ?? parent.TextVerticalAlignment };
+        return snapshot.ResolvedBrushes.GetOrAdd(name, resolved);
+    }
     private readonly Dictionary<string, BitmapFontDefinition?> fonts = new(StringComparer.OrdinalIgnoreCase);
     public BitmapFontDefinition? FindFont(string name)
     {
@@ -190,5 +215,8 @@ public sealed class BannerlordAssetCatalog : IAssetCatalog
         return new(order, sprites, brushes, unavailable);
     }
     private static string Normalize(string? name) => (name ?? "").Trim().Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-    private sealed record Snapshot(IReadOnlyList<BannerlordModule> Order, Dictionary<string, SpriteDefinition> Sprites, Dictionary<string, BrushDefinition> Brushes, IReadOnlyList<string> UnavailableDependencies);
+    private sealed record Snapshot(IReadOnlyList<BannerlordModule> Order, Dictionary<string, SpriteDefinition> Sprites, Dictionary<string, BrushDefinition> Brushes, IReadOnlyList<string> UnavailableDependencies)
+    {
+        public ConcurrentDictionary<string, BrushDefinition> ResolvedBrushes { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
 }

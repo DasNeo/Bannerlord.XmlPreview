@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Xml;
 using System.Xml.Linq;
+using System.Collections.Immutable;
 
 namespace Bannerlord.XmlPreview.Services;
 
@@ -93,6 +94,7 @@ public sealed class PrefabLoader : IPrefabLoader
                 state.RootNodeElement,
                 state.DefaultParameters,
                 constants,
+                ParseVisualDefinitions(state.VisualDefinitionsElement, state.DefaultParameters, constants),
                 diagnostics,
                 state.ExpansionStack,
                 cancellationToken,
@@ -268,8 +270,19 @@ public sealed class PrefabLoader : IPrefabLoader
             rootNodeElement,
             ParseParameters(root.Element("Parameters")),
             root.Element("Constants"),
+            root.Element("VisualDefinitions"),
             expansionStack);
     }
+
+    private static IReadOnlyDictionary<string, PrefabVisualDefinition> ParseVisualDefinitions(
+        XElement? element, IReadOnlyDictionary<string, string> parameters, IReadOnlyDictionary<string, string> constants)
+        => (element?.Elements("VisualDefinition") ?? []).Where(e => e.Attribute("Name") is not null)
+            .ToDictionary(e => e.Attribute("Name")!.Value, e => new PrefabVisualDefinition(
+                e.Elements("VisualState").Where(s => s.Attribute("State") is not null).ToImmutableDictionary(
+                    s => s.Attribute("State")!.Value,
+                    s => s.Attributes().Where(a => a.Name.LocalName != "State").ToImmutableDictionary(
+                        a => a.Name.LocalName, a => ResolveSimpleScopedValue(a.Value, parameters, constants), StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase)), StringComparer.OrdinalIgnoreCase);
 
     private static Dictionary<string, string> ParseParameters(XElement? parametersElement)
     {
@@ -567,6 +580,7 @@ public sealed class PrefabLoader : IPrefabLoader
         XElement element,
         IReadOnlyDictionary<string, string> parameters,
         IReadOnlyDictionary<string, string> constants,
+        IReadOnlyDictionary<string, PrefabVisualDefinition> visualDefinitions,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
         CancellationToken cancellationToken,
@@ -577,6 +591,7 @@ public sealed class PrefabLoader : IPrefabLoader
             element,
             parameters,
             constants,
+            visualDefinitions,
             diagnostics,
             expansionStack,
             cancellationToken,
@@ -593,6 +608,8 @@ public sealed class PrefabLoader : IPrefabLoader
         {
             clone.SetAttributeValue(attribute.Name, ResolveSimpleScopedValue(attribute.Value, parameters, constants));
         }
+        if (clone.Attribute("VisualDefinition")?.Value is { } name && visualDefinitions.TryGetValue(name, out var definition))
+            clone.AddAnnotation(definition);
 
         foreach (var node in element.Nodes())
         {
@@ -612,6 +629,7 @@ public sealed class PrefabLoader : IPrefabLoader
                 childElement,
                 parameters,
                 constants,
+                visualDefinitions,
                 diagnostics,
                 expansionStack,
                 cancellationToken,
@@ -627,6 +645,7 @@ public sealed class PrefabLoader : IPrefabLoader
         XElement element,
         IReadOnlyDictionary<string, string> parameters,
         IReadOnlyDictionary<string, string> constants,
+        IReadOnlyDictionary<string, PrefabVisualDefinition> visualDefinitions,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
         CancellationToken cancellationToken,
@@ -687,6 +706,7 @@ public sealed class PrefabLoader : IPrefabLoader
             element,
             parameters,
             constants,
+            visualDefinitions,
             diagnostics,
             expansionStack,
             cancellationToken);
@@ -694,6 +714,7 @@ public sealed class PrefabLoader : IPrefabLoader
             includeState.RootNodeElement,
             includeParameters,
             includeConstants,
+            ParseVisualDefinitions(includeState.VisualDefinitionsElement, includeParameters, includeConstants),
             diagnostics,
             nextStack,
             cancellationToken,
@@ -710,6 +731,12 @@ public sealed class PrefabLoader : IPrefabLoader
         }
 
         MergeCallerAttributes(expandedRoot, element, parameters, constants);
+        if (element.Attribute("VisualDefinition")?.Value is { } callerDefinition)
+        {
+            expandedRoot.RemoveAnnotations<PrefabVisualDefinition>();
+            if (visualDefinitions.TryGetValue(ResolveSimpleScopedValue(callerDefinition, parameters, constants), out var definition))
+                expandedRoot.AddAnnotation(definition);
+        }
         return expandedRoot;
     }
 
@@ -795,6 +822,7 @@ public sealed class PrefabLoader : IPrefabLoader
         XElement callerElement,
         IReadOnlyDictionary<string, string> parameters,
         IReadOnlyDictionary<string, string> constants,
+        IReadOnlyDictionary<string, PrefabVisualDefinition> visualDefinitions,
         PreviewDiagnostics diagnostics,
         IReadOnlyCollection<string> expansionStack,
         CancellationToken cancellationToken)
@@ -810,6 +838,7 @@ public sealed class PrefabLoader : IPrefabLoader
                         child,
                         parameters,
                         constants,
+                        visualDefinitions,
                         diagnostics,
                         expansionStack,
                         cancellationToken,
@@ -886,7 +915,11 @@ public sealed class PrefabLoader : IPrefabLoader
             children.Add(ParseNode(child, bindingKeys));
         }
 
-        return _widgetNodeFactory.CreateNode(element.Name.LocalName, attributes, children);
+        var node = _widgetNodeFactory.CreateNode(element.Name.LocalName, attributes, children)
+            .WithVisualDefinition(element.Annotation<PrefabVisualDefinition>());
+        foreach (var state in node.VisualDefinition?.States.Values ?? [])
+            foreach (var value in state.Values) CollectBindingKey(value, bindingKeys);
+        return node;
     }
 
     private static IEnumerable<XElement> GetParsedChildElements(XElement element)
@@ -959,7 +992,10 @@ public sealed class PrefabLoader : IPrefabLoader
     {
         var copy = new XElement(element);
         foreach (var pair in element.DescendantsAndSelf().Zip(copy.DescendantsAndSelf()))
+        {
             if (pair.First.Annotation<SourceLocation>() is { } source) pair.Second.AddAnnotation(source);
+            if (pair.First.Annotation<PrefabVisualDefinition>() is { } definition) pair.Second.AddAnnotation(definition);
+        }
         return copy;
     }
 
@@ -1001,5 +1037,6 @@ public sealed class PrefabLoader : IPrefabLoader
         XElement RootNodeElement,
         IReadOnlyDictionary<string, string> DefaultParameters,
         XElement? ConstantsElement,
+        XElement? VisualDefinitionsElement,
         IReadOnlyCollection<string> ExpansionStack);
 }

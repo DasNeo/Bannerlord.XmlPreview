@@ -73,9 +73,9 @@ public static class ScenarioLoader
             throw new InvalidDataException("Scenario requires identity, scene and data state.");
         var p = scenario.CaptureProfile ?? throw new InvalidDataException("Capture Profile is required.");
         if (string.IsNullOrWhiteSpace(p.Id) || p.Width <= 0 || p.Height <= 0 || p.Width > 8192 || p.Height > 8192 ||
-            p.UiScale != 1 || p.Language != "English" || p.ColorSpace != "sRGB" || p.CropRule != "FullFrame" ||
+            !double.IsFinite(p.UiScale) || p.UiScale is < 0.25 or > 4 || p.Language != "English" || p.ColorSpace != "sRGB" || p.CropRule != "FullFrame" ||
             !System.Text.RegularExpressions.Regex.IsMatch(p.Background, "^#[0-9a-fA-F]{6}$"))
-            throw new InvalidDataException("Unsupported Capture Profile; use scale 1, English, sRGB and FullFrame with an RGB background.");
+            throw new InvalidDataException("Unsupported Capture Profile; use a finite scale from 0.25 to 4, English, sRGB and FullFrame with an RGB background.");
         if (scenario.Bindings is null || scenario.Lists is null || scenario.WidgetStates is null || scenario.OptionalConnectionExplanations is null ||
             scenario.KeyBoundsSelectors is null || scenario.ExpectedWarnings is null || scenario.Masks is null)
             throw new InvalidDataException("Scenario collections cannot be null.");

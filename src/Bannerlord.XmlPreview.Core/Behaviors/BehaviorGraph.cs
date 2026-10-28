@@ -78,7 +78,8 @@ public sealed class BehaviorGraph
         var runValues = widgets.ToImmutableDictionary(w => w.Widget.Id, w => w.Values);
         var writers = new HashSet<(WidgetId, BehaviorPhase, string)>();
         var ids = widgets.Select(w => w.Widget.Id).ToHashSet();
-        foreach (var input in widgets.OrderBy(w => w.Widget.Id.Value, StringComparer.Ordinal))
+        var orderedWidgets = widgets.OrderBy(w => w.Widget.Id.Value, StringComparer.Ordinal).ToArray();
+        foreach (var input in orderedWidgets)
         {
             var selected = matches[input.Widget.Id];
             if (selected.Count(r => r.Phase == BehaviorPhase.Instantiate) > 1)
@@ -86,7 +87,7 @@ public sealed class BehaviorGraph
         }
         // Phase ordering is global, not one widget at a time.
         foreach (var rule in orderedRules)
-        foreach (var input in widgets.OrderBy(w => w.Widget.Id.Value, StringComparer.Ordinal))
+        foreach (var input in orderedWidgets)
         {
             if (!matches[input.Widget.Id].Contains(rule)) continue;
             cancellationToken.ThrowIfCancellationRequested();
@@ -106,6 +107,8 @@ public sealed class BehaviorGraph
                 switch (value)
                 {
                     case DescriptionContribution d:
+                        target = d.Target ?? target;
+                        if (!ids.Contains(target)) throw Fail("MissingDescriptionTarget", "Description target must be in the expanded tree.", input.Widget.Id, rule.Id);
                         if (!Enum.IsDefined(d.Merge)) throw Fail("UnknownMerge", "Unknown collection merge contract.");
                         var key = (target, d.Property.ToUpperInvariant());
                         if (merges.TryGetValue(key, out var merge) && (merge != CollectionMerge.Append || d.Merge != CollectionMerge.Append))
@@ -138,7 +141,8 @@ public sealed class BehaviorGraph
                     case LayoutContribution l:
                         if (!Enum.IsDefined(l.Intent)) throw Fail("UnknownLayoutIntent", "Unknown layout intent.");
                         if (!double.IsFinite(l.Padding)) throw Fail("InvalidLayoutValue", "Layout padding must be finite.");
-                        if (l.Intent is LayoutIntent.CopyDimensions or LayoutIntent.RangeValue && l.Source is null)
+                        if ((l.Intent == LayoutIntent.CopyDimensions && l.Source is null) ||
+                            (l.Intent == LayoutIntent.RangeValue && l.Source is null && l.SecondaryTarget is null))
                             throw Fail("MissingLayoutSource", "This layout intent requires a source.", input.Widget.Id, rule.Id);
                         if (l.Intent == LayoutIntent.CopyDimensions && l.Axis is not ("Horizontal" or "Vertical" or "HorizontalAndVertical"))
                             throw Fail("UnknownAxis", "Dimension copying requires a reviewed axis.", input.Widget.Id, rule.Id);
@@ -166,7 +170,7 @@ public sealed class BehaviorGraph
                     }
                     if (layout.Intent == LayoutIntent.RangeValue)
                     {
-                        footprints.Add((layout.Source!.Value, layout.Axis == "Vertical" ? "Canvas.Top" : "Canvas.Left"));
+                        if (layout.Source is { } handle) footprints.Add((handle, layout.Axis == "Vertical" ? "Canvas.Top" : "Canvas.Left"));
                         if (layout.SecondaryTarget is { } filler) footprints.Add((filler, layout.Axis == "Vertical" ? "Height" : "Width"));
                     }
                     foreach (var footprint in footprints)
@@ -177,8 +181,8 @@ public sealed class BehaviorGraph
                     throw Fail("MultipleWriters", $"Multiple writers for {target.Value}.{property} in {rule.Phase}.", input.Widget.Id, rule.Id);
                 if (value is DescriptionContribution description)
                 {
-                    var previous = runValues[input.Widget.Id].GetValueOrDefault(description.Property, "");
-                    runValues = runValues.SetItem(input.Widget.Id, runValues[input.Widget.Id].SetItem(description.Property,
+                    var previous = runValues[target].GetValueOrDefault(description.Property, "");
+                    runValues = runValues.SetItem(target, runValues[target].SetItem(description.Property,
                         description.Merge == CollectionMerge.Append ? previous + description.Value : description.Value));
                 }
                 contributions.Add(new(input.Widget.Id, rule.Id, value));
@@ -221,7 +225,9 @@ public sealed class BehaviorGraph
             edges += transfers.Sum(c => transfers.Count(other => Target(other) == Source(c)));
         }
         sorting.Stop();
-        var support = widgets.ToImmutableDictionary(w => w.Widget.Id, w => contributions.Any(c => c.Widget == w.Widget.Id && c.Contribution is InspectionContribution { Support: BehaviorSupport.Partial }) ? BehaviorSupport.Partial : BehaviorSupport.Supported);
+        var partialWidgets = contributions.Where(c => c.Contribution is InspectionContribution { Support: BehaviorSupport.Partial })
+            .Select(c => c.Widget).ToHashSet();
+        var support = widgets.ToImmutableDictionary(w => w.Widget.Id, w => partialWidgets.Contains(w.Widget.Id) ? BehaviorSupport.Partial : BehaviorSupport.Supported);
         return new(contributions.OrderBy(c => c.Contribution.Phase).ToImmutableArray(),
             new(rules.Length, matches.Sum(p => p.Value.Length), edges,
                 Enum.GetValues<BehaviorPhase>().ToImmutableDictionary(p => p, p => contributions.Count(c => c.Contribution.Phase == p)),

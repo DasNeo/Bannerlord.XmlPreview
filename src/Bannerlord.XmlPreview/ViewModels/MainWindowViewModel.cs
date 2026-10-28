@@ -527,7 +527,8 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             var candidateDocument = scenario is null ? document : ScenarioApplication.Apply(document, scenario);
-            var candidate = _prefabRenderer.Render(candidateDocument, diagnostics, scenario is null ? null : ScenarioApplication.Options(scenario));
+            var candidate = _prefabRenderer.Render(candidateDocument, diagnostics,
+                scenario is null ? null : ScenarioApplication.Options(scenario) with { DeferHiddenSubtrees = true });
             if (diagnostics.CompletionStatus == RenderCompletionStatus.Failed) throw new InvalidDataException("Render failed validation.");
             return candidate;
         }
@@ -643,10 +644,10 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     private void PopulateDiagnosticSources(PreviewDiagnostics diagnostics, PrefabDocument? document, SourceLocation fallback)
     {
         AuthoringDiagnostics.Clear();
+        var sources = document?.SourceMap.OrderByDescending(pair => pair.Key.Length).ToArray();
         foreach (var message in diagnostics.Messages)
         {
-            var source = document?.SourceMap.OrderByDescending(pair => pair.Key.Length)
-                .FirstOrDefault(pair => message.Contains(pair.Key, StringComparison.Ordinal)).Value ?? fallback;
+            var source = sources?.FirstOrDefault(pair => message.Contains(pair.Key, StringComparison.Ordinal)).Value ?? fallback;
             AuthoringDiagnostics.Add(new(message, source, _navigator, ScenarioOperation));
         }
     }

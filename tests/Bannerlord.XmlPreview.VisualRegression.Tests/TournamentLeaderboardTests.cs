@@ -35,6 +35,38 @@ public sealed class TournamentLeaderboardTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BitmapFontGlyphImagesRespectChangedColorAndFont(bool changeFont)
+    {
+        SnapshotCaptureTests.Sta(() =>
+        {
+            var atlas = System.Windows.Media.Imaging.BitmapSource.Create(1, 1, 96, 96, PixelFormats.Bgra32, null,
+                new byte[] { 255, 255, 255, 255 }, 4);
+            atlas.Freeze();
+            var font = new Bannerlord.XmlPreview.Models.Assets.BitmapFontDefinition("fixture", 1, 1, 0.5, atlas,
+                new Dictionary<int, Bannerlord.XmlPreview.Models.Assets.BitmapFontGlyph> { [65] = new(65, 0, 0, 1, 1, 1, 0, 0) },
+                new Dictionary<(int, int), double>());
+            var text = new BitmapFontTextBlock { BitmapFont = font,
+                StyleSource = new TextBlock { Text = "A", FontSize = 1, Foreground = Brushes.Red } };
+            var profile = new Bannerlord.XmlPreview.VisualRegression.CaptureProfile("glyph", 1, 1, Background: "#000000");
+            Assert.Equal(new byte[] { 255, 0, 0 }, WpfPreviewCapture.Capture(text, profile).Pixels);
+            if (changeFont)
+            {
+                var empty = System.Windows.Media.Imaging.BitmapSource.Create(1, 1, 96, 96, PixelFormats.Bgra32, null,
+                    new byte[] { 0, 0, 0, 255 }, 4);
+                empty.Freeze();
+                text.BitmapFont = font with { Atlas = empty };
+            }
+            else text.StyleSource.Foreground = Brushes.Blue;
+            text.InvalidateVisual();
+            Assert.Equal(changeFont ? new byte[] { 0, 0, 0 } : new byte[] { 0, 0, 255 },
+                WpfPreviewCapture.Capture(text, profile).Pixels);
+            return 0;
+        });
+    }
+
+    [Theory]
     [InlineData("false")]
     [InlineData("true")]
     public void LocalVisibilityAndIntTextAllocateOneNameAndOneVictoryCell(string mainHero)
@@ -118,7 +150,8 @@ public sealed class TournamentLeaderboardTests
                 Assert.All(ranks, t =>
                 {
                     Assert.Equal(HorizontalAlignment.Left, t.HorizontalAlignment);
-                    Assert.Equal(655, t.TranslatePoint(new Point(), rendered).X);
+                    // Declared column placement without the former preview-only brush border inset.
+                    Assert.Equal(652.5, t.TranslatePoint(new Point(), rendered).X);
                 });
                 if (count > 0)
                 {

@@ -87,7 +87,7 @@ public sealed class WidgetReferenceResolver : IWidgetReferenceResolver
             return false;
         }
 
-        return attributeName is "ClipRect" or "Handle" or "Filler" or "Button" ||
+        return attributeName is "ClipRect" or "Handle" or "Filler" or "Button" or "EquipButton" ||
                attributeName.EndsWith("Scrollbar", StringComparison.OrdinalIgnoreCase) ||
                attributeName.Contains("Widget", StringComparison.OrdinalIgnoreCase) ||
                attributeName.EndsWith("Panel", StringComparison.OrdinalIgnoreCase) ||

@@ -29,6 +29,16 @@ public sealed class BehaviorGraphTests
     }
     [Fact] public void DuplicateRulesFail() => Assert.Equal("DuplicateRuleId", Assert.Throws<BehaviorGraphException>(() => Plan(Rule("a", BehaviorPhase.Describe, new DescriptionContribution("A", "1")), Rule("a", BehaviorPhase.Describe, new DescriptionContribution("B", "2")))).Error.Code);
     [Fact] public void ExclusiveInstantiationConflictsFail() => Assert.Equal("InstantiateConflict", Assert.Throws<BehaviorGraphException>(() => Plan(Rule("a", BehaviorPhase.Instantiate, new ElementBlueprint(ElementKind.Container)), Rule("b", BehaviorPhase.Instantiate, new ElementBlueprint(ElementKind.Container)))).Error.Code);
+    [Fact] public void TargetedDescriptionsValidateTargetsAndConflictingWriters()
+    {
+        Assert.Equal("MissingDescriptionTarget", Assert.Throws<BehaviorGraphException>(() => Plan(
+            Rule("target", BehaviorPhase.Describe, new DescriptionContribution("Brush", "row", Target: new("missing"))))).Error.Code);
+        var inputs = new[] { Widget("Source", "a"), Widget("Target", "b") }.ToImmutableArray();
+        var rules = new[] {
+            new BehaviorRule(new("source"), BehaviorPhase.Describe, new(ExactType: "Source"), new Returns([new DescriptionContribution("IsVisible", "true", Target: new("b"))])),
+            new BehaviorRule(new("target"), BehaviorPhase.Describe, new(ExactType: "Target"), new Returns([new DescriptionContribution("IsVisible", "false")])) }.ToImmutableArray();
+        Assert.Equal("MultipleWriters", Assert.Throws<BehaviorGraphException>(() => new BehaviorGraph().Plan(inputs, rules, cancellationToken: TestContext.Current.CancellationToken)).Error.Code);
+    }
     [Fact] public void FallbackOnlyAppliesWithoutSpecializedRule()
     {
         Assert.Equal("core.fallback", Assert.Single(Plan().Contributions).Rule.Value);

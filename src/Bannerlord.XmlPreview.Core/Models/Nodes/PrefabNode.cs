@@ -18,6 +18,22 @@ public abstract class PrefabNode
 
     public IReadOnlyList<PrefabNode> Children { get; private set; }
 
+    public PrefabVisualDefinition? VisualDefinition { get; private set; }
+
+    public PrefabNode WithVisualDefinition(PrefabVisualDefinition? definition)
+    {
+        var copy = (PrefabNode)MemberwiseClone();
+        copy.VisualDefinition = definition;
+        return copy;
+    }
+
+    internal PrefabNode WithAttributes(IReadOnlyDictionary<string, string> attributes)
+    {
+        var copy = (PrefabNode)MemberwiseClone();
+        copy.Attributes = attributes;
+        return copy;
+    }
+
     internal PrefabNode CopyForRender(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> states)
     {
         var copy = (PrefabNode)MemberwiseClone();
